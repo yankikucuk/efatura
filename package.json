@@ -1,0 +1,76 @@
+{
+  "name": "efatura",
+  "version": "0.1.0",
+  "description": "GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi",
+  "keywords": [
+    "efatura",
+    "e-arsiv",
+    "earsiv",
+    "gib",
+    "fatura",
+    "invoice",
+    "turkey"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "knip": "knip",
+    "check:publish": "publint && attw --pack .",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "puppeteer": ">=22"
+  },
+  "peerDependenciesMeta": {
+    "puppeteer": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.2",
+    "@eslint/js": "9.36.0",
+    "@types/node": "22.18.1",
+    "@vitest/coverage-v8": "3.2.4",
+    "eslint": "9.36.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import-x": "4.16.1",
+    "knip": "5.64.0",
+    "lint-staged": "16.2.0",
+    "prettier": "3.6.2",
+    "publint": "0.3.12",
+    "simple-git-hooks": "2.13.1",
+    "tsup": "8.5.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.44.0",
+    "vitest": "3.2.4"
+  }
+}
