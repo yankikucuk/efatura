@@ -117,6 +117,7 @@ export default tseslint.config(
               target: './src/modules/signing',
               from: [
                 './src/modules/auth',
+                './src/modules/invoice',
                 './src/modules/document',
                 './src/modules/user',
                 './src/modules/dispute',

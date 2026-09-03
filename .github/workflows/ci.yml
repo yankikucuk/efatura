@@ -32,6 +32,7 @@ jobs:
       - run: npm run test:coverage
       - run: npm run build
       - run: npm run check:publish
+      - run: npm run check:types
 
   e2e:
     if: github.event_name == 'workflow_dispatch' && inputs.run_e2e
