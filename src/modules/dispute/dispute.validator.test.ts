@@ -6,6 +6,7 @@ import { EArsivValidationError } from '../../core/index.js'
 import {
   validateCancellationRequest,
   validateDisputeResponse,
+  validateIncomingObjectionRequest,
   validateObjectionRequest,
 } from './dispute.validator.js'
 
@@ -68,6 +69,77 @@ describe('validateObjectionRequest', () => {
       expect.unreachable('hata bekleniyordu')
     } catch (error) {
       expect((error as EArsivValidationError).issues.length).toBe(2)
+    }
+  })
+})
+
+describe('validateIncomingObjectionRequest', () => {
+  const valid = {
+    ettn: 'a',
+    method: DisputeMethod.KEP,
+    referenceDocumentId: '2026/1',
+    referenceDocumentDate: '03/09/2026',
+    reason: 'İtiraz gerekçesi',
+    invoiceOid: '999',
+    totalAmount: 120,
+    sellerTaxOrIdentityNumber: '9999999999',
+    documentNumber: 'GIB123',
+  }
+
+  it('tam girdi (11 alan) ile geçer', () => {
+    expect(() => {
+      validateIncomingObjectionRequest(valid)
+    }).not.toThrow()
+  })
+
+  it('invoiceOid zorunludur', () => {
+    expect(() => {
+      validateIncomingObjectionRequest({ ...valid, invoiceOid: '' })
+    }).toThrow(/invoiceOid|portal içi kayıt/i)
+  })
+
+  it('sellerTaxOrIdentityNumber zorunludur', () => {
+    expect(() => {
+      validateIncomingObjectionRequest({ ...valid, sellerTaxOrIdentityNumber: '' })
+    }).toThrow(/satıcı/i)
+  })
+
+  it('documentNumber zorunludur', () => {
+    expect(() => {
+      validateIncomingObjectionRequest({ ...valid, documentNumber: '' })
+    }).toThrow(/belge numarası/i)
+  })
+
+  it('totalAmount sonlu bir sayı olmalı', () => {
+    expect(() => {
+      validateIncomingObjectionRequest({ ...valid, totalAmount: Number.NaN })
+    }).toThrow(/tutar/i)
+  })
+
+  it('negatif totalAmount reddedilir', () => {
+    expect(() => {
+      validateIncomingObjectionRequest({ ...valid, totalAmount: -1 })
+    }).toThrow(/tutar/i)
+  })
+
+  it('temel yedi alanın doğrulaması da uygulanır (gerekçe boş)', () => {
+    expect(() => {
+      validateIncomingObjectionRequest({ ...valid, reason: '' })
+    }).toThrow(EArsivValidationError)
+  })
+
+  it('tüm eksikleri tek seferde toplar', () => {
+    try {
+      validateIncomingObjectionRequest({
+        ...valid,
+        invoiceOid: '',
+        sellerTaxOrIdentityNumber: '',
+        documentNumber: '',
+        reason: '',
+      })
+      expect.unreachable('hata bekleniyordu')
+    } catch (error) {
+      expect((error as EArsivValidationError).issues.length).toBe(4)
     }
   })
 })

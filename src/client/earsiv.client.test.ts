@@ -82,6 +82,11 @@ describe('EArsivClient', () => {
   it.each([
     ['listDrafts', ['03/09/2026', '03/09/2026'], 'EARSIV_PORTAL_TASLAKLARI_GETIR'],
     ['listIncoming', ['03/09/2026', '03/09/2026'], 'EARSIV_PORTAL_ADIMA_KESILEN_BELGELERI_GETIR'],
+    [
+      'listIncomingExternal',
+      ['03/09/2026', '03/09/2026'],
+      'EARSIV_PORTAL_ENTEGRATOR_ADIMA_DUZENLENENLER_SORGULA',
+    ],
     ['getInvoice', ['abc'], 'EARSIV_PORTAL_FATURA_GETIR'],
     ['getInvoiceHtml', ['abc'], 'EARSIV_PORTAL_FATURA_GOSTER'],
     ['getUserInfo', [], 'EARSIV_PORTAL_KULLANICI_BILGILERI_GETIR'],
@@ -101,6 +106,23 @@ describe('EArsivClient', () => {
       'respondToDisputeRequest',
       [{ disputeId: '1', answer: '1' }],
       'EARSIV_PORTAL_IPTAL_ITIRAZ_TALEP_DURUM_GUNCELLE',
+    ],
+    [
+      'createObjectionRequestForIncoming',
+      [
+        {
+          ettn: 'a',
+          invoiceOid: '1',
+          totalAmount: 10,
+          sellerTaxOrIdentityNumber: '9999999999',
+          documentNumber: 'GIB1',
+          method: 'KEP',
+          referenceDocumentId: '1',
+          referenceDocumentDate: '03/09/2026',
+          reason: 'r',
+        },
+      ],
+      'EARSIV_PORTAL_ITIRAZ_TALEBI_OLUSTUR',
     ],
   ] as [string, unknown[], string][])(
     'facade %s metodunu %s komutuna yönlendirir',
@@ -126,6 +148,48 @@ describe('EArsivClient', () => {
     },
   )
 
+  it('createObjectionRequestForIncoming, createObjectionRequest ile AYNI komut ama FARKLI pageName gönderir', async () => {
+    // it.each yüzey testi yalnızca `cmd` alanını doğruluyor; ikisi de AYNI
+    // komutu (EARSIV_PORTAL_ITIRAZ_TALEBI_OLUSTUR) gönderdiği için o test
+    // yanlış pageName'i asla yakalamazdı — asıl regresyon burada.
+    const fetchMock = vi.fn(() => json({ data: 'başarıyla' }))
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    await client.createObjectionRequestForIncoming({
+      ettn: 'abc',
+      invoiceOid: '999',
+      totalAmount: 120,
+      sellerTaxOrIdentityNumber: '9999999999',
+      documentNumber: 'GIB123',
+      method: 'KEP',
+      referenceDocumentId: '2026/42',
+      referenceDocumentDate: '03/09/2026',
+      reason: 'Hizmet alınmadı',
+    })
+
+    const body = new URLSearchParams(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+    )
+    expect(body.get('pageName')).toBe('RG_ALICI_TASLAKLAR')
+    expect(JSON.parse(body.get('jp') ?? '{}')).toEqual({
+      ettn: 'abc',
+      faturaOid: '999',
+      toplamTutar: '120.00',
+      saticiVknTckn: '9999999999',
+      belgeNumarasi: 'GIB123',
+      onayDurumu: 'Onaylandı',
+      belgeTuru: 'FATURA',
+      itirazYontemi: 'KEP',
+      referansBelgeId: '2026/42',
+      referansBelgeTarihi: '03/09/2026',
+      talepAciklama: 'Hizmet alınmadı',
+    })
+  })
+
   it('public API yüzeyi eksiksiz', () => {
     // Not: bu test yalnızca yüzeyi koruyor — bir metodun kazara silinmesini
     // yakalar, davranışını değil. Davranış testleri yukarıdaki beş testte.
@@ -138,6 +202,7 @@ describe('EArsivClient', () => {
       'createDraft',
       'listDrafts',
       'listIncoming',
+      'listIncomingExternal',
       'getInvoice',
       'cancelDraft',
       'getInvoiceHtml',
@@ -152,6 +217,7 @@ describe('EArsivClient', () => {
       'getPhoneNumber',
       'createCancellationRequest',
       'createObjectionRequest',
+      'createObjectionRequestForIncoming',
       'listDisputeRequests',
       'respondToDisputeRequest',
     ]) {

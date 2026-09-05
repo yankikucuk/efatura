@@ -13,7 +13,13 @@ import {
 import { formatMinor, formatPortalDate, formatPortalTime, toMinor } from '../../core/index.js'
 
 import { computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
-import type { InvoiceInput, InvoiceSummary, InvoiceTotals, LineItemInput } from './invoice.types.js'
+import type {
+  IncomingExternalSummary,
+  InvoiceInput,
+  InvoiceSummary,
+  InvoiceTotals,
+  LineItemInput,
+} from './invoice.types.js'
 
 const str = (value: unknown, fallback = ''): string =>
   typeof value === 'string' ? value : typeof value === 'number' ? String(value) : fallback
@@ -172,6 +178,28 @@ export function toInvoiceSummary(raw: Record<string, unknown>): InvoiceSummary {
     documentNumber: str(raw.belgeNumarasi),
     buyerTaxOrIdentityNumber: str(raw.aliciVknTckn),
     buyerName: str(raw.aliciUnvanAdSoyad),
+    date: normalizePortalDate(raw.belgeTarihi),
+    documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
+    approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,
+  }
+}
+
+/**
+ * Entegratör (portal harici) adıma düzenlenen belge satırını eşler.
+ *
+ * `toInvoiceSummary`'den BİLİNÇLİ olarak ayrı: bu listede siz her zaman
+ * alıcısınız, bu yüzden portalın filtre alanıyla (`saticiVknTckn`) tutarlı
+ * olarak satıcı kimliği taşınır — `aliciVknTckn`/`aliciUnvanAdSoyad` değil.
+ * Entegratörün kendi fatura numarası (`faturaNo`) da portalın belge
+ * numarasından (`belgeNumarasi`) ayrı bir alan olarak taşınır.
+ */
+export function toIncomingExternalSummary(raw: Record<string, unknown>): IncomingExternalSummary {
+  return {
+    ettn: str(raw.ettn),
+    documentNumber: str(raw.belgeNumarasi),
+    invoiceNumber: str(raw.faturaNo),
+    sellerTaxOrIdentityNumber: str(raw.saticiVknTckn),
+    sellerName: str(raw.saticiUnvanAdSoyad),
     date: normalizePortalDate(raw.belgeTarihi),
     documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
     approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,

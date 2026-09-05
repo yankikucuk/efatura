@@ -13,6 +13,9 @@ describe('komut kataloğu', () => {
     expect(Command.CREATE_INVOICE).toBe('EARSIV_PORTAL_FATURA_OLUSTUR')
     expect(Command.LIST_INVOICES).toBe('EARSIV_PORTAL_TASLAKLARI_GETIR')
     expect(Command.LIST_INCOMING).toBe('EARSIV_PORTAL_ADIMA_KESILEN_BELGELERI_GETIR')
+    expect(Command.LIST_INCOMING_EXTERNAL).toBe(
+      'EARSIV_PORTAL_ENTEGRATOR_ADIMA_DUZENLENENLER_SORGULA',
+    )
     expect(Command.GET_INVOICE).toBe('EARSIV_PORTAL_FATURA_GETIR')
     expect(Command.DELETE_INVOICE).toBe('EARSIV_PORTAL_FATURA_SIL')
     expect(Command.SHOW_INVOICE).toBe('EARSIV_PORTAL_FATURA_GOSTER')
@@ -37,6 +40,7 @@ describe('komut kataloğu', () => {
     expect(PageName.INTERACTIVE_DRAFTS).toBe('RG_BASITTASLAKLAR')
     expect(PageName.DRAFTS).toBe('RG_TASLAKLAR')
     expect(PageName.INCOMING_DRAFTS).toBe('RG_ALICI_TASLAKLAR')
+    expect(PageName.INCOMING_INTEGRATOR).toBe('RG_ALICI_ENTEGRATOR')
     expect(PageName.DISPUTE_DRAFTS).toBe('RG_IPTALITIRAZTASLAKLAR')
     expect(PageName.USER).toBe('RG_KULLANICI')
     expect(PageName.SMS_APPROVAL).toBe('RG_SMSONAY')
@@ -149,5 +153,9 @@ describe('RETRYABLE_COMMANDS (round 2 madde 2)', () => {
     ['RESPOND_TO_DISPUTE', Command.RESPOND_TO_DISPUTE],
   ])('%s mutasyon komutu RETRYABLE_COMMANDS içinde DEĞİLDİR', (_name, command) => {
     expect(RETRYABLE_COMMANDS.has(command)).toBe(false)
+  })
+
+  it('LIST_INCOMING_EXTERNAL salt okunur olduğu için RETRYABLE_COMMANDS içindedir', () => {
+    expect(RETRYABLE_COMMANDS.has(Command.LIST_INCOMING_EXTERNAL)).toBe(true)
   })
 })

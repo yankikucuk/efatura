@@ -50,9 +50,10 @@ Daha kapsamlı örnekler için `examples/` dizinine bakın:
 ## Özellikler
 
 - Oturum yönetimi: `login`, `loginWithTestUser`, `logout`, `setToken`
-- Fatura: oluşturma (`createDraft`), listeleme (`listDrafts`, `listIncoming`),
-  okuma (`getInvoice`), silme (`cancelDraft` — varsayılan bugün, `{ date }`
-  seçeneğiyle başka bir günün taslağı da hedeflenebilir)
+- Fatura: oluşturma (`createDraft`), listeleme (`listDrafts`, `listIncoming`,
+  `listIncomingExternal`), okuma (`getInvoice`), silme (`cancelDraft` —
+  varsayılan bugün, `{ date }` seçeneğiyle başka bir günün taslağı da
+  hedeflenebilir)
 - Toplamların kalemlerden otomatik hesaplanması (tam sayı kuruş aritmetiği);
   `getInvoice` okurken kalemlerden yeniden HESAPLAMAZ, portalın kendi
   `matrah`/`hesaplanankdv`/`odenecekTutar` gibi resmi rakamlarını raporlar
@@ -60,9 +61,38 @@ Daha kapsamlı örnekler için `examples/` dizinine bakın:
   (`downloadPackage`, ZIP), doğrudan indirme adresi (`getDownloadUrl`)
 - SMS ile fatura imzalama (`getPhoneNumber`, `sendSmsCode`, `verifySmsCode` —
   başarısızlıkta `EArsivApiError` fırlatır, `boolean` DÖNDÜRMEZ)
-- İptal ve itiraz talepleri: oluşturma, listeleme, cevaplama
+- İptal ve itiraz talepleri: oluşturma (`createCancellationRequest`,
+  `createObjectionRequest`, `createObjectionRequestForIncoming`), listeleme,
+  cevaplama
 - Firma bilgisi okuma/güncelleme, VKN ile firma sorgulama
 - Opsiyonel PDF üretimi (`toPdf`) — `puppeteer` peer bağımlılığı gerektirir
+
+## Gelen belgeler: portal vs entegratör
+
+Adınıza düzenlenen belgeler İKİ ayrı yoldan gelebilir ve portal bunları İKİ
+farklı ekranda/komutta listeler:
+
+- `listIncoming(from, to)` — yalnızca PORTALIN KENDİSİ üzerinden düzenlenen
+  belgeler ("Adıma Kesilen Belgeler").
+- `listIncomingExternal(from, to, filters?)` — bir ENTEGRATÖR aracılığıyla
+  (portalın kendisi DEĞİL) düzenlenen belgeler ("Portal Harici Adıma
+  Düzenlenen Belgeler"). Pratikte büyük firmalardan gelen B2B faturaların
+  çoğu bu yolla gelir ve `listIncoming` bunları GÖSTERMEZ.
+
+```ts
+const fromPortal = await client.listIncoming(new Date('2026-09-01'), new Date())
+const fromIntegrators = await client.listIncomingExternal(
+  new Date('2026-09-01'),
+  new Date(),
+  { sellerTaxOrIdentityNumber: '9999999999' }, // üç filtre de opsiyonel
+)
+```
+
+`listIncomingExternal`'ın satır tipi (`IncomingExternalSummary`)
+`listIncoming`'inkinden (`InvoiceSummary`) FARKLIDIR: bu listede siz her
+zaman alıcı olduğunuz için satır, alıcı kimliği yerine SATICI kimliğini
+(`sellerTaxOrIdentityNumber`, `sellerName`) ve entegratörün kendi verdiği ayrı
+bir fatura numarasını (`invoiceNumber`) taşır.
 
 ## PHP kütüphanesinden farklar
 
@@ -182,10 +212,30 @@ URL'yi başka bir host'a taşıyıp orada açmak da aynı şekilde başarısız 
 
 ## İptal/itiraz ön koşulu
 
-`createCancellationRequest` ve `createObjectionRequest` yalnızca
-**onaylanmış (imzalanmış)** bir belge için çalışır ve her belge için en
-fazla bir kez açılabilir; taslak veya daha önce talebi açılmış bir belgede
-portal iş kuralı hatası döndürür (`EArsivApiError`).
+`createCancellationRequest`, `createObjectionRequest` ve
+`createObjectionRequestForIncoming` yalnızca **onaylanmış (imzalanmış)** bir
+belge için çalışır ve her belge için en fazla bir kez açılabilir; taslak veya
+daha önce talebi açılmış bir belgede portal iş kuralı hatası döndürür
+(`EArsivApiError`).
+
+### İki itiraz yükü: kendi belgeniz vs adınıza düzenlenmiş belge
+
+Portal, itiraz talebi için EKRANA göre farklı yük bekler — `createObjectionRequest`
+ve `createObjectionRequestForIncoming` bu ikisini KARIŞTIRMAZ:
+
+- `createObjectionRequest(input)` — **kendi düzenlediğiniz** bir belgeye
+  itiraz (yedi alan: `ettn`, `method`, `referenceDocumentId`,
+  `referenceDocumentDate`, `reason`, opsiyonel `approvalStatus`/`documentType`).
+  Nadir bir senaryodur; çoğu kullanım aşağıdakidir.
+- `createObjectionRequestForIncoming(input)` — **adınıza düzenlenmiş**
+  (portal veya entegratör) bir belgeye itiraz — kütüphanenin belgelediği asıl
+  kullanım durumu. Yukarıdaki yedi alana ek olarak `invoiceOid` (`faturaOid`),
+  `totalAmount` (`toplamTutar`), `sellerTaxOrIdentityNumber` (`saticiVknTckn`)
+  ve `documentNumber` (`belgeNumarasi`) ZORUNLUDUR — bu dört alan
+  `listIncoming`/`listIncomingExternal` satırlarından okunur. Portal bu
+  yükleri farklı sayfalara (`RG_TASLAKLAR` vs `RG_ALICI_TASLAKLAR`) gönderiyor
+  olarak doğrular; yanlış eşleşme "Bu işlem için yetkiniz yok" hatasına yol
+  açar.
 
 ## Kapsam dışı
 

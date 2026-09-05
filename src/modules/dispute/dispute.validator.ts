@@ -4,6 +4,7 @@ import { EArsivValidationError, type ValidationIssue } from '../../core/index.js
 import type {
   CancellationRequestInput,
   DisputeResponseInput,
+  IncomingObjectionRequestInput,
   ObjectionRequestInput,
 } from './dispute.types.js'
 
@@ -31,10 +32,13 @@ export function validateCancellationRequest(input: CancellationRequestInput): vo
 }
 
 /**
- * Portalın kendi istemci kontrolü: itirazda belge sayısı, belge tarihi ve
+ * `ObjectionRequestInput`'un ortak yedi alanını doğrular — hem kendi
+ * belgenize (`validateObjectionRequest`) hem de adınıza düzenlenmiş bir
+ * belgeye (`validateIncomingObjectionRequest`) itiraz için PAYLAŞILAN kural
+ * kümesi. Portalın kendi istemci kontrolü: belge sayısı, belge tarihi ve
  * gerekçe zorunludur.
  */
-export function validateObjectionRequest(input: ObjectionRequestInput): void {
+function objectionCommonIssues(input: ObjectionRequestInput): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   if (isBlank(input.ettn)) issues.push({ path: 'ettn', message: 'ETTN boş olamaz.' })
   if (isBlank(input.referenceDocumentId)) {
@@ -53,6 +57,48 @@ export function validateObjectionRequest(input: ObjectionRequestInput): void {
   }
   if (isBlank(input.reason)) {
     issues.push({ path: 'reason', message: 'Lütfen açıklama alanına itiraz gerekçenizi yazınız.' })
+  }
+  return issues
+}
+
+/**
+ * Kendi düzenlediğiniz bir belgeye itiraz talebi doğrular (yedi alanlı
+ * varyant, `RG_TASLAKLAR`).
+ */
+export function validateObjectionRequest(input: ObjectionRequestInput): void {
+  raise(objectionCommonIssues(input))
+}
+
+/**
+ * Adınıza düzenlenmiş (portal veya entegratör) bir belgeye itiraz talebi
+ * doğrular — on bir alanlı varyant, `RG_ALICI_TASLAKLAR`. Ortak yedi alana
+ * ek olarak dördü BİRLİKTE zorunludur: `invoiceOid`, `totalAmount`,
+ * `sellerTaxOrIdentityNumber`, `documentNumber`. Bu dört alan
+ * `IncomingObjectionRequestInput`'ta zaten (opsiyonel değil) ZORUNLU
+ * olduğundan burada "ikisi verilip ikisi unutulur" durumu YOKTUR — yalnızca
+ * her birinin boş/geçersiz OLUP OLMADIĞI kontrol edilir.
+ */
+export function validateIncomingObjectionRequest(input: IncomingObjectionRequestInput): void {
+  const issues = objectionCommonIssues(input)
+  if (isBlank(input.invoiceOid)) {
+    issues.push({
+      path: 'invoiceOid',
+      message: 'Faturanın portal içi kaydı (invoiceOid) boş olamaz.',
+    })
+  }
+  if (isBlank(input.sellerTaxOrIdentityNumber)) {
+    issues.push({
+      path: 'sellerTaxOrIdentityNumber',
+      message: "Belgeyi düzenleyen satıcının VKN/TCKN'i boş olamaz.",
+    })
+  }
+  if (isBlank(input.documentNumber)) {
+    issues.push({ path: 'documentNumber', message: 'Belge numarası boş olamaz.' })
+  }
+  if (typeof input.totalAmount !== 'number' || !Number.isFinite(input.totalAmount)) {
+    issues.push({ path: 'totalAmount', message: 'Toplam tutar geçerli, sonlu bir sayı olmalı.' })
+  } else if (input.totalAmount < 0) {
+    issues.push({ path: 'totalAmount', message: 'Toplam tutar negatif olamaz.' })
   }
   raise(issues)
 }

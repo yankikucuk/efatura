@@ -44,7 +44,30 @@ try {
   else throw error
 }
 
-// Adınıza düzenlenmiş bir belgeye itiraz
+// Adınıza düzenlenmiş bir belgeye itiraz — bu kütüphanenin belgelediği asıl
+// kullanım durumu (bkz. README "İki itiraz yükü"). Gerçek bir akışta
+// invoiceOid/totalAmount/sellerTaxOrIdentityNumber/documentNumber
+// listIncoming veya listIncomingExternal satırından okunur; burada
+// örnek olsun diye elle veriliyor.
+try {
+  await client.createObjectionRequestForIncoming({
+    ettn: '00000000-0000-0000-0000-000000000000',
+    invoiceOid: '0',
+    totalAmount: 1180,
+    sellerTaxOrIdentityNumber: '9999999999',
+    documentNumber: 'GIB2026000000001',
+    method: DisputeMethod.KEP,
+    referenceDocumentId: '2026/42',
+    referenceDocumentDate: new Date(),
+    reason: 'Söz konusu hizmet tarafımıza sunulmamıştır.',
+  })
+} catch (error) {
+  if (error instanceof EArsivApiError) console.log('Portal:', error.message)
+  else throw error
+}
+
+// Kendi düzenlediğiniz bir belgeye itiraz (nadir senaryo — normalde iptal
+// kullanılır); yedi alanlı diğer yük buradan da erişilebilir kalır.
 try {
   await client.createObjectionRequest({
     ettn: '00000000-0000-0000-0000-000000000000',

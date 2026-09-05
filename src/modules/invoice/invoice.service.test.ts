@@ -196,6 +196,79 @@ describe('InvoiceService.listIncoming', () => {
   })
 })
 
+describe('InvoiceService.listIncomingExternal', () => {
+  const externalRow = (ettn: string): Record<string, unknown> => ({
+    ettn,
+    belgeNumarasi: `GIB-${ettn}`,
+    faturaNo: `ENT-${ettn}`,
+    saticiVknTckn: '9999999999',
+    saticiUnvanAdSoyad: 'Entegratör Satıcı A.Ş.',
+    belgeTarihi: '03-09-2026',
+    belgeTuru: 'FATURA',
+    onayDurumu: 'Onaylandı',
+  })
+
+  it('entegratör komutunu ve doğru sayfa adını gönderir, filtresiz çağrıda boş string kullanır', async () => {
+    const call = vi.fn().mockResolvedValue([externalRow('a')])
+    await new InvoiceService(gatewayMock(call)).listIncomingExternal('01/09/2026', '03/09/2026')
+
+    expect(call.mock.calls[0]?.[0]).toBe('EARSIV_PORTAL_ENTEGRATOR_ADIMA_DUZENLENENLER_SORGULA')
+    // pageName kasıtlı olarak RG_ALICI_TASLAKLAR'DAN FARKLI: yanlış sayfa
+    // adı "Bu işlem için yetkiniz yok" hatasına yol açar (bkz. rapor).
+    expect(call.mock.calls[0]?.[1]).toBe('RG_ALICI_ENTEGRATOR')
+    expect(call.mock.calls[0]?.[2]).toEqual({
+      saticiVknTckn: '',
+      belgeTuru: '',
+      faturaNo: '',
+      baslangic: '01/09/2026',
+      bitis: '03/09/2026',
+    })
+  })
+
+  it('verilen filtreleri yükte gönderir', async () => {
+    const call = vi.fn().mockResolvedValue([])
+    await new InvoiceService(gatewayMock(call)).listIncomingExternal('01/09/2026', '03/09/2026', {
+      sellerTaxOrIdentityNumber: '9999999999',
+      documentType: 'FATURA',
+      invoiceNumber: 'ENT-42',
+    })
+
+    expect(call.mock.calls[0]?.[2]).toEqual({
+      saticiVknTckn: '9999999999',
+      belgeTuru: 'FATURA',
+      faturaNo: 'ENT-42',
+      baslangic: '01/09/2026',
+      bitis: '03/09/2026',
+    })
+  })
+
+  it('satırları satıcı kimliğiyle eşler (toInvoiceSummary DEĞİL)', async () => {
+    const call = vi.fn().mockResolvedValue([externalRow('a')])
+    const [result] = await new InvoiceService(gatewayMock(call)).listIncomingExternal(
+      '01/09/2026',
+      '03/09/2026',
+    )
+
+    expect(result).toEqual({
+      ettn: 'a',
+      documentNumber: 'GIB-a',
+      invoiceNumber: 'ENT-a',
+      sellerTaxOrIdentityNumber: '9999999999',
+      sellerName: 'Entegratör Satıcı A.Ş.',
+      date: '03/09/2026',
+      documentType: 'FATURA',
+      approvalStatus: 'Onaylandı',
+    })
+  })
+
+  it('dizi olmayan yanıtı boş listeye çevirir', async () => {
+    const call = vi.fn().mockResolvedValue(null)
+    expect(
+      await new InvoiceService(gatewayMock(call)).listIncomingExternal('01/09/2026', '03/09/2026'),
+    ).toEqual([])
+  })
+})
+
 describe('InvoiceService.getInvoice', () => {
   it('ETTN ile detay çeker', async () => {
     const call = vi.fn().mockResolvedValue({

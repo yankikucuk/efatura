@@ -13,6 +13,7 @@ import {
   fromPortalPayload,
   normalizePortalDate,
   portalTotals,
+  toIncomingExternalSummary,
   toInvoiceSummary,
   toPortalInvoice,
 } from './invoice.mapper.js'
@@ -25,9 +26,11 @@ import {
 import type {
   CancelDraftOptions,
   CreatedInvoice,
+  IncomingExternalSummary,
   InvoiceDetail,
   InvoiceInput,
   InvoiceSummary,
+  ListIncomingExternalFilters,
   ListOptions,
 } from './invoice.types.js'
 import { validateInvoiceInput } from './invoice.validator.js'
@@ -143,6 +146,35 @@ export class InvoiceService {
       bitis: formatPortalDate(to),
     })
     return asRows(data).map(toInvoiceSummary)
+  }
+
+  /**
+   * "Portal Harici Adıma Düzenlenen Belgeler" — bir ENTEGRATÖR aracılığıyla
+   * (portalın kendisi değil) adınıza düzenlenmiş belgeleri listeler.
+   *
+   * `listIncoming`'den farkı budur: `listIncoming` yalnızca portalın
+   * KENDİSİNDEN düzenlenen belgeleri kapsar, ki pratikte büyük firmalardan
+   * gelen B2B faturaların çoğu bir entegratör üzerinden gelir ve o listede
+   * GÖRÜNMEZ. Üç filtre alanı da portalın kendi ekranında opsiyoneldir; boş
+   * bırakılan alan "filtre yok" anlamına gelir.
+   */
+  async listIncomingExternal(
+    from: DateInput,
+    to: DateInput,
+    filters: ListIncomingExternalFilters = {},
+  ): Promise<IncomingExternalSummary[]> {
+    const data = await this.gateway.call<unknown>(
+      Command.LIST_INCOMING_EXTERNAL,
+      PageName.INCOMING_INTEGRATOR,
+      {
+        saticiVknTckn: filters.sellerTaxOrIdentityNumber ?? '',
+        belgeTuru: filters.documentType ?? '',
+        faturaNo: filters.invoiceNumber ?? '',
+        baslangic: formatPortalDate(from),
+        bitis: formatPortalDate(to),
+      },
+    )
+    return asRows(data).map(toIncomingExternalSummary)
   }
 
   /** Tek bir faturanın tam detayını getirir. */

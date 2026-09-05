@@ -1,5 +1,5 @@
 import { ApprovalStatus, Command, DocumentType, PageName } from '../../constants/index.js'
-import { type DateInput, formatPortalDate } from '../../core/index.js'
+import { type DateInput, formatMinor, formatPortalDate, toMinor } from '../../core/index.js'
 import type { DispatchGateway } from '../../transport/index.js'
 
 import { toDisputeRequest } from './dispute.mapper.js'
@@ -7,11 +7,13 @@ import type {
   CancellationRequestInput,
   DisputeRequest,
   DisputeResponseInput,
+  IncomingObjectionRequestInput,
   ObjectionRequestInput,
 } from './dispute.types.js'
 import {
   validateCancellationRequest,
   validateDisputeResponse,
+  validateIncomingObjectionRequest,
   validateObjectionRequest,
 } from './dispute.validator.js'
 
@@ -39,11 +41,39 @@ export class DisputeService {
     })
   }
 
-  /** Adınıza düzenlenmiş bir belgeye itiraz talebi açar. */
+  /**
+   * Kendi düzenlediğiniz bir belgeye itiraz talebi açar (yedi alanlı yük,
+   * `RG_TASLAKLAR`). Adınıza düzenlenmiş bir belgeye itiraz için
+   * `createObjectionRequestForIncoming` kullanın — portal bu iki durum için
+   * FARKLI yükler bekler (bkz. rapor, Fix 2).
+   */
   async createObjectionRequest(input: ObjectionRequestInput): Promise<string> {
     validateObjectionRequest(input)
     return this.gateway.call<string>(Command.CREATE_OBJECTION_REQUEST, PageName.DRAFTS, {
       ettn: input.ettn,
+      onayDurumu: input.approvalStatus ?? ApprovalStatus.APPROVED,
+      belgeTuru: input.documentType ?? DocumentType.INVOICE,
+      itirazYontemi: input.method,
+      referansBelgeId: input.referenceDocumentId,
+      referansBelgeTarihi: formatPortalDate(input.referenceDocumentDate),
+      talepAciklama: input.reason,
+    })
+  }
+
+  /**
+   * Adınıza düzenlenmiş (portal veya entegratör) bir belgeye itiraz talebi
+   * açar — spec §9.2'nin belgelediği asıl kullanım durumu. On bir alanlı yük
+   * ve `RG_ALICI_TASLAKLAR` sayfa adı gönderir; `createObjectionRequest`'in
+   * yedi alanlı, `RG_TASLAKLAR` sayfa adlı yüküyle KARIŞTIRILMAMALIDIR.
+   */
+  async createObjectionRequestForIncoming(input: IncomingObjectionRequestInput): Promise<string> {
+    validateIncomingObjectionRequest(input)
+    return this.gateway.call<string>(Command.CREATE_OBJECTION_REQUEST, PageName.INCOMING_DRAFTS, {
+      ettn: input.ettn,
+      faturaOid: input.invoiceOid,
+      toplamTutar: formatMinor(toMinor(input.totalAmount)),
+      saticiVknTckn: input.sellerTaxOrIdentityNumber,
+      belgeNumarasi: input.documentNumber,
       onayDurumu: input.approvalStatus ?? ApprovalStatus.APPROVED,
       belgeTuru: input.documentType ?? DocumentType.INVOICE,
       itirazYontemi: input.method,

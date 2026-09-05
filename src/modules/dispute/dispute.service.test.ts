@@ -71,6 +71,61 @@ describe('DisputeService.createObjectionRequest', () => {
   })
 })
 
+describe('DisputeService.createObjectionRequestForIncoming', () => {
+  it('on bir alanlı yükü RG_ALICI_TASLAKLAR sayfasına gönderir', async () => {
+    const call = vi.fn().mockResolvedValue('başarıyla')
+
+    await new DisputeService(gatewayMock(call)).createObjectionRequestForIncoming({
+      ettn: 'abc',
+      invoiceOid: '999',
+      totalAmount: 120,
+      sellerTaxOrIdentityNumber: '9999999999',
+      documentNumber: 'GIB123',
+      method: DisputeMethod.NOTARY,
+      referenceDocumentId: '2026/42',
+      referenceDocumentDate: new Date(2026, 8, 3),
+      reason: 'Hizmet alınmadı',
+    })
+
+    // pageName KASITLI olarak createObjectionRequest'in gönderdiği
+    // RG_TASLAKLAR'DAN FARKLI — bu ayrım Fix 2'nin bütün amacı. Yalnızca
+    // komut adını doğrulayan bir test, iki değişkeni de yeşil geçirirdi.
+    expect(call.mock.calls[0]?.[0]).toBe('EARSIV_PORTAL_ITIRAZ_TALEBI_OLUSTUR')
+    expect(call.mock.calls[0]?.[1]).toBe('RG_ALICI_TASLAKLAR')
+    expect(call.mock.calls[0]?.[2]).toEqual({
+      ettn: 'abc',
+      faturaOid: '999',
+      toplamTutar: '120.00',
+      saticiVknTckn: '9999999999',
+      belgeNumarasi: 'GIB123',
+      onayDurumu: 'Onaylandı',
+      belgeTuru: 'FATURA',
+      itirazYontemi: 'NOTER',
+      referansBelgeId: '2026/42',
+      referansBelgeTarihi: '03/09/2026',
+      talepAciklama: 'Hizmet alınmadı',
+    })
+  })
+
+  it('geçersiz girdide (dört alandan biri eksik) ağa çıkmaz', async () => {
+    const call = vi.fn()
+    await expect(
+      new DisputeService(gatewayMock(call)).createObjectionRequestForIncoming({
+        ettn: 'abc',
+        invoiceOid: '',
+        totalAmount: 120,
+        sellerTaxOrIdentityNumber: '9999999999',
+        documentNumber: 'GIB123',
+        method: DisputeMethod.NOTARY,
+        referenceDocumentId: '2026/42',
+        referenceDocumentDate: new Date(2026, 8, 3),
+        reason: 'Hizmet alınmadı',
+      }),
+    ).rejects.toThrow(/invoiceOid|portal içi kayıt/i)
+    expect(call).not.toHaveBeenCalled()
+  })
+})
+
 describe('DisputeService.listRequests', () => {
   it('tarih aralığını gönderir ve satırları eşler', async () => {
     const call = vi.fn().mockResolvedValue([

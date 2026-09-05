@@ -6,16 +6,19 @@ import {
   DisputeService,
   type DisputeRequest,
   type DisputeResponseInput,
+  type IncomingObjectionRequestInput,
   type ObjectionRequestInput,
 } from '../modules/dispute/index.js'
 import { type DocumentOptions, DocumentService } from '../modules/document/index.js'
 import {
   type CancelDraftOptions,
   type CreatedInvoice,
+  type IncomingExternalSummary,
   type InvoiceDetail,
   type InvoiceInput,
   InvoiceService,
   type InvoiceSummary,
+  type ListIncomingExternalFilters,
   type ListOptions,
 } from '../modules/invoice/index.js'
 import {
@@ -107,6 +110,15 @@ export class EArsivClient {
     return this.invoices.listIncoming(from, to)
   }
 
+  /** Bir ENTEGRATÖR aracılığıyla (portalın kendisi değil) adınıza düzenlenmiş belgeleri listeler. */
+  async listIncomingExternal(
+    from: DateInput,
+    to: DateInput,
+    filters?: ListIncomingExternalFilters,
+  ): Promise<IncomingExternalSummary[]> {
+    return this.invoices.listIncomingExternal(from, to, filters)
+  }
+
   async getInvoice(ettn: string): Promise<InvoiceDetail> {
     return this.invoices.getInvoice(ettn)
   }
@@ -173,6 +185,11 @@ export class EArsivClient {
 
   async createObjectionRequest(input: ObjectionRequestInput): Promise<string> {
     return this.disputes.createObjectionRequest(input)
+  }
+
+  /** Adınıza düzenlenmiş (portal veya entegratör) bir belgeye itiraz talebi açar — spec §9.2. */
+  async createObjectionRequestForIncoming(input: IncomingObjectionRequestInput): Promise<string> {
+    return this.disputes.createObjectionRequestForIncoming(input)
   }
 
   async listDisputeRequests(from: DateInput, to: DateInput): Promise<DisputeRequest[]> {

@@ -174,6 +174,41 @@ export interface ListOptions {
   kind?: InvoiceListKindValue
 }
 
+/**
+ * `listIncomingExternal` filtreleri — portalın kendi ekranında üçü de
+ * opsiyoneldir; boş bırakılan alan "filtre yok" anlamına gelir.
+ */
+export interface ListIncomingExternalFilters {
+  sellerTaxOrIdentityNumber?: string
+  documentType?: DocumentTypeCode
+  invoiceNumber?: string
+}
+
+/**
+ * "Portal Harici Adıma Düzenlenen Belgeler" satırı — bir ENTEGRATÖR
+ * aracılığıyla adınıza düzenlenmiş belge. `InvoiceSummary`'den farklı: satıcı
+ * kimliği taşır (bu listede siz her zaman alıcısınız) ve entegratörün verdiği
+ * ayrı bir fatura numarası (`invoiceNumber`) içerir.
+ *
+ * NOT: alan adları portalın filtre alanlarıyla (`saticiVknTckn`, `belgeTuru`,
+ * `faturaNo`) ve diğer belge listelerindeki (`belgeNumarasi`, `belgeTarihi`,
+ * `onayDurumu`) tutarlı adlandırma kuralından çıkarıldı; canlı test
+ * ortamındaki paylaşımlı test kullanıcısında gerçek bir entegratör kaydı
+ * gözlemlenemedi (bkz. rapor). Gerçek bir yanıt görüldüğünde bu tip ve
+ * mapper'ı buna göre doğrulayın/düzeltin.
+ */
+export interface IncomingExternalSummary {
+  ettn: string
+  documentNumber: string
+  /** Entegratörün verdiği fatura numarası — `belgeNumarasi`'ndan ayrı. */
+  invoiceNumber: string
+  sellerTaxOrIdentityNumber: string
+  sellerName: string
+  date: string
+  documentType: DocumentTypeCode
+  approvalStatus: ApprovalStatusValue
+}
+
 export interface CancelDraftOptions {
   /**
    * Taslağın aranacağı tarih. Varsayılan: bugün.

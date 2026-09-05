@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
 import { Country, Currency, InvoiceType, Unit } from '../../constants/index.js'
 
-import { fromPortalPayload, num, toInvoiceSummary, toPortalInvoice } from './invoice.mapper.js'
+import {
+  fromPortalPayload,
+  num,
+  toIncomingExternalSummary,
+  toInvoiceSummary,
+  toPortalInvoice,
+} from './invoice.mapper.js'
 import type { InvoiceInput } from './invoice.types.js'
 
 const input = (overrides: Partial<InvoiceInput> = {}): InvoiceInput => ({
@@ -176,6 +182,51 @@ describe('toInvoiceSummary', () => {
     }
     expect(() => toInvoiceSummary(row)).not.toThrow()
     expect(toInvoiceSummary(row).date).toBe('')
+  })
+})
+
+describe('toIncomingExternalSummary', () => {
+  it('entegratör satırını satıcı kimliğiyle eşler (portal alıcı kimliğinden FARKLI alanlar)', () => {
+    // Bu test yalnızca alan SAYISINI değil, satıcı-özel alanların (seller*,
+    // invoiceNumber) doğru anahtarlardan okunduğunu doğrular — aksi halde bu
+    // satırları yanlışlıkla toInvoiceSummary'den geçirmek (alıcı alanlarını
+    // arayıp bulamadığı için) sessizce boş satıcı kimliği üretirdi.
+    const row: Record<string, unknown> = {
+      ettn: 'ettn-1',
+      belgeNumarasi: 'GIB2026000000123',
+      faturaNo: 'ENT-2026-000042',
+      saticiVknTckn: '9999999999',
+      saticiUnvanAdSoyad: 'Entegratör Satıcı A.Ş.',
+      belgeTarihi: '03-09-2026',
+      belgeTuru: 'FATURA',
+      onayDurumu: 'Onaylandı',
+    }
+
+    expect(toIncomingExternalSummary(row)).toEqual({
+      ettn: 'ettn-1',
+      documentNumber: 'GIB2026000000123',
+      invoiceNumber: 'ENT-2026-000042',
+      sellerTaxOrIdentityNumber: '9999999999',
+      sellerName: 'Entegratör Satıcı A.Ş.',
+      date: '03/09/2026',
+      documentType: 'FATURA',
+      approvalStatus: 'Onaylandı',
+    })
+  })
+
+  it('ayrıştırılamayan tarihte hata fırlatmaz (I5 ile aynı sağlamlaştırma)', () => {
+    const row: Record<string, unknown> = {
+      ettn: 'ettn-2',
+      belgeNumarasi: 'GIB1',
+      faturaNo: '',
+      saticiVknTckn: '9999999999',
+      saticiUnvanAdSoyad: 'X',
+      belgeTarihi: '',
+      belgeTuru: 'FATURA',
+      onayDurumu: 'Onaylanmadı',
+    }
+    expect(() => toIncomingExternalSummary(row)).not.toThrow()
+    expect(toIncomingExternalSummary(row).date).toBe('')
   })
 })
 
