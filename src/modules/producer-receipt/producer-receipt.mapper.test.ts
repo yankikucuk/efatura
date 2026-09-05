@@ -1,3 +1,27 @@
+/**
+ * Müstahsil makbuzunun portal yüküne ve portal yanıtından tipli detaya
+ * çevrilmesi.
+ *
+ * Bu dosya baştan sona canlı portal gözlemlerinin kaydıdır; alan adlarının
+ * hiçbiri "mantıklı" oldukları için değil, portal öyle yazdığı için böyledir:
+ *
+ * - Belge toplamı `malhizmetToplamTutari` (küçük "h"), kalem alanı ise
+ *   `malHizmetTutari` (büyük "H"). Camel-case'e "düzeltilen" bir anahtar
+ *   portalda sessizce yok sayılır.
+ * - Belge düzeyi vergi toplamları `hesaplananv0003`, `hesaplananv9040`,
+ *   `hesaplananv8001` — ama dördüncüsü `hesaplananvSGK_PRIMTutari`, yani tek
+ *   başına `Tutari` ekiyle biter. Bir döngüde `hesaplananv${kod}` üretmek bu
+ *   alanı sessizce kaçırır ve SGK primini 0 raporlardı.
+ * - Portal, gönderilen `not` alanının sonuna bir `\n` EKLEYEREK döndürüyor;
+ *   kırpılmazsa her gidiş-dönüş karşılaştırması yanlış negatif verir.
+ *
+ * Okuma yolunun sözü (I4): PORTALIN rakamları raporlanır, kalemlerden yeniden
+ * hesaplanmaz. Kanıt fixture'ı bilerek tutarsızdır — canlı olarak gönderilen
+ * yanlış bir `odenecekTutar` (77,77; aritmetik doğrusu 98,00) portalda aynen
+ * saklandı. Yeniden hesaplayan bir okuma 98 gösterir ve GİB'in kayıtlı
+ * rakamıyla çelişirdi; test tam bu farkı ayırt eder.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
@@ -32,6 +56,9 @@ const input = (overrides: Partial<ProducerReceiptInput> = {}): ProducerReceiptIn
 })
 
 describe('toPortalProducerReceipt', () => {
+  // Kapsam: yazma yönü — portalın kendi (tutarsız) alan adları, dört vergi
+  // ÇİFTİ, opsiyonel alanların boş string olarak doldurulması ve
+  // GÖNDERİLMEYEN alanlar (kimlik alanları, `hesaplanan*` toplamları).
   it('kimlik alanlarını ASLA göndermez — ETTN portal tarafından atanır', () => {
     const payload = toPortalProducerReceipt(input())
     expect(payload).not.toHaveProperty('uuid')
@@ -117,6 +144,9 @@ describe('toPortalProducerReceipt', () => {
 })
 
 describe('toProducerReceiptDetail', () => {
+  // Kapsam: okuma yönü — SAYISAL tutarlar, `uuid` kimlik alanı (SMM'de
+  // `ettn`), `not` alanındaki fazladan satır sonu, asimetrik vergi toplamı
+  // adları ve portalın kendi rakamlarının raporlanması.
   const raw = portalResponses.producerReceiptDetail.data as unknown as Record<string, unknown>
 
   it('canlı yanıttaki SAYISAL tutarları ve `uuid` kimlik alanını okur', () => {

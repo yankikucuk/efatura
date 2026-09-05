@@ -1,3 +1,29 @@
+/**
+ * Serbest meslek makbuzu aritmetiği — brüt ücret → stopaj → net ücret → KDV →
+ * KDV tevkifatı → net alınan zinciri.
+ *
+ * Bu zincirin formülleri hiçbir portal yanıtından TÜRETİLEMEDİ: portal makbuz
+ * tutarlarını ne hesaplıyor ne doğruluyor (`netUcret`/`netAlinan`
+ * gönderilmediğinde bunları hesaplamayıp 0 olarak SAKLIYOR — canlı
+ * doğrulandı). Yani yanlış bir formül sessizce yanlış bir hukuki belge üretir
+ * ve portal itiraz etmez. Formüller mevzuattaki standart SMM hesabına göre
+ * yazıldı ve zincirin HER adımı ayrı bir testle sabitlendi.
+ *
+ * İki test bilinçli olarak "en kolay yapılan hata"yı pinler ve AYIRT EDİCİ
+ * değerlerle yazılmıştır:
+ * - KDV matrahı BRÜT ücrettir, net ücret DEĞİL. Net üzerinden hesaplansaydı
+ *   160 çıkardı; doğrusu 200. (Mutasyon denetimi: ters çevrildiğinde 11 test
+ *   kırılıyor.)
+ * - KDV tevkifatı KDV TUTARININ yüzdesidir, brüt ücretin değil. Brüt üzerinden
+ *   hesaplansaydı 200 çıkardı; doğrusu 40.
+ *
+ * AÇIK KALAN BELİRSİZLİK: `kdvTevkifatOrani` alanının BİRİMİ. Mevzuat oranı
+ * kesirle anıyor (5/10); kütüphane yüzde (0–100) olarak modelledi, portal `50`
+ * değerini kabul edip aynen geri verdi — ama portal bu alanı doğrulamadığı
+ * için "5" gönderilseydi de kabul ederdi. Yani bu seçim portal tarafından
+ * KANITLANMIŞ değildir ve gerçek bir mükellef ekranıyla teyit edilmelidir.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { EArsivValidationError } from '../../core/index.js'
@@ -21,6 +47,8 @@ const item = (
 })
 
 describe('computeSelfEmployedReceiptLineItem', () => {
+  // Kapsam: altı adımlı zincirin her halkası. KDV matrahı ve tevkifat tabanı
+  // ayrı ayrı, ayırt edici değerlerle pinlenir.
   it('brüt ücret → stopaj → net ücret → KDV → tevkifat → net alınan zincirini uygular', () => {
     const computed = computeSelfEmployedReceiptLineItem(item({ vatWithholdingRate: 50 }))
     expect(computed).toMatchObject({
@@ -89,6 +117,10 @@ describe('computeSelfEmployedReceiptLineItem', () => {
 })
 
 describe('computeSelfEmployedReceiptLineItemForRead', () => {
+  // Kapsam: aynı zincirin DOĞRULAMASIZ hâli. Okuma yolu ayrı bir fonksiyondur
+  // çünkü portaldan gelen bir kaydı reddetmek yanlıştır: kullanıcı var olan
+  // bir belgeyi okuyor, yeni bir belge oluşturmuyor — reddetmek onu `raw`
+  // alanına erişmekten bile alıkoyardı (faturadaki I4 kararının aynısı).
   it('okuma yolunda doğrulama YAPMADAN aynı zinciri uygular', () => {
     // Portaldan gelen bir kaydı reddetmek çağıranın `raw`'a erişimini bile
     // engellerdi (faturadaki I4 kararının aynısı).
@@ -102,6 +134,8 @@ describe('computeSelfEmployedReceiptLineItemForRead', () => {
 })
 
 describe('computeSelfEmployedReceiptTotals', () => {
+  // Kapsam: yedi belge toplamının kalemlerden türetilmesi ve çok kalemli
+  // makbuzda her toplamın AYRI AYRI toplanması.
   it('yedi belge toplamını kalemlerden türetir', () => {
     const { totals } = computeSelfEmployedReceiptTotals([item({ vatWithholdingRate: 50 })])
     expect(totals).toEqual({
@@ -133,6 +167,8 @@ describe('computeSelfEmployedReceiptTotals', () => {
 })
 
 describe('sumSelfEmployedReceiptTotals', () => {
+  // Kapsam: okuma yolunda hesaplanmış kalemlerden yeniden toplamanın
+  // oluşturma yoluyla aynı sonucu vermesi.
   it('hesaplanmış kalemlerden aynı toplamları üretir', () => {
     const { lines, totals } = computeSelfEmployedReceiptTotals([item({ vatWithholdingRate: 50 })])
     expect(sumSelfEmployedReceiptTotals(lines)).toEqual(totals)

@@ -2,10 +2,11 @@
 
 GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi.
 
-`earsivportal.efatura.gov.tr` üzerindeki e-Arşiv (perakende) fatura akışını
-kapsar: oturum açma, fatura oluşturma/okuma/listeleme/silme, belge indirme,
-SMS ile imzalama ve iptal/itiraz talepleri. Çalışma zamanı bağımlılığı yoktur;
-tüm istekler `fetch` ile yapılır.
+`earsivportal.efatura.gov.tr` üzerindeki e-Arşiv (perakende) belge akışını
+kapsar ve **üç belge türünü** destekler: fatura, **müstahsil makbuzu** ve
+**serbest meslek makbuzu**. Oturum açma, belge oluşturma/okuma/listeleme,
+belge indirme, SMS ile imzalama ve iptal/itiraz talepleri dahildir. Çalışma
+zamanı bağımlılığı yoktur; tüm istekler `fetch` ile yapılır.
 
 ## Kurulum
 
@@ -40,6 +41,62 @@ console.log(created.ettn, created.documentNumber)
 await client.logout()
 ```
 
+### Müstahsil makbuzu
+
+Aynı `client` üzerinden (yukarıdaki `Unit` import'u geçerli):
+
+```ts
+const receipt = await client.createProducerReceipt({
+  producer: { taxOrIdentityNumber: '11111111111', firstName: 'Ayşe', lastName: 'Demir' },
+  city: 'Konya',
+  note: 'Eylül alımı',
+  lineItems: [
+    {
+      name: 'Buğday',
+      quantity: 100,
+      unit: Unit.KILOGRAM,
+      unitPrice: 12,
+      // Dört kesintinin tamamı opsiyoneldir; verilmeyen sıfır sayılır.
+      taxRates: { incomeTaxWithholding: 2, pastureFund: 1 },
+    },
+  ],
+})
+
+const detail = await client.getProducerReceipt(receipt.ettn)
+// 1200 brüt, 24 + 12 kesinti, 1164 ödenecek: makbuzda vergiler EKLENMEZ, KESİLİR.
+console.log(detail.totals.payableAmount)
+
+const html = await client.getProducerReceiptHtml(receipt.ettn)
+```
+
+### Serbest meslek makbuzu
+
+```ts
+const smm = await client.createSelfEmployedReceipt({
+  payer: { taxOrIdentityNumber: '1111111111', title: 'ÖRNEK A.Ş.', taxOffice: 'Kadıköy' },
+  description: 'Eylül 2026 danışmanlık',
+  lineItems: [
+    {
+      description: 'Mali müşavirlik',
+      grossFee: 10_000,
+      vatRate: 20,
+      withholdingRate: 20,
+      // Mevzuattaki 5/10 kesri YÜZDE olarak verilir.
+      vatWithholdingRate: 50,
+    },
+  ],
+})
+
+const smmDetail = await client.getSelfEmployedReceipt(smm.ettn)
+// 10.000 brüt → 2.000 stopaj → 8.000 net ücret → 2.000 KDV → 1.000 tevkifat
+// → 1.000 tahsil edilen KDV → 9.000 net alınan.
+console.log(smmDetail.totals.netReceived)
+
+// DİKKAT: SMM'nin HTML/PDF gösterimi PORTALDA bozuktur ve bu çağrı ağa
+// çıkmadan EArsivPortalDefectError fırlatır. Aşağıya bakın.
+// client.getSelfEmployedReceiptHtml(smm.ettn)
+```
+
 Daha kapsamlı örnekler için `examples/` dizinine bakın:
 
 - `examples/01-test-login.ts` — test kullanıcısıyla giriş
@@ -53,7 +110,18 @@ Daha kapsamlı örnekler için `examples/` dizinine bakın:
 - Fatura: oluşturma (`createDraft`), listeleme (`listDrafts`, `listIncoming`,
   `listIncomingExternal`), okuma (`getInvoice`), silme (`cancelDraft` —
   varsayılan bugün, `{ date }` seçeneğiyle başka bir günün taslağı da
-  hedeflenebilir)
+  hedeflenebilir; test portalında ÇALIŞMIYOR, bkz. "Bilinen kısıtlar")
+- **Müstahsil Makbuzu**: oluşturma (`createProducerReceipt`), listeleme
+  (`listProducerReceipts`), okuma (`getProducerReceipt`), HTML gösterimi
+  (`getProducerReceiptHtml`), PDF (`producerReceiptToPdf`). Dört kesinti
+  desteklenir: gelir vergisi stopajı, mera fonu, borsa tescil ücreti ve SGK
+  primi
+- **Serbest Meslek Makbuzu**: oluşturma (`createSelfEmployedReceipt`),
+  listeleme (`listSelfEmployedReceipts`), okuma (`getSelfEmployedReceipt`).
+  Brüt ücret → stopaj → net ücret → KDV → KDV tevkifatı → net alınan zinciri
+  hesaplanır. HTML/PDF gösterimi (`getSelfEmployedReceiptHtml`,
+  `selfEmployedReceiptToPdf`) PORTAL KUSURU nedeniyle DESTEKLENMEZ; bu iki
+  metot her zaman `EArsivPortalDefectError` fırlatır (bkz. "Bilinen kısıtlar")
 - Toplamların kalemlerden otomatik hesaplanması (tam sayı kuruş aritmetiği);
   `getInvoice` okurken kalemlerden yeniden HESAPLAMAZ, portalın kendi
   `matrah`/`hesaplanankdv`/`odenecekTutar` gibi resmi rakamlarını raporlar
@@ -66,6 +134,49 @@ Daha kapsamlı örnekler için `examples/` dizinine bakın:
   cevaplama
 - Firma bilgisi okuma/güncelleme, VKN ile firma sorgulama
 - Opsiyonel PDF üretimi (`toPdf`) — `puppeteer` peer bağımlılığı gerektirir
+
+## Makbuz belgeleri hakkında bilmeniz gerekenler
+
+### Aritmetiğin tek güvencesi bu kütüphanedir
+
+Portal makbuz tutarlarını **ne hesaplıyor ne doğruluyor** (canlı doğrulandı):
+
+- Kasıtlı olarak yanlış bir `odenecekTutar` gönderildiğinde portal onu aynen
+  sakladı ve geri verdi — aritmetik olarak doğru değeri hesaplayıp
+  düzeltmedi, uyarı da vermedi.
+- Serbest meslek makbuzunda türetilmiş alanlar (`netUcret`, `netAlinan`)
+  gönderilmediğinde portal bunları hesaplamadı, **0 olarak kaydetti**.
+
+Yani faturadan farklı olarak makbuzda portal bir emniyet ağı değildir.
+Kütüphanenin hesabı yanlışsa portal itiraz etmez, yanlış tutar hukuki belgeye
+yazılır. Bu nedenle makbuzlarda `totals` override'ı **bilinçli olarak
+açılmadı**: faturada override'ın karşılığında `mergeAndVerifyTotals` eşitlik
+kontrolü var, makbuzda ise override'ın tek etkisi yanlış tutarın portala
+gitmesini kolaylaştırmak olurdu.
+
+### Makbuz listeleri bir ÜST KÜMEDEN süzülür
+
+Portal makbuzlar için ayrı bir listeleme komutu sunmuyor.
+`listProducerReceipts` ve `listSelfEmployedReceipts` fatura ile aynı taslak
+listesini (`hangiTip: 'Buyuk'`) sorgular ve sonucu `belgeTuru` ile süzer;
+bu liste fatura + iki makbuz türünü birden içerir.
+
+### Okuma yolunda hangi rakam raporlanır
+
+- **Müstahsil:** portal hem kalem hem belge düzeyinde tüm tutarları
+  döndürüyor; hepsi portaldan okunur, yeniden hesaplanmaz.
+- **Serbest meslek:** portal kalem düzeyinde türetilmiş tutarları (stopaj,
+  KDV, KDV tevkifatı) hiç döndürmüyor, bu yüzden **kalem** değerleri
+  oranlardan yeniden hesaplanır; **belge** toplamları ise portalın kendi
+  kaydından okunur.
+
+### `kdvTevkifatOrani` birimi doğrulanmış DEĞİLDİR
+
+Mevzuat KDV tevkifat oranını kesirle anıyor (ör. 5/10). Bu kütüphane alanı
+**yüzde** (0–100) olarak modelliyor: 5/10 → `vatWithholdingRate: 50`. Portal
+bu alanı doğrulamıyor — `50` gönderildiğinde `50`, `5` gönderildiğinde `5`
+saklıyor. Yani yüzde seçimi kütüphanenin sözleşmesidir, portalın teyidi
+değildir.
 
 ## Gelen belgeler: portal vs entegratör
 
@@ -124,13 +235,20 @@ olarak üç noktada ayrılır:
 Tüm hatalar `EArsivError` soyut sınıfından türer ve ayırt edici bir `kind`
 alanı taşır:
 
-| Sınıf                        | `kind`               | Ne zaman fırlatılır                                                      |
-| ---------------------------- | -------------------- | ------------------------------------------------------------------------ |
-| `EArsivValidationError`      | `'validation'`       | İstek portala gönderilmeden önce yakalanan yerel doğrulama hatası        |
-| `EArsivAuthError`            | `'auth'`             | Token yok, süresi dolmuş veya giriş reddedildi                           |
-| `EArsivApiError`             | `'api'`              | Portal iş mantığı veya yetki hatası döndürdü                             |
-| `EArsivAmbiguousResultError` | `'ambiguous-result'` | Sonuç (ör. yeni oluşturulan faturanın ETTN'i) tekil olarak belirlenemedi |
-| `EArsivNetworkError`         | `'network'`          | Zaman aşımı, DNS hatası, bağlantı kesintisi veya HTTP 5xx                |
+| Sınıf                        | `kind`               | Ne zaman fırlatılır                                                             |
+| ---------------------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `EArsivValidationError`      | `'validation'`       | İstek portala gönderilmeden önce yakalanan yerel doğrulama hatası               |
+| `EArsivAuthError`            | `'auth'`             | Token yok, süresi dolmuş veya giriş reddedildi                                  |
+| `EArsivApiError`             | `'api'`              | Portal iş mantığı veya yetki hatası döndürdü                                    |
+| `EArsivAmbiguousResultError` | `'ambiguous-result'` | Sonuç (ör. yeni oluşturulan faturanın ETTN'i) tekil olarak belirlenemedi        |
+| `EArsivNetworkError`         | `'network'`          | Zaman aşımı, DNS hatası, bağlantı kesintisi veya HTTP 5xx                       |
+| `EArsivPortalDefectError`    | `'portal-defect'`    | PORTALIN kendi kusuru; ne çağıranın ne kütüphanenin düzeltebileceği bir şey var |
+
+`EArsivPortalDefectError` diğerlerinden kasıtlı olarak ayrıdır: `validation`
+"sen yanlış verdin", `api` "portal iş kuralıyla reddetti" demek. Portal kusuru
+ise ikisi de değildir ve mevcut bir tipi kullanmak kullanıcıyı kendi kodunda
+hata aramaya iterdi. Hata; portalın ham metnini (`portalMessage`), komutu
+(`command`) ve varsa çalışan alternatifi taşır.
 
 Portalın "Bu işlem için yetkiniz yok" metni hem GERÇEK bir izin kısıtlaması
 hem de sunucu tarafında süresi dolmuş bir token için AYNI şekilde geliyor —
@@ -172,6 +290,54 @@ gönderemeden fırlayabilir; bu durumda mutasyonu yeniden denemek mükerrer bir
 hukuki belgeyle (mükerrer fatura, mükerrer silme, mükerrer imzalama...)
 sonuçlanır. `retry.attempts: 5` vermek bu davranışı DEĞİŞTİRMEZ — yalnızca
 okuma komutları 5 kez denenir, her mutasyon yine tek seferde denenir.
+
+## Performans
+
+Aşağıdaki değerler ölçümdür, tahmin değil. Kendiniz doğrulayabilirsiniz:
+paket boyutu için `npm pack --dry-run`, import maliyeti için `dist/index.js`
+ve `dist/index.cjs`'i tek seferlik bir Node süreci içinde yükleyin.
+
+**Soğuk import.** Boş bir Node sürecinde kütüphaneyi yüklemenin maliyeti
+**3–5 ms** (ölçüm: Node 26, macOS/arm64; ESM ve CJS pratikte aynı, makineye ve
+disk önbelleğine göre değişir). Kütüphane yan etkisiz (`sideEffects: false`)
+ve tek dosyaya
+paketlenmiştir; import anında hiçbir ağ, dosya sistemi veya kripto işlemi
+yapılmaz.
+
+**Paket boyutu.** Yayınlanan paket **~250 KB tarball / ~970 KB açılmış** ve
+**sıfır çalışma zamanı bağımlılığı** taşır (`dependencies: {}` — bu bir testle
+sabitlenmiştir). Açılmış boyutun yarıdan fazlası kaynak haritalarıdır
+(`*.js.map`, `*.cjs.map`); çalışma zamanı JavaScript'i her biçim için ~115 KB,
+tip tanımları ~92 KB'tır. `puppeteer` yalnızca PDF isteyenler için opsiyonel
+bir peer bağımlılıktır ve kurulmadıkça indirilmez.
+
+**Portal istekleri.** Tek bir portal isteği yaklaşık **130–150 ms** sürüyor
+(test portalı, Türkiye'den). Buradaki asıl maliyet istek SAYISINDADIR:
+
+| İşlem                                                               | Portal isteği | Yaklaşık süre |
+| ------------------------------------------------------------------- | ------------- | ------------- |
+| Listeleme / okuma / gösterim                                        | 1             | ~130–150 ms   |
+| `createDraft`, `createProducerReceipt`, `createSelfEmployedReceipt` | 3             | ~680 ms       |
+
+Oluşturma çağrılarının üç istek yapmasının sebebi mimari bir tercih değil,
+portalın davranışıdır: **portal oluşturma yanıtında ETTN döndürmüyor.** Bu
+yüzden akış zorunlu olarak `listele → oluştur → yeniden listele` şeklindedir
+ve yeni belge, iki liste anlık görüntüsünün farkından bulunur. İki liste
+çağrısı KALDIRILAMAZ; kaldırılırsa oluşturulan belgenin ETTN'i hiçbir şekilde
+öğrenilemez.
+
+**Eşzamanlılık.** Aynı istemci örneği üzerinden yapılan eşzamanlı oluşturma
+çağrıları sıraya alınır (serileştirilir). Bu bilinçlidir: paralel çalışsalardı
+ikisi de aynı "önce" anlık görüntüsünü görür, ikisi de belge oluşturur ve
+ikisi de farkı tekile indiremeyip `EArsivAmbiguousResultError` ile
+reddedilirdi — oysa portalda iki belge de gerçekten oluşmuş olurdu.
+
+Bu serileştirme yalnızca **aynı örnek** içindir. Aynı mükellef hesabı için
+ikinci bir `EArsivClient` örneği açmak ya da işi ayrı süreçlere/sunuculara
+dağıtmak sorunu ÇÖZMEZ, aksine geri getirir: anlık görüntü farkı hesabın
+tamamına bakar. Yani oluşturma çağrılarının aktarım hızı tek hesap için
+yaklaşık **saniyede 1,5 belge** ile sınırlıdır ve bu sınır kütüphanenin değil
+portalın ETTN döndürmemesinin sonucudur.
 
 ## Test ortamı
 
@@ -237,14 +403,70 @@ ve `createObjectionRequestForIncoming` bu ikisini KARIŞTIRMAZ:
   olarak doğrular; yanlış eşleşme "Bu işlem için yetkiniz yok" hatasına yol
   açar.
 
+## Bilinen kısıtlar
+
+Bunlar kütüphanenin eksikleri değil, portalın gözlenmiş davranışlarıdır ve
+kullanırken karşılaşacağınız için burada açıkça yazılmıştır.
+
+### Serbest Meslek Makbuzunun HTML/PDF gösterimi PORTALDA bozuk
+
+`EARSIV_PORTAL_FATURA_GOSTER` komutu geçerli bir SMM ETTN'i ile ham bir Java
+istisnası döndürüyor: `{"error":"1","messages":["String index out of range: 4"]}`.
+Denenen tüm varyantlar başarısız oldu — iki farklı `pageName`, ek `belgeTuru`
+alanı, liste ETTN'i, detay ETTN'i, `belgeNumarasi`; alternatif komut adları
+(`..._SERBEST_MESLEK_GOSTER`, `..._MAKBUZ_GOSTER`) portalda mevcut değil.
+**Müstahsil Makbuzunda AYNI komut sorunsuz çalışıyor**, yani kusur SMM'ye
+özgü ve istemci tarafında çözülemez.
+
+Bu yüzden `getSelfEmployedReceiptHtml` ve `selfEmployedReceiptToPdf` metotları
+**ağa hiç çıkmadan** `EArsivPortalDefectError` fırlatır. Metotlar bilinçli
+olarak silinmedi: silinseydi çağıran `getInvoiceHtml`'i bir SMM ETTN'iyle
+dener ve portalın ham istisnasını kendi hatası sanırdı. Makbuzun verilerine
+`getSelfEmployedReceipt` ile erişebilirsiniz.
+
+Aynı istisna metni `getInvoiceHtml`/`toPdf` yolunda da yakalanıp çevrilir.
+DİKKAT: portal bu metni SMM'ye özgü döndürmüyor — var olmayan ya da hatalı
+biçimli bir ETTN de aynı metni üretiyor. Bu hatayı gördüğünüzde önce
+ETTN'inizi doğrulayın.
+
+### Taslak silme test portalında hiç çalışmıyor
+
+`cancelDraft` API'si mevcuttur ve isteği doğru kurar, ancak
+`EARSIV_PORTAL_FATURA_SIL` komutu test portalında her denemede
+`"Silinirken bir sorun oluştu."` döndürüyor — **fatura dahil hiçbir belge
+türünde çalışmıyor**. Denenen varyantlar: tam liste satırı ve minimal
+`{belgeTuru, ettn}` yükü, `RG_TASLAKLAR` ve `RG_BASITTASLAKLAR` sayfa adları,
+her üç belge türü.
+
+Bu makbuz desteğiyle gelen bir gerileme değil, önceden var olan bir portal
+davranışıdır. Üretim ortamında doğrulanamadı, çünkü doğrulamak gerçek bir
+hukuki belge oluşturmayı gerektirirdi. `cancelDraft`'ı "çalışıyor" varsayarak
+bir akış kurmayın.
+
+Makbuzlar için silme API'si hiç eklenmedi.
+
+### Portal makbuz tutarlarını doğrulamıyor
+
+Ayrıntı için bkz. "Makbuz belgeleri hakkında bilmeniz gerekenler". Özet:
+makbuzda aritmetiğin tek güvencesi bu kütüphanedir; portal yanlış bir tutarı
+sessizce kabul eder.
+
+### İndirme uç noktası oturumu açan istemcinin IP'sine bağlı
+
+Bkz. "Belge paketi içeriği" altındaki not.
+
 ## Kapsam dışı
 
 - e-Fatura (ticari, mükellefler arası) entegrasyonu — bu kütüphane yalnızca
   e-Arşiv (perakende) portalını hedefler.
-- Serbest Meslek Makbuzunun HTML gösterimi ve PDF çıktısı — portalın kendi
-  kusuru (`String index out of range: 4`); istemci tarafında çözülemiyor,
-  bu yüzden açılmadı. Makbuzun verilerine `getSelfEmployedReceipt` ile
-  erişilir. Müstahsil Makbuzunda aynı özellik ÇALIŞIR.
+- Desteklenen üç belge türü dışındaki e-Belge türleri (ör. e-İrsaliye,
+  e-Bilet, e-Adisyon).
+- Makbuzların SMS ile imzalanması ve makbuzlar için iptal/itiraz talepleri —
+  bu akışlar makbuz belgelerinde hiç denenmedi; fatura için desteklenir.
+- Makbuzlar için `downloadPackage` (resmi ZIP paketi) — indirme uç noktası
+  `belgeTip: 'FATURA'` sabitiyle çağrılıyor; makbuzda ne beklendiği test
+  edilmedi, bu yüzden "çalışıyor" diye sunulmuyor.
+- Taslak silme — API mevcut ama portal tarafında çalışmıyor (yukarıya bakın).
 - Bir komut satırı arayüzü (CLI) — kütüphane yalnızca programatik kullanım
   içindir.
 

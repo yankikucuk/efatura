@@ -1,3 +1,30 @@
+/**
+ * Fatura yükünün portal alan adlarına çevrilmesi ve liste satırlarının geri
+ * okunması.
+ *
+ * Portal yükü, EKSİK anahtarı da YANLIŞ TİPTEKİ değeri de aynı teşhis
+ * edilemez metinle ("Form parametrelerinde sorun var") reddediyor. Bu yüzden
+ * kullanılmayan alanlar bile GÖNDERİLİR — boş string olarak; üç alan
+ * (`vergiCesidi`, `fisSaati`, `fisTipi`) ise portalın beklediği TEK BOŞLUK
+ * olarak.
+ *
+ * "Opsiyonel alanları boş string olarak doldurur" testi, projede yakalanan
+ * yedi "adını taşıdığı davranışı sabitlemeyen test" vakasından biridir: ilk
+ * hâli yalnızca `toHaveProperty` ile ANAHTARIN VARLIĞINI kontrol ediyordu,
+ * yani implementasyon `null` ya da `'N/A'` doldursa bile geçerdi — oysa testin
+ * adı DEĞERİ vaat ediyordu. Değer kontrolüne çevrildi ve portalın tek boşluk
+ * beklediği üç alan da eklendi.
+ *
+ * `faturaUuid` gönderilmemesi ayrıca pinlenir: ETTN'i portal atar, istemcinin
+ * gönderdiği kimlik yok sayılır (bkz. `src/documents/ettn-resolver.ts`).
+ *
+ * `toIncomingExternalSummary`, entegratör listesinin AYRI bir satır tipi
+ * olduğunu kilitler: bu listede SİZ her zaman alıcısınızdır, bu yüzden satır
+ * alıcı değil SATICI kimliğini taşır. Bu satırları `toInvoiceSummary`'den
+ * geçirmek hata VERMEZ — alıcı alanlarını bulamadığı için sessizce boş satıcı
+ * kimliği üretirdi.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { Country, Currency, InvoiceType, Unit } from '../../constants/index.js'
@@ -25,6 +52,8 @@ const input = (overrides: Partial<InvoiceInput> = {}): InvoiceInput => ({
 })
 
 describe('toPortalInvoice', () => {
+  // Kapsam: yazma yönü — alan adları, kalem tablosu, hesaplanan toplamlar,
+  // döviz kuru ve portalın beklediği "boş ama VAR olması gereken" alanlar.
   it('faturaUuid alanını ASLA göndermez', () => {
     const payload = toPortalInvoice(input())
     expect(payload).not.toHaveProperty('faturaUuid')
@@ -128,6 +157,8 @@ describe('toPortalInvoice', () => {
 })
 
 describe('num (I4 — binlik ayırıcı sağlamlaştırma; documents katmanına taşındı)', () => {
+  // Kapsam: `documents/portal-field`'a taşınan `num`'ın fatura tarafından da
+  // hâlâ aynı davrandığı (geriye dönük uyumluluk kaydı).
   it('binlik nokta + ondalık virgülü ayrıştırır', () => {
     expect(num('1.234,56')).toBe(1234.56)
   })
@@ -150,6 +181,8 @@ describe('num (I4 — binlik ayırıcı sağlamlaştırma; documents katmanına 
 })
 
 describe('toIncomingExternalSummary', () => {
+  // Kapsam: entegratör listesinin AYRI satır tipi — satıcı kimliği ve
+  // entegratörün kendi verdiği fatura numarası + bozuk tarihte fırlatmama.
   it('entegratör satırını satıcı kimliğiyle eşler (portal alıcı kimliğinden FARKLI alanlar)', () => {
     // Bu test yalnızca alan SAYISINI değil, satıcı-özel alanların (seller*,
     // invoiceNumber) doğru anahtarlardan okunduğunu doğrular — aksi halde bu
@@ -195,6 +228,8 @@ describe('toIncomingExternalSummary', () => {
 })
 
 describe('fromPortalPayload', () => {
+  // Kapsam: okuma yönü — Türkçe anahtarlı ham yükün `InvoiceInput`'a
+  // çevrilmesi ve temel alanların gidiş-dönüşte korunması.
   it('Türkçe alan adlarıyla verilen ham nesneyi InvoiceInput yapar', () => {
     const result = fromPortalPayload({
       faturaTarihi: '03/09/2026',
@@ -244,6 +279,8 @@ describe('fromPortalPayload', () => {
 })
 
 describe('toInvoiceSummary (geriye dönük uyumluluk takma adı)', () => {
+  // Kapsam: geriye dönük uyumluluk takma adının, `documents` katmanına taşınan
+  // `toDocumentSummary` ile AYNI sonucu verdiği.
   it("src/documents/document.mapper.js'teki toDocumentSummary'nin aynısıdır", () => {
     const row: Record<string, unknown> = {
       ettn: 'ettn-uyumluluk',

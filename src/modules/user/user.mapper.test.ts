@@ -1,3 +1,35 @@
+/**
+ * Firma bilgisi kaydının portal alan adlarıyla İngilizce alanlar arasında
+ * çevrilmesi.
+ *
+ * Bu eşleme 21 alanlıdır ve tek yönlü değil GİDİŞ-DÖNÜŞLÜ kullanılır:
+ * `updateUserInfo` mevcut kaydı okur (`toUserInfo`), yamayı bindirir ve
+ * tamamını geri yazar (`toPortalUserInfo`). Eşlemeden düşen bir alan bu yüzden
+ * yalnızca "okunamaz" olmaz — kullanıcının portaldaki kaydından SİLİNİR.
+ *
+ * Round-trip testi, projede yakalanan yedi "adını taşıdığı davranışı
+ * sabitlemeyen test" vakasının en öğreticisidir ve İKİ turda düzeltildi:
+ *
+ * 1. Test adı "TÜM alanları korur" diyordu ama `toMatchObject` listesi 21
+ *    alandan yalnızca 16'sını sayıyordu; `ad`, `soyad`, `kasaba`, `faksNo` ve
+ *    `webSitesiAdresi` hiç doğrulanmıyordu.
+ * 2. Liste tam gidiş-dönüş eşitliğine çevrildi — ama GERÇEK fixture ile, ve
+ *    hâlâ ayırt edici değildi: fixture'da tam o beş alan boş string ve boş
+ *    değerde gidiş-dönüş hiçbir şey kanıtlamaz (`str()` düşen alan için de ''
+ *    üretir). Ampirik olarak doğrulandı: `toPortalUserInfo`'dan `faksNo`
+ *    silindiğinde test YEŞİL kalıyordu. Yani "daha titiz görünen" düzeltme tam
+ *    olarak eski listenin atladığı beş alana karşı kördü.
+ *
+ * Bugünkü hâli her alana BENZERSİZ bir değer veren sentetik bir kayıt kullanır;
+ * artık düşen ya da yer değiştiren HER alan eşitliği bozar (doğrulandı:
+ * `kasaba` düşürülünce kırılıyor).
+ *
+ * Kimlik eşitliği tek başına yetmez: iki tarafta TUTARLI bir yanlış adlandırma
+ * (ör. her ikisinde de `faks` yazmak) round-trip'ten geçer ama portalda alanı
+ * siler. Bu yüzden "portal alan adlarını doğru yazar" testi gerçek fixture ile
+ * AYRI bir test olarak korunuyor.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
@@ -8,6 +40,9 @@ import type { UserInfo } from './user.types.js'
 const raw = portalResponses.userInfo.data as unknown as Record<string, unknown>
 
 describe('toUserInfo', () => {
+  // Kapsam: okuma yönü. Portal eksik alanı hiç göndermeyebiliyor; hepsi boş
+  // stringe düşer, `undefined`'a değil — böylece çağıran her alanda güvenle
+  // string bekleyebilir.
   it('portal alanlarını İngilizce alanlara eşler', () => {
     expect(toUserInfo(raw)).toEqual({
       taxOrIdentityNumber: '3333333301',
@@ -41,6 +76,9 @@ describe('toUserInfo', () => {
 })
 
 describe('toPortalUserInfo', () => {
+  // Kapsam: yazma yönü, İKİ ayrı testle: gidiş-dönüş bütünlüğü (sentetik,
+  // her alanı benzersiz kayıtla) ve portal alan adlarının yazımı (gerçek
+  // fixture ile). Ayrılmaları zorunlu — gerekçesi dosya başlığında.
   it('gidiş-dönüş TÜM alanları korur', () => {
     // Gerçek fixture ile gidiş-dönüş yapmak YETMEZ: fixture'da ad, soyad,
     // kasaba, faksNo ve webSitesiAdresi boş string ve boş değerde gidiş-dönüş

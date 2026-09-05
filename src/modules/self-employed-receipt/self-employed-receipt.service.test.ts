@@ -1,3 +1,30 @@
+/**
+ * Serbest meslek makbuzu servisi — oluşturma, listeleme, okuma ve
+ * DESTEKLENMEYEN gösterim yolu.
+ *
+ * Müstahsille ortak davranışların (üst küme listesinden süzme, üç istekli ETTN
+ * çözümü, eşzamanlı çağrıların serileştirilmesi) yanında SMM'ye ÖZGÜ iki şey
+ * burada sabitlenir:
+ *
+ * 1. ETTN daraltma ipucu `unvan`dan DEĞİL, ad + soyaddan üretilir. Canlı
+ *    doğrulandı: liste satırındaki `aliciUnvanAdSoyad`, `adi` ve `soyadi`
+ *    alanlarının birleşimidir ve yalnızca `unvan` gönderilen çalıştırmada BOŞ
+ *    döndü. İpucu ünvandan üretilseydi daraltma sessizce bozulurdu; test bu
+ *    yüzden makbuza asla yansımaması gereken bir ünvan ("HİÇ KULLANILMAMALI
+ *    A.Ş.") veriyor.
+ * 2. `getHtml`/`toPdf` AÇILMADI. Portal `FATURA_GOSTER` komutunu geçerli bir
+ *    SMM ETTN'i ile ham bir Java istisnasıyla ("String index out of range: 4")
+ *    reddediyor; denenen tüm varyantlar (iki `pageName`, ek `belgeTuru`, liste
+ *    ve detay ETTN'i, `belgeNumarasi`, alternatif komut adları) başarısız oldu.
+ *    Müstahsil AYNI komutla çalışıyor, yani kusur SMM'ye özgü ve bizim
+ *    tarafımızda çözülemez. Metotlar yine de SİLİNMEDİ: silinseydi kullanıcı
+ *    `getInvoiceHtml`'i bir SMM ETTN'iyle dener ve portalın ham istisnasını
+ *    kendi hatası sanardı.
+ *
+ * Hata metninin İÇERİĞİ ayrıca test edilir; yalnızca "fırlatıyor mu" demek,
+ * mesaj "Geçersiz kullanım" gibi yanıltıcı bir şeye dönse bile yeşil kalırdı.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
@@ -29,6 +56,9 @@ const gatewayMock = (call: ReturnType<typeof vi.fn>): DispatchGateway =>
   ({ call }) as unknown as DispatchGateway
 
 describe('SelfEmployedReceiptService.createReceipt', () => {
+  // Kapsam: üç istekli ETTN çözümü, ipucunun ad+soyaddan üretilmesi, ÜST KÜME
+  // listesinden SMM satırlarına süzme, doğrulama kapısı, belirsizlikte
+  // reddetme ve eşzamanlı çağrıların serileştirilmesi.
   it('anlık görüntü farkıyla ETTN çözer', async () => {
     const call = vi
       .fn()
@@ -147,6 +177,8 @@ describe('SelfEmployedReceiptService.createReceipt', () => {
 })
 
 describe('SelfEmployedReceiptService.listReceipts', () => {
+  // Kapsam: aynı üst küme listesinden yalnızca SMM satırlarının süzülmesi.
+  // Fikstür canlı portaldan yakalanmıştır (iki müstahsil + bir SMM).
   it('yalnızca serbest meslek makbuzlarını döndürür', async () => {
     const call = vi.fn().mockResolvedValue(portalResponses.receiptDraftList.data)
     const rows = await new SelfEmployedReceiptService(gatewayMock(call)).listReceipts(
@@ -173,6 +205,8 @@ describe('SelfEmployedReceiptService.listReceipts', () => {
 })
 
 describe('SelfEmployedReceiptService.getReceipt', () => {
+  // Kapsam: SMM'nin KENDİ komut ve sayfa adıyla okunması ve belge
+  // toplamlarının geri okunması.
   it('kendi komut ve sayfa adıyla detay çeker', async () => {
     const call = vi.fn().mockResolvedValue(portalResponses.selfEmployedReceiptDetail.data)
     const detail = await new SelfEmployedReceiptService(gatewayMock(call)).getReceipt(
@@ -187,6 +221,10 @@ describe('SelfEmployedReceiptService.getReceipt', () => {
 })
 
 describe('SelfEmployedReceiptService.getHtml — portal kusuru', () => {
+  // Kapsam: DESTEKLENMEYEN gösterim yolunun sözleşmesi — AĞA ÇIKMADAN
+  // fırlatma ve hata metninin İÇERİĞİ (kusurun portalda olduğu, portalın
+  // kendi metni, müstahsilin aynı komutla çalıştığı, çalışan alternatif ve
+  // istenen ETTN).
   const service = (): { service: SelfEmployedReceiptService; call: ReturnType<typeof vi.fn> } => {
     const call = vi.fn()
     return { service: new SelfEmployedReceiptService(gatewayMock(call)), call }

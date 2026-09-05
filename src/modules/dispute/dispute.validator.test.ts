@@ -1,3 +1,20 @@
+/**
+ * İptal ve itiraz taleplerinin girdi doğrulaması.
+ *
+ * Bu talepler geri alınamaz ve her belge için EN FAZLA BİR KEZ açılabilir;
+ * eksik alanla gönderilen bir talep o tek şansın harcanmasına yol açabilir. Bu
+ * yüzden doğrulama ağa çıkmadan yapılır.
+ *
+ * Süitin ayırt ettiği asıl şey İKİ FARKLI itiraz yüküdür:
+ * - `validateObjectionRequest` — KENDİ düzenlediğiniz belgeye itiraz; yedi
+ *   alan. Nadir senaryo.
+ * - `validateIncomingObjectionRequest` — ADINIZA düzenlenmiş belgeye itiraz;
+ *   aynı yedi alan + `invoiceOid`, `totalAmount`, `sellerTaxOrIdentityNumber`
+ *   ve `documentNumber`. Bu dört alan liste satırından okunur; eksikleri
+ *   portalda "Bu işlem için yetkiniz yok" gibi tamamen yanıltıcı bir metinle
+ *   geri gelir, yani yerelde yakalanmazsa teşhis edilemez.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { DisputeAnswer, DisputeMethod } from '../../constants/index.js'
@@ -11,6 +28,8 @@ import {
 } from './dispute.validator.js'
 
 describe('validateCancellationRequest', () => {
+  // Kapsam: ETTN ve gerekçenin zorunluluğu (yalnızca boşluktan oluşan gerekçe
+  // dahil).
   it('gerekçe ile geçer', () => {
     expect(() => {
       validateCancellationRequest({ ettn: 'a', reason: 'Yanlış tutar' })
@@ -31,6 +50,7 @@ describe('validateCancellationRequest', () => {
 })
 
 describe('validateObjectionRequest', () => {
+  // Kapsam: yedi alanlı temel itiraz girdisi; eksikler tek seferde toplanır.
   const valid = {
     ettn: 'a',
     method: DisputeMethod.KEP,
@@ -74,6 +94,8 @@ describe('validateObjectionRequest', () => {
 })
 
 describe('validateIncomingObjectionRequest', () => {
+  // Kapsam: temel yedi alan + liste satırından okunan dört ek alan. Sayısal
+  // `totalAmount` ayrıca sonluluk ve işaret açısından denetlenir.
   const valid = {
     ettn: 'a',
     method: DisputeMethod.KEP,
@@ -145,6 +167,8 @@ describe('validateIncomingObjectionRequest', () => {
 })
 
 describe('validateDisputeResponse', () => {
+  // Kapsam: cevap tipine göre ASİMETRİK gerekçe kuralı — kabul gerekçe
+  // istemez, ret ister.
   it('kabul cevabı gerekçe istemez', () => {
     expect(() => {
       validateDisputeResponse({ disputeId: '1', answer: DisputeAnswer.ACCEPT })

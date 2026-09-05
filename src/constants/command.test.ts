@@ -1,3 +1,27 @@
+/**
+ * Komut kataloğu, sayfa adları, başarı/başarısızlık metinleri ve yeniden
+ * denenebilir komut kümesi.
+ *
+ * Portal belgelenmiş bir API değildir: her komut adı ve her ekran (pageName)
+ * adı canlı gözlemle bulundu ve harfi harfine doğru olmak zorunda. TANINMAYAN
+ * bir komut "Bu işlem için yetkiniz yok" döndürüyor — yani bir yazım hatası,
+ * YETKİ hatası gibi görünüyor ve saatlerce yanlış yerde aranıyor. Makbuz
+ * komutlarındaki asimetrik yazım (Müstahsil'de "MAKBUZU" yok; SMM'de
+ * oluşturmada var, getirmede yok) bu yüzden "düzeltilmeden" sabitlenir.
+ *
+ * `SUCCESS_PATTERNS` / `FAILURE_MARKERS` blokları portal yanıtlarının METİN
+ * olarak sınıflandırılmasını sınar. Genel bir "başarıyla" kalıbı bilinçli
+ * olarak KALDIRILDI: "İşleminiz başarıyla tamamlanamamıştır." cümlesi o
+ * kalıptan geçiyordu. Ters yöndeki tuzak da test edilir — "Muhatap" içinde
+ * "hata", "Ramazan" içinde "amaz" alt metni geçer; masum cümlelerin hata
+ * SAYILMAMASI ayrıca pinlenir.
+ *
+ * `RETRYABLE_COMMANDS` bloğu C1'in (mükerrer hukuki belge) tekrar
+ * canlanabileceği TEK noktadır: kümeye dikkatsizce eklenen bir mutasyon
+ * komutu, o komutun tüm 5xx/zaman aşımı hatalarında sessizce yeniden
+ * denenmesine yol açar.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -9,6 +33,8 @@ import {
 } from './index.js'
 
 describe('komut kataloğu', () => {
+  // Kapsam: portal komut adları, ekran (pageName) adları ve komut bazlı
+  // başarı metinleri. Her değer canlı gözlemin harfi harfine kaydıdır.
   it('doğrulanmış komut adlarını içerir', () => {
     expect(Command.CREATE_INVOICE).toBe('EARSIV_PORTAL_FATURA_OLUSTUR')
     expect(Command.LIST_INVOICES).toBe('EARSIV_PORTAL_TASLAKLARI_GETIR')
@@ -111,6 +137,10 @@ describe('komut kataloğu', () => {
 })
 
 describe('FAILURE_MARKERS', () => {
+  // Kapsam: düz metin yanıtların hata olarak sınıflandırılması — İKİ yönde
+  // birden: gerçek hata metinlerini YAKALAR ve masum cümleleri (Muhatap,
+  // Ramazan, gerçek başarı metinleri) hata SAYMAZ. Tek yön test edilseydi
+  // desen ya çok gevşer ya çok sıkılaşırdı.
   const isFailure = (text: string): boolean => FAILURE_MARKERS.some((marker) => marker.test(text))
 
   it('canlı portaldan yakalanan gerçek hata metinlerini yakalar', () => {
@@ -173,6 +203,7 @@ describe('FAILURE_MARKERS', () => {
 })
 
 describe('RETRYABLE_COMMANDS (round 2 madde 2)', () => {
+  // Kapsam: yeniden deneme izninin komut bazında verilmesi.
   // Bu küme, C1'in tekrar canlanabileceği TEK nokta: dikkatsizce eklenen bir
   // mutasyon komutu, o komutun tüm 5xx/zaman-aşımı hatalarında sessizce
   // yeniden denenmesine ve mükerrer bir hukuki belgeye (mükerrer fatura,

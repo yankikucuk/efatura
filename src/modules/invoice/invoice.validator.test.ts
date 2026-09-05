@@ -1,3 +1,19 @@
+/**
+ * Fatura girdi doğrulaması — istek ağa çıkmadan.
+ *
+ * Portalın hata metinleri teşhis edilemez ("Form parametrelerinde sorun var",
+ * "Bu işlem için yetkiniz yok"): hangi alanın bozuk olduğunu söylemezler ve
+ * aynı metin bambaşka sebeplerden gelir. Bu yüzden yerelde yakalanabilen her
+ * şey yerelde yakalanır ve hata ALAN YOLUYLA
+ * (`lineItems.0.additionalTaxRate`) birlikte verilir.
+ *
+ * İki bilinçli tasarım kararı süitte sabitlidir:
+ * - Sorunlar tek tek değil TOPLU raporlanır; kullanıcı beş turda beş hata
+ *   düzeltmek yerine hepsini bir kerede görür.
+ * - Alıcı için "ünvan VEYA ad/soyad" yeterlidir; portal ikisinden birini
+ *   ister, ikisini birden değil.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { Currency, Unit } from '../../constants/index.js'
@@ -13,6 +29,9 @@ const base = (overrides: Partial<InvoiceInput> = {}): InvoiceInput => ({
 })
 
 describe('isValidTaxOrIdentityNumber', () => {
+  // Kapsam: `documents/identity`'ye taşınan doğrulamanın, `invoice`
+  // barrel'ından yeniden dışa açılan takma adı üzerinden de AYNI davrandığı.
+  // Asıl uygulamanın süiti: src/documents/identity.test.ts.
   it('10 haneli VKN ve 11 haneli TCKN kabul eder', () => {
     expect(isValidTaxOrIdentityNumber('1234567890')).toBe(true)
     expect(isValidTaxOrIdentityNumber('11111111111')).toBe(true)
@@ -27,6 +46,8 @@ describe('isValidTaxOrIdentityNumber', () => {
 })
 
 describe('validateInvoiceInput', () => {
+  // Kapsam: alıcı kimliği/ünvanı, kalem listesi, para birimi + kur,
+  // oran aralıkları, özel matrah alanları ve hataların toplu raporlanması.
   it('geçerli faturayı kabul eder', () => {
     expect(() => {
       validateInvoiceInput(base())

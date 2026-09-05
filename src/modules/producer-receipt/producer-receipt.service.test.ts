@@ -1,3 +1,28 @@
+/**
+ * Müstahsil makbuzu servisi — oluşturma, listeleme, okuma.
+ *
+ * Portal makbuzlar için AYRI bir listeleme komutu sunmuyor: `hangiTip: 'Buyuk'`
+ * ile alınan taslak listesi fatura + iki makbuz türünü birden içeren bir ÜST
+ * KÜMEDİR ve makbuzlar `belgeTuru` ile süzülür. Bu yalnızca listelemeyi değil
+ * ETTN ÇÖZÜMÜNÜ de etkiler: süzme olmadan aynı gün oluşturulmuş bir FATURA
+ * anlık görüntü farkını kirletir, "iki yeni kayıt" bulunur ve (aynı alıcı ve
+ * tarih yüzünden daraltma da başarısız olacağından) makbuz oluşturma
+ * `EArsivAmbiguousResultError` ile REDDEDİLİRDİ. Ayrı bir test tam bu senaryoyu
+ * kurar.
+ *
+ * Oluşturma ÜÇ istektir (listele → oluştur → yeniden listele) çünkü portal
+ * ETTN döndürmüyor; `expect(call).toHaveBeenCalledTimes(3)` bu maliyeti
+ * bilinçli olarak sabitler — bir "optimizasyon" sessizce ETTN çözümünü
+ * bozamasın.
+ *
+ * Eşzamanlılık testi mlevent#101 vakasının makbuz karşılığıdır: aynı üreticiye
+ * art arda makbuz kesmek olağandır ve serileştirme olmadan iki eşzamanlı
+ * çağrının İKİSİ de belirsizlikten reddedilirdi — oysa portalda iki makbuz da
+ * GERÇEKTEN oluşmuş olurdu. Sahte portal gerçek paylaşılan durum tutar ve her
+ * çağrıyı bir makro-görevle geciktirir; elle sıralanmış bir mock kuyruğu bu
+ * karışmayı üretemez, yani test yanlış nedenle yeşil kalamaz.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
@@ -37,6 +62,9 @@ const gatewayMock = (call: ReturnType<typeof vi.fn>): DispatchGateway =>
   ({ call }) as unknown as DispatchGateway
 
 describe('ProducerReceiptService.createReceipt', () => {
+  // Kapsam: üç istekli ETTN çözümü, yükte kimlik alanı bulunmaması, ÜST KÜME
+  // listesinden süzme (fatura kirliliği dahil), doğrulama kapısı,
+  // belirsizlikte reddetme ve eşzamanlı çağrıların serileştirilmesi.
   it('anlık görüntü farkıyla ETTN çözer', async () => {
     const call = vi
       .fn()
@@ -160,6 +188,9 @@ describe('ProducerReceiptService.createReceipt', () => {
 })
 
 describe('ProducerReceiptService.listReceipts', () => {
+  // Kapsam: `hangiTip: 'Buyuk'` sorgusu + `belgeTuru` süzmesi. Fikstür
+  // uydurulmuş değil, canlı portaldan yakalanmış bir yanıttır: iki müstahsil
+  // + bir SMM satırı içerir, yani süzme gerçekten sınanıyor.
   it('ÜST KÜME listesini sorgular ve yalnızca müstahsil makbuzlarını döndürür', async () => {
     const call = vi.fn().mockResolvedValue(portalResponses.receiptDraftList.data)
     const rows = await new ProducerReceiptService(gatewayMock(call)).listReceipts(
@@ -185,6 +216,8 @@ describe('ProducerReceiptService.listReceipts', () => {
 })
 
 describe('ProducerReceiptService.getReceipt', () => {
+  // Kapsam: makbuzun KENDİ komut ve sayfa adıyla okunması (fatura komutuyla
+  // değil) ve portalın kendi toplamlarının raporlanması.
   it('kendi komut ve sayfa adıyla detay çeker', async () => {
     const call = vi.fn().mockResolvedValue(portalResponses.producerReceiptDetail.data)
     const detail = await new ProducerReceiptService(gatewayMock(call)).getReceipt(

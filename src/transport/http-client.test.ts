@@ -1,3 +1,35 @@
+/**
+ * HTTP taşıma katmanı: form-urlencoded POST, ikili GET, yeniden deneme ve
+ * token gizleme.
+ *
+ * Yeniden deneme politikası bu kütüphanenin en önemli güvenlik kararıdır:
+ * `retryable` bayrağı VERİLMEYEN her istek TEK kez denenir. Sebep, bir zaman
+ * aşımının sunucunun isteği zaten işlediği anlamına gelebilmesidir — mutasyonu
+ * yeniden denemek mükerrer bir hukuki belge (mükerrer fatura, mükerrer silme,
+ * mükerrer imzalama) üretir. Varsayılan bu yüzden güvenli taraftır ve ayrı bir
+ * testle pinlenir.
+ *
+ * "5xx yanıtını yeniden dener" testi, projede yakalanan yedi "adını taşıdığı
+ * davranışı sabitlemeyen test" vakasından biridir. İlk hâli yalnızca hata
+ * SINIFINI ve çağrı sayısını kontrol ediyordu; `send()` içindeki
+ * `instanceof EArsivNetworkError` yeniden-fırlatma koruması silinseydi hata
+ * genel "Portala ulaşılamadı." mesajıyla ve `status` olmadan yeniden sarılır,
+ * ama SINIF ve ÇAĞRI SAYISI aynı kalırdı — test yeşil geçerdi. Bugün `status`
+ * ve `attempts` alanları sabitleniyor; ayırt edicilik geri-döndür-gözle ile
+ * doğrulandı (koruma silinince hem bu test hem 4xx testi kırılıyor).
+ *
+ * `attempts` alanı "toplam deneme sayısı" olarak belgelidir ve GERÇEK sayıyı
+ * bildirmek zorundadır; yapılandırılmış tavanı bildirmek üretimde hata
+ * ayıklayanı yanıltırdı. Bu yüzden birkaç test kasıtlı olarak ilk denemede
+ * 5xx, ikincide FARKLI bir başarısızlık üretir.
+ *
+ * Son test (I1) hassas veri sızıntısını kapatır: `getBinary` token'ı SORGU
+ * DİZESİNDE taşır ve bu URL hem yeniden deneme günlüğüne hem de
+ * `EArsivNetworkError.url` alanına gidiyordu — oysa `logger.types.ts` "hassas
+ * veri buraya konmaz" diye söz veriyor. Tek test hem günlük hem hata yolunu
+ * birden doğrular.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../config/index.js'
@@ -29,6 +61,9 @@ const clientWith = (fetchImpl: typeof globalThis.fetch, retryBackoffMs = 0): Htt
   )
 
 describe('PostFormOptions dışa açıklığı (round 2 madde 5)', () => {
+  // Kapsam: tipin BARREL'dan (`transport/index.js`) adlandırılabilir olduğu.
+  // İçe aktarma kasıtlı olarak barrel üzerindendir; doğrudan
+  // `http-client.js`'ten alınsaydı test, dışa açma eksikliğini GÖRMEZDİ.
   it('transport/index.js barrel üzerinden adlandırılabilir', () => {
     const options: PostFormOptions = { retryable: true }
     expect(options.retryable).toBe(true)
@@ -36,6 +71,9 @@ describe('PostFormOptions dışa açıklığı (round 2 madde 5)', () => {
 })
 
 describe('HttpClient.postForm', () => {
+  // Kapsam: form kodlaması ve başlıklar, UTF-8, yeniden deneme politikası
+  // (varsayılan TEK deneme) ve `attempts` alanının gerçek deneme sayısını
+  // bildirmesi.
   it('alanları form-urlencoded olarak gönderir', async () => {
     const fetchMock = vi.fn(() => json({ data: 'ok' }))
     const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
@@ -147,6 +185,9 @@ describe('HttpClient.postForm', () => {
 })
 
 describe('HttpClient.getBinary', () => {
+  // Kapsam: ikili indirme yolu — sorgu dizesi kurulumu, boş gövde tespiti,
+  // deneme sayısının doğruluğu ve token'ın hem URL'de hem günlükte
+  // gizlenmesi (I1).
   it('sorgu dizesi kurar ve baytları döndürür', async () => {
     const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04])
     const fetchMock = vi.fn(() => new Response(bytes, { status: 200 }))

@@ -1,3 +1,26 @@
+/**
+ * Oturum yaşam döngüsü: giriş, test kullanıcısıyla giriş, çıkış ve token
+ * durumu.
+ *
+ * Süitin ağırlık merkezi TEK bir tehlikedir: BAYAT TOKEN. Çok hesaplı
+ * kullanımda kullanıcı hesap değiştirdiğini sanırken eski oturum altında
+ * fatura kesmeye devam edebilir — yani YANLIŞ MÜKELLEF adına hukuki belge
+ * düzenlenir. Bu yüzden başarısız her giriş yolu yerel durumu temizlemek
+ * zorundadır ve süit üç ayrı yolu tek tek pinler:
+ * (a) token dönmeyen yanıt, (b) portal hatası, (c) `loginWithTestUser`ın
+ * `login()`'den ÖNCE çalışan test kullanıcısı alma aşaması — üçüncüsü ilk iki
+ * düzeltmeden sonra da açık kalmıştı ve ancak "başka bir durum geçişinde aynı
+ * tehlike var mı" diye sorulunca bulundu.
+ *
+ * Simetrik olarak bir İSTİSNA vardır: canlı ortamda `loginWithTestUser`
+ * çağrılırsa mevcut oturum BOZULMAZ. Üretim koruması temizlikten ÖNCE gelir ki
+ * yanlışlıkla çağıran biri çalışan oturumunu kaybetmesin.
+ *
+ * Çıkışta ters karar geçerlidir: uzak çıkış ağ hatasıyla düşse bile yerel token
+ * temizlenir ve hata yine yukarı iletilir. Sunucuda oturumun açık kalması,
+ * istemcinin kimliğinin doğrulandığına inanmasından daha küçük bir sorundur.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../../config/index.js'
@@ -20,6 +43,8 @@ const bodyOf = (call: unknown): URLSearchParams =>
   new URLSearchParams((call as [string, RequestInit])[1].body as string)
 
 describe('AuthService.login', () => {
+  // Kapsam: token alma/saklama ve ortam bazlı `assoscmd` farkı (test ortamında
+  // `login`, canlıda `anologin`) + `loginCommand` ile geçersiz kılma.
   it('token alır ve saklar', async () => {
     const fetchMock = vi.fn(() => json({ token: 'abc123', chgpwd: 'true' }))
     const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch)
@@ -90,6 +115,8 @@ describe('AuthService.login', () => {
 })
 
 describe('AuthService.loginWithTestUser', () => {
+  // Kapsam: yalnızca test ortamında çalışan iki aşamalı akış (kullanıcı öner →
+  // giriş), sabit şifre `"1"` ve canlı ortamda ağa çıkmadan reddedilmesi.
   it('test kullanıcısı önerir ve onunla giriş yapar', async () => {
     const fetchMock = vi.fn((url: string) =>
       url.endsWith('/esign') ? json({ userid: '33333312' }) : json({ token: 'tok' }),
@@ -123,6 +150,9 @@ describe('AuthService.loginWithTestUser', () => {
 })
 
 describe('AuthService token yaşam döngüsü', () => {
+  // Kapsam: bayat token tehlikesi — hangi yolların yerel durumu TEMİZLEMESİ,
+  // hangilerinin KORUMASI gerektiği. Bu blok bir "getter/setter" süiti değil,
+  // yanlış mükellef adına belge düzenlenmesine karşı korumadır.
   it('token yokken getToken hata fırlatır', () => {
     const service = serviceWith(vi.fn() as unknown as typeof globalThis.fetch)
     expect(service.isAuthenticated).toBe(false)

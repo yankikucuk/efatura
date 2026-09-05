@@ -1,3 +1,11 @@
+/**
+ * Sıfır çalışma zamanı bağımlılığı garantisinin MAKİNE tarafından
+ * doğrulanabilir kanıtı.
+ *
+ * README'nin ilk cümlesi ve npm sayfasındaki "0 dependencies" rozeti tek bir
+ * alana dayanır. İddia bu yüzden bir belgede değil, bir testte tutuluyor.
+ */
+
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -12,6 +20,8 @@ import { describe, expect, it } from 'vitest'
  * `npm install -D` bunu tekrar silerse bu test kırılır.
  */
 describe('package.json içindeki dependencies alanı (round 2 madde 4)', () => {
+  // Kapsam: yayınlanan paketin çalışma zamanında hiçbir şey indirmediğinin
+  // tek greplenebilir kanıtı.
   it('boş nesne olarak MEVCUTTUR — sıfır çalışma zamanı bağımlılığı garantisi', () => {
     const packageJsonPath = fileURLToPath(new URL('../package.json', import.meta.url))
     const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as Record<string, unknown>

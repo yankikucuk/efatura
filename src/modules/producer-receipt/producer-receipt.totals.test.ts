@@ -1,3 +1,23 @@
+/**
+ * Müstahsil makbuzu aritmetiği.
+ *
+ * Portal makbuz tutarlarını NE HESAPLIYOR NE DOĞRULUYOR: kasıtlı yanlış bir
+ * `odenecekTutar` (doğrusu 98,00 iken 77,77) canlı olarak gönderildi ve aynen
+ * saklanıp geri verildi. Yani bu dosyadaki aritmetik, oluşturulan belgenin
+ * doğruluğunun TEK güvencesidir.
+ *
+ * Belgenin özü şudur: müstahsil makbuzunda vergiler tutara EKLENMEZ, tutardan
+ * KESİLİR — `odenecekTutar` = vergiler dahil toplam − dört kesintinin toplamı.
+ * Faturadan gelen alışkanlıkla `payableAmount = grandTotal` yazmak buradaki en
+ * olası hatadır ve ayrı bir testle pinlenmiştir (mutasyon denetiminde bu
+ * değişiklik 3 testi birden kırıyor).
+ *
+ * AYIRT EDİCİLİK NOTU: dört kesinti oranı testlerde KASITLI olarak birbirinden
+ * farklıdır (2 / 1 / 0,5 / 4). Eşit oranlarla yazılmış bir test, oranların
+ * birbirine karışmasını — ör. mera fonu oranının borsa tescil ücretine
+ * uygulanmasını — ayırt EDEMEZDİ.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { Unit } from '../../constants/index.js'
@@ -22,6 +42,8 @@ const item = (
   }) as ProducerReceiptLineItemInput
 
 describe('computeProducerReceiptLineItem', () => {
+  // Kapsam: kalem tutarı (miktar × birim fiyat) ve dört kesintinin AYRI AYRI,
+  // kendi oranıyla, kalem tutarı üzerinden hesaplanması + yerel doğrulama.
   it('kalem tutarını miktar × birim fiyat olarak hesaplar', () => {
     expect(computeProducerReceiptLineItem(item()).amount).toBe(1000)
   })
@@ -96,6 +118,8 @@ describe('computeProducerReceiptLineItem', () => {
 })
 
 describe('computeProducerReceiptTotals', () => {
+  // Kapsam: belge düzeyi toplamlar ve makbuzun ayırt edici kuralı — ödenecek
+  // tutar, KESİNTİLER DÜŞÜLMÜŞ tutardır.
   it('belge toplamlarını türetir; ödenecek tutar KESİNTİLER DÜŞÜLMÜŞ tutardır', () => {
     const { totals } = computeProducerReceiptTotals([
       item({ taxRates: { incomeTaxWithholding: 2, pastureFund: 1 } }),
@@ -131,6 +155,9 @@ describe('computeProducerReceiptTotals', () => {
 })
 
 describe('sumProducerReceiptTotals', () => {
+  // Kapsam: okuma yolunda hesaplanmış kalemlerden yeniden toplama.
+  // `computeProducerReceiptTotals` ile AYNI sonucu vermek zorunda: ayrışsalar
+  // aynı makbuz oluşturulurken ve okunurken farklı toplam gösterirdi.
   it('hesaplanmış kalemlerden aynı toplamları üretir', () => {
     const { lines, totals } = computeProducerReceiptTotals([
       item({ taxRates: { socialSecurityPremium: 4 } }),

@@ -1,3 +1,25 @@
+/**
+ * Belge gösterimi (HTML) ve resmi belge paketi (ZIP) indirme.
+ *
+ * `getHtml` bloğunun ağırlık merkezi bir PORTAL KUSURUNUN çevirisidir:
+ * `EARSIV_PORTAL_FATURA_GOSTER`, geçerli bir serbest meslek makbuzu ETTN'i ile
+ * ham bir Java istisnası ("String index out of range: 4") döndürüyor (canlı
+ * doğrulandı 2026-09-05; müstahsilde AYNI komut sorunsuz çalışıyor).
+ * Kullanıcı bu metni gördüğünde kendi kodunda hata arar; çeviri, kusurun
+ * portalda olduğunu ve çalışan alternatifi söyleyen tipli bir hataya
+ * (`EArsivPortalDefectError`) dönüştürür.
+ *
+ * Çevirinin İKİ sınırı ayrı testlerle pinlenmiştir, çünkü ikisi de yanlış
+ * tarafa kaydığında zarar veriyor:
+ * - Yalnızca BU metin çevrilir. Her API hatasını "portal kusuru" saymak gerçek
+ *   iş kurallarını (yetki reddi, ön koşul) gizlerdi.
+ * - Mesaj kullanıcıyı suçlamaz AMA kesin dille "senin hatan değil" de diyemez:
+ *   aynı metin GEÇERSİZ/bilinmeyen bir ETTN'de de dönüyor (canlı doğrulandı —
+ *   sıfır UUID, 'not-a-uuid' ve boş string, üçü de aynı istisnayı verdi). Bu
+ *   yüzden mesaj her iki olasılığı da vermek ve önce kullanıcıya kendi ETTN'ini
+ *   doğrulatmak zorunda.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../../config/index.js'
@@ -23,6 +45,8 @@ const build = (
 }
 
 describe('DocumentService.getHtml', () => {
+  // Kapsam: gösterim isteğinin yükü (varsayılan `Onaylanmadı`), portal
+  // kusurunun tipli hataya çevrilmesi ve çevirinin KAPSAM SINIRI.
   it('onaylanmamış varsayılanıyla HTML çeker', async () => {
     const { service, call } = build(vi.fn().mockResolvedValue('<html>fatura</html>'))
     expect(await service.getHtml('abc')).toBe('<html>fatura</html>')
@@ -101,6 +125,11 @@ describe('DocumentService.getHtml', () => {
 })
 
 describe('DocumentService.downloadPackage', () => {
+  // Kapsam: ZIP yolu dispatch'ten DEĞİL, ayrı bir GET uç noktasından geçer ve
+  // token'ı sorgu dizesinde taşır. Yükün beş alanı sabitlenir; eksik ya da
+  // yanlış alanda portal oturumu geçersiz sayıyor. Bu uç noktanın oturumu
+  // AÇAN istemcinin IP'sine bağlı olması birim testinde gözlenemez (bkz.
+  // README, "İndirme uç noktası istemci IP'sine bağlıdır").
   it('ZIP baytlarını döndürür', async () => {
     const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00])
     const { service, getBinary } = build(vi.fn(), vi.fn().mockResolvedValue(zip))
@@ -127,6 +156,10 @@ describe('DocumentService.downloadPackage', () => {
 })
 
 describe('DocumentService.getDownloadUrl', () => {
+  // Kapsam: aynı adresin indirme YAPILMADAN üretilmesi (kullanıcı URL'yi
+  // kendi HTTP yığınına verebilsin diye). `downloadPackage` ile aynı
+  // parametreleri ürettiği burada pinlenir; ikisi ayrışırsa biri çalışırken
+  // diğeri "Oturum geçersiz" verirdi.
   it('tam indirme adresini kurar', () => {
     const { service } = build()
     const url = service.getDownloadUrl('abc', { signed: true })

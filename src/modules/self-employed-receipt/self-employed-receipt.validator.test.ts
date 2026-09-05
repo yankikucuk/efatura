@@ -1,3 +1,20 @@
+/**
+ * Serbest meslek makbuzu girdi doğrulaması — istek ağa çıkmadan.
+ *
+ * Müstahsilden İKİ farkı vardır ve ikisi de burada sabitlenir:
+ * - `unvan` GERÇEKTEN kullanılabilir: serbest meslek makbuzu tüzel kişiye de
+ *   düzenlenir, bu yüzden "ünvan VEYA ad/soyad" kuralı geçerlidir. Müstahsilde
+ *   `unvan` alanı hiç yoktur ve ad zorunludur.
+ * - Yabancı para birimi desteklenir, dolayısıyla TRY dışında `kur` ZORUNLUDUR;
+ *   kursuz gönderilen bir yabancı para makbuzu portalda sessizce yanlış
+ *   tutarla kaydolurdu (portal makbuz tutarlarını doğrulamıyor).
+ *
+ * Oran hatalarının ALAN YOLUYLA raporlanması bilinçlidir: üç ayrı oran alanı
+ * vardır (`vatRate`, `withholdingRate`, `vatWithholdingRate`) ve aşağı akıştaki
+ * `applyPercent` yalnızca "oran aralık dışı" diyebilir — çağıran hangisinin
+ * bozuk olduğunu bilemezdi.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { Currency } from '../../constants/index.js'
@@ -13,6 +30,8 @@ const base = (overrides: Partial<SelfEmployedReceiptInput> = {}): SelfEmployedRe
 })
 
 describe('validateSelfEmployedReceiptInput', () => {
+  // Kapsam: kimlik, ünvan-veya-ad kuralı, boş kalem listesi, üç oran alanının
+  // aralığı, negatif brüt ücret ve TRY dışı para biriminde kur zorunluluğu.
   it('geçerli makbuzu kabul eder', () => {
     expect(() => {
       validateSelfEmployedReceiptInput(base())

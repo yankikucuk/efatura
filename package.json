@@ -1,7 +1,7 @@
 {
   "name": "efatura",
   "version": "1.0.0",
-  "description": "GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi",
+  "description": "GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi — fatura, müstahsil makbuzu ve serbest meslek makbuzu",
   "keywords": [
     "efatura",
     "e-fatura",
@@ -22,7 +22,18 @@
     "turkish",
     "vergi",
     "mukellef",
-    "nodejs"
+    "nodejs",
+    "makbuz",
+    "mustahsil",
+    "mustahsil-makbuzu",
+    "e-mustahsil",
+    "serbest-meslek",
+    "serbest-meslek-makbuzu",
+    "e-smm",
+    "stopaj",
+    "tevkifat",
+    "kdv",
+    "fatura-kesme"
   ],
   "license": "MIT",
   "author": "Yankı Küçük",

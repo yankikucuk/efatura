@@ -1,3 +1,36 @@
+/**
+ * Canlı test portalına (`earsivportaltest.efatura.gov.tr`) karşı uçtan uca
+ * paket.
+ *
+ * Varsayılan olarak KAPALIDIR (`EFATURA_E2E=1` ile açılır): devlet sunucusuna
+ * her `npm test` çalıştırmasında yük bindirmemek için. Birim testleri
+ * fixture'lara karşı çalışır ve fixture'lar eskiyebilir — portalın habersiz
+ * değiştiğini yalnızca bu paket görebilir.
+ *
+ * İki yapısal kural:
+ * - Hiçbir test SAYIM iddiası içermez ("listede tam olarak N kayıt var").
+ *   `kullaniciOner` her çağrıda "yeni" bir test kullanıcısı verir ama havuz
+ *   DÖNÜŞÜMLÜDÜR: tahsis edilen kullanıcı önceki çalıştırmalardan kalma
+ *   belgeler taşıyabiliyor (canlı gözlem: 33333307 numaralı kullanıcı iki eski
+ *   müstahsil makbuzuyla geldi). Sayım iddiası rastgele kırılırdı.
+ * - Alıcı ünvanına rastgele bir damga (`uniqueStamp`) eklenir; test
+ *   kullanıcıları portalı kullanan herkesle paylaşıldığı için kendi
+ *   kayıtlarımızı ancak böyle güvenilir biçimde ayırt edebiliriz.
+ *
+ * KANARYA testi ters yönde çalışan tek testtir: portalın SMM gösterim kusurunu,
+ * kendi korumamızı ATLAYARAK, genel fatura gösterim yolundan doğrudan
+ * yokluyor. GİB kusuru düzeltirse bu test KIRILIR — ve o an
+ * `getSelfEmployedReceiptHtml`/`selfEmployedReceiptToPdf` kısıtının
+ * kaldırılması gerektiği anlaşılır. Bugün hâlâ bozuk (canlı teyit 2026-09-05).
+ *
+ * KAPSAM DIŞI — taslak SİLME. `EARSIV_PORTAL_FATURA_SIL` test portalında
+ * HİÇBİR belge türünde çalışmıyor ("Silinirken bir sorun oluştu."), fatura
+ * dahil; denenen tüm yük ve `pageName` varyantlarıyla doğrulandı. Yani bu bir
+ * makbuz gerilemesi değil, önceden var olan bir portal davranışıdır ve üretim
+ * ortamında denemek gerçek hukuki belge oluşturmayı gerektirdiği için
+ * kapsanmıyor.
+ */
+
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { EArsivClient, EArsivPortalDefectError, InvoiceListKind, Unit } from '../../src/index.js'
@@ -5,6 +38,9 @@ import { isE2eEnabled, uniqueStamp } from '../helpers/e2e-guard.js'
 
 // Devlet sunucusuna gereksiz yük bindirmemek için varsayılan olarak kapalı.
 describe.runIf(isE2eEnabled())('e-Arşiv test portalı uçtan uca', () => {
+  // Kapsam: tek oturumda gerçek bir fatura + iki makbuz oluşturup geri okuma,
+  // liste/gösterim/indirme yollarının canlıda çalıştığı ve SMM gösterim
+  // kusurunun HÂLÂ mevcut olduğu. Silme kapsam dışıdır (bkz. dosya başlığı).
   const client = new EArsivClient({ environment: 'test', timeoutMs: 45_000 })
   const buyerTitle = uniqueStamp()
   let ettn = ''

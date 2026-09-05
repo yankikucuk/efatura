@@ -1,3 +1,27 @@
+/**
+ * Portal dispatch protokolü: beş zorunlu alan, `callid` üretimi, hataların
+ * tiplenmesi ve yeniden deneme politikasının komut bazında uygulanması.
+ *
+ * Dosyanın çoğunluğu TEK bir belirsizliğe ayrılmıştır: portalın "Bu işlem için
+ * yetkiniz yok" metni HEM gerçek bir izin kısıtlaması HEM de sunucu tarafında
+ * süresi dolmuş bir token için AYNI şekilde geliyor — metnin kendisi ikisini
+ * ayırt etmiyor. Yanlış tarafa düşmenin bedeli iki yönlüdür: sıradan bir izin
+ * reddini süre dolumu saymak kullanıcının ÇALIŞAN oturumunu siler; süre
+ * dolumunu izin reddi saymak kullanıcıyı ölü bir tokenla döngüde bırakır.
+ *
+ * Çözüm zararsız bir prob isteğidir (`getUserMenu`) ve süit üç durumu birden
+ * pinler: prob başarılıysa token KORUNUR ve orijinal `EArsivApiError` aynen
+ * yükselir; prob da başarısızsa token temizlenir ve `EArsivAuthError`
+ * fırlatılır; prob TAM OLARAK BİR KEZ atılır — kendi başarısızlığı ikinci bir
+ * prob tetiklemez (yasak özyineleme).
+ *
+ * Buna karşılık açık metinli "e-Arşiv oturumu zaman aşımına uğradı."
+ * (furkankadioglu#6) iki anlama gelmez; orada prob atmak gereksiz bir istektir
+ * ve HİÇ atılmadığı ayrıca doğrulanır. `fetch` çağrı sayıları bu yüzden bu
+ * dosyada gerçek birer iddiadır, dekorasyon değil: 1 = prob yok, 2 = tam bir
+ * prob, 3+ = özyineleme.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../config/index.js'
@@ -19,6 +43,8 @@ const gatewayWith = (
 const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 })
 
 describe('DispatchGateway.call', () => {
+  // Kapsam: dispatch protokolünün beş zorunlu alanı, `callid` tekilliği,
+  // portal hatalarının tiplenmesi ve bayat token / izin reddi ayrımı.
   it('beş zorunlu alanı gönderir', async () => {
     const fetchMock = vi.fn(() => json({ data: 'ok' }))
     await gatewayWith(fetchMock as unknown as typeof globalThis.fetch).call(
@@ -96,6 +122,8 @@ describe('DispatchGateway.call', () => {
   })
 
   describe('round 3 madde 2 — açık oturum zaman aşımı prob YAPMAZ', () => {
+    // Kapsam: tek anlamlı süre dolumu metninde prob'un GEREKSİZ olduğu — ve
+    // "yetkiniz yok" yolunun buna rağmen prob atmaya devam ettiği.
     // furkankadioglu#6: "e-Arşiv oturumu zaman aşımına uğradı." AUTH_EXPIRED_
     // PATTERN'in aksine iki anlama gelmez — yalnızca süre dolumunu bildirir.
     // Bu yüzden probeTokenIsExpired() ile doğrulamaya gerek yok; token
@@ -140,6 +168,8 @@ describe('DispatchGateway.call', () => {
   })
 
   describe('round 2 madde 1 — genuine yetki hatası ile bayat token ayrımı', () => {
+    // Kapsam: prob mekanizmasının üç sonucu — sağlıklı prob, başarısız prob,
+    // ve prob'un tam olarak bir kez atılması.
     // Spec §2.5: EARSIV_PORTAL_TELEFONNO_SORGULA test ortamında bir YETKİ
     // KISITLAMASIDIR, bayat token değil. Portal ikisi için de AYNI "Bu işlem
     // için yetkiniz yok" metnini döndürür — bu yüzden metnin kendisi
@@ -220,6 +250,9 @@ describe('DispatchGateway.call', () => {
 })
 
 describe('DispatchGateway.call — RETRYABLE_COMMANDS (C1)', () => {
+  // Kapsam: yeniden deneme politikasının komut düzeyinde gerçekten
+  // uygulandığı. AYNI 503 yanıtı karşısında mutasyon komutu TEK POST, salt
+  // okunur komut yapılandırılan sayıda POST atmalı.
   const gatewayWithRetry = (fetchImpl: typeof globalThis.fetch): DispatchGateway => {
     const options = resolveClientOptions({
       environment: 'test',

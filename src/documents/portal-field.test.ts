@@ -1,8 +1,30 @@
+/**
+ * Portal alanlarını okuyan ilkeller: `str`, `num`, `asRows`.
+ *
+ * Portal aynı alanı vakaya göre string, sayı, `null` ya da hiç göndermeyerek
+ * döndürüyor; bu üç yardımcı o düzensizliği tek yerde soğuruyor. Daha önce
+ * `invoice.mapper` ve `document.mapper` içinde AYRI AYRI duruyorlardı ("kasıtlı
+ * kopya" olarak belgelenmişti); iki makbuz modülü de aynı ilkellere ihtiyaç
+ * duyunca kopya sayısı dörde çıkacaktı ve `documents` yaprak katmanına
+ * taşındılar.
+ *
+ * Süitin en değerli iki iddiası:
+ * - `str('')` varsayılana DÜŞMEZ; boş string geçerli bir stringtir. Bu kör
+ *   nokta I5'in kök sebebiydi: portalın boş `belgeTarihi` gönderdiği TEK bir
+ *   satır, `formatPortalDate('')` fırlattığı için listenin TAMAMINI
+ *   düşürüyordu.
+ * - `num` hem Türkçe biçimli stringi ("1.234,56") hem de ham sayıyı kabul
+ *   eder — makbuz detay yanıtları tutarları STRING değil SAYI döndürüyor
+ *   (canlı doğrulandı), faturanın aksine.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { asRows, num, str } from './portal-field.js'
 
 describe('str', () => {
+  // Kapsam: string/sayı dışındaki her girdinin varsayılana düşmesi — ve boş
+  // stringin bu kuralın DIŞINDA kalması.
   it('stringi aynen, sayıyı metne çevirerek döndürür', () => {
     expect(str('Ceviz')).toBe('Ceviz')
     expect(str(1000)).toBe('1000')
@@ -19,6 +41,8 @@ describe('str', () => {
 })
 
 describe('num', () => {
+  // Kapsam: portalın iki ayrı sayı gösterimi (Türkçe biçimli string ve ham
+  // sayı) ve ayrıştırılamayan girdide fallback.
   it('Türkçe binlik/ondalık biçimini ayrıştırır (I4)', () => {
     expect(num('1.234,56')).toBe(1234.56)
     expect(num('1234,56')).toBe(1234.56)
@@ -41,6 +65,14 @@ describe('num', () => {
 })
 
 describe('asRows', () => {
+  // Kapsam: liste yanıtlarının güvenli hâle getirilmesi. Portal boş sonucu
+  // bazen `null`, hata durumunda ise düz metin olarak döndürüyor; koruma
+  // olmadan çağıran `.map()` üzerinde `TypeError` alırdı.
+  //
+  // DİKKAT: bu blok dizi OLMAYAN girdilerle yazılmak zorunda. `[]` ile
+  // yazılmış bir "boş listeyi tolere eder" testi hiçbir şey kanıtlamaz —
+  // `[]` zaten geçerli bir dizidir ve `Array.isArray` koruması silinse de
+  // geçerdi. Bu tuzağa dispute.service.test.ts'te düşüldü ve düzeltildi.
   it('diziyi satır listesine çevirir', () => {
     expect(asRows([{ a: 1 }])).toEqual([{ a: 1 }])
   })

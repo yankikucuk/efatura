@@ -1,3 +1,19 @@
+/**
+ * Hata taksonomisi — çağıranın programatik olarak dallanabilmesi.
+ *
+ * Referans PHP kütüphanesi hata durumunda `die()` çağırıyordu; bu kütüphanenin
+ * sözü ise "hiçbir hata yutulmaz". Söz ancak hatalar AYIRT EDİLEBİLİRSE bir işe
+ * yarar: geçersiz girdi (`validation`) tekrar denenmez, ağ hatası (`network`)
+ * denenebilir, belirsiz sonuç (`ambiguous-result`) kullanıcı kararı ister.
+ *
+ * Süit her sınıfın (a) `instanceof EArsivError`/`Error` ile yakalanabildiğini,
+ * (b) ayırt edici `kind` alanını taşıdığını, (c) teşhis için gereken bağlamı
+ * (komut, `callId`, ham yanıt, adaylar, `cause`) KAYBETMEDİĞİNİ sabitler.
+ *
+ * `name === constructor.name` iddiası önemsiz görünür ama bir bundler sınıf
+ * adını küçültürse üretim günlüklerinde hatanın kimliği kaybolur.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -10,6 +26,8 @@ import {
 } from './index.js'
 
 describe('hata sınıfları', () => {
+  // Kapsam: beş hata tipinin ORTAK sözleşmesi (miras zinciri, `name`, `kind`)
+  // ve her birinin taşıdığı teşhis bağlamı.
   it('tümü EArsivError ve Error alt sınıfıdır', () => {
     const errors = [
       new EArsivApiError('api', { command: 'C', callId: 'id', raw: null }),

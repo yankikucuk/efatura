@@ -1,3 +1,40 @@
+/**
+ * Portal yanıtlarının başarı/hata olarak sınıflandırılması.
+ *
+ * Portal HTTP durum kodunu anlamlı kullanmıyor: hata da başarı da 200 ile
+ * dönüyor ve ayrım yanıt GÖVDESİNDE. Üstelik gövde tutarsız — hata bazen üst
+ * seviye `error` alanında, bazen `data.hata` içinde, bazen yalnızca düz bir
+ * Türkçe cümlede. Bu dosya o sınıflandırmanın tamamını sabitler.
+ *
+ * Üç gerçek kusur burada kilitlidir:
+ * - Üst seviye `error` alanı BOŞ/SIFIR değerlerle de geliyor ("", "0", 0,
+ *   false) ve "tanımlı mı" kontrolü bunları hata sayıyordu (I6).
+ * - Aynı kusurun ikizi `data.hata` içinde: `FATURA_GETIR` BAŞARIDA da `hata`
+ *   alanını gönderiyor ama boş string olarak — yalnızca `typeof` bakmak her
+ *   başarılı `getInvoice` çağrısını boş mesajlı bir hataya çeviriyordu.
+ * - Belge gövdesi yanlış-pozitifi: `FATURA_GOSTER` 47-55 KB'lık render edilmiş
+ *   HTML döndürür ve bu HTML KULLANICI metni taşır (fatura notu, alıcı ünvanı,
+ *   kalem açıklaması). Kısa durum mesajları için tasarlanmış `FAILURE_MARKERS`
+ *   bu gövdeye uygulanınca, notunda "teslim edilemedi" ya da "hata" geçen HER
+ *   geçerli fatura hataya çevriliyor ve mesaj olarak 47 KB'lık HTML'in tamamı
+ *   fırlatılıyordu. `toPdf` aynı kusuru miras alıyordu.
+ *
+ * Belge muafiyeti İKİ katmanlıdır ve blokları ayrıdır: Layer 1 açık kayıt
+ * (`DOCUMENT_COMMANDS`), Layer 2 kaydedilmeyi UNUTAN bir komut için savunma
+ * sezgisi (metin `<` ile başlıyor VEYA 500 karakterden uzun). Muafiyet
+ * heuristiği GEVŞETTİĞİ için son blok bir regresyon paketidir: gerçek portal
+ * hata metinlerinin — en uzunu 166 karakterlik iptal ön koşul metni — hâlâ
+ * eşiğin ALTINDA kaldığını ve yine de yakalandığını her vaka için ayrıca
+ * doğrular.
+ *
+ * AYIRT EDİCİLİK NOTU: "başarı kalıbı tanımsız komutlarda temiz string data
+ * aynen döner" testi hiçbir tetikleyici sözcük içermeyen bir gövde kullanır ve
+ * `DOCUMENT_COMMANDS` hiç eklenmeden de — yani kusur MEVCUTKEN de — geçerdi.
+ * Bilinçli olarak korundu (geçerli bir "temiz gövde" taban testidir), ama
+ * kusuru asıl pinleyenler düzeltmeden önce fiilen kırmızı olan Layer 1
+ * vakalarıdır.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { portalResponses } from '../../tests/fixtures/portal-responses.js'
@@ -30,6 +67,8 @@ function buildInvoiceHtml(noteText: string): string {
 }
 
 describe('parsePortalResponse — payload.error yanlış-pozitifleri (I6)', () => {
+  // Kapsam: üst seviye `error` alanının boş/sıfır değerlerinin başarı
+  // sayılması.
   // `payload.error !== undefined && payload.error !== null` "", "0", 0 ve
   // false değerlerini de hata sayıyordu — `data.hata === ''` kusurunun (13
   // satır altında düzeltilen) aynısı, üst seviyede. Portal başarıda bu tür
@@ -44,6 +83,9 @@ describe('parsePortalResponse — payload.error yanlış-pozitifleri (I6)', () =
 })
 
 describe('parsePortalResponse', () => {
+  // Kapsam: sınıflandırmanın ana gövdesi — üç hata biçimi (üst seviye `error`,
+  // `data.hata`, düz metin), komut bazlı başarı metinleri, dizi/nesne
+  // yanıtlar, boş dizi ve boş `data.hata` kusuru.
   it('üst seviye error biçimini hataya çevirir', () => {
     expect(() => parsePortalResponse(portalResponses.unauthorized, ctx)).toThrow(EArsivApiError)
     try {
@@ -182,6 +224,10 @@ describe('parsePortalResponse', () => {
 })
 
 describe('parsePortalResponse — belge gövdesi yanlış-pozitifleri (Layer 1: DOCUMENT_COMMANDS)', () => {
+  // Kapsam: açık kayıtlı belge komutlarında metin taramasının TAMAMEN
+  // atlanması. Her vaka gerçek bir tetikleyici sözcük taşıyan TAM bir HTML
+  // gövdesi kullanır ve `result === html` (kimlik) doğrular — yalnızca
+  // "throw etmedi" değil, gövdenin BOZULMADAN döndüğü de sınanır.
   // Portal SHOW_INVOICE için render edilmiş HTML döndürür; bu HTML kullanıcı
   // metni taşır (fatura notu, alıcı ünvanı, kalem açıklaması) ve bu metin
   // FAILURE_MARKERS ile aynı işaretleri taşıyabilir. Bu blok, belge
@@ -203,6 +249,9 @@ describe('parsePortalResponse — belge gövdesi yanlış-pozitifleri (Layer 1: 
 })
 
 describe('parsePortalResponse — Layer 2: kayıtsız komutlarda savunma sezgisi', () => {
+  // Kapsam: iki bağımsız sezgi (`<` ile başlama, 500 karakter eşiği) AYRI
+  // AYRI sınanır — biri kaldırılsa diğeri hâlâ anlamlı kalmalı. Üçüncü test
+  // ters yönü tutar: kısa ve gerçek bir hata metni hâlâ hata sayılmalı.
   // DOCUMENT_COMMANDS'a kaydedilmeyi UNUTAN gelecekteki bir komut senaryosu:
   // DOWNLOAD_DOCUMENT şu an tabloda değil. Yine de metin HTML gövdesi gibi
   // görünüyorsa (`<` ile başlıyor) tarama atlanır ve gövde aynen döner.
@@ -244,6 +293,9 @@ describe('parsePortalResponse — Layer 2: kayıtsız komutlarda savunma sezgisi
 })
 
 describe('parsePortalResponse — regresyon: gerçek portal hata metinleri hâlâ hata sayılır', () => {
+  // Kapsam: muafiyetin gevşetmediğinin kanıtı. Kullanılan komut kasıtlı
+  // olarak ne `SUCCESS_PATTERNS`'ta ne `DOCUMENT_COMMANDS`'ta — yani
+  // gevşetmenin etkili olduğu KOD YOLUNDAN geçiyor.
   // Bu paket, belge muafiyetinin (Layer 1/2) heuristiği GEVŞETTİĞİ tek yer
   // olduğu için en kritik regresyondur: aşağıdaki metinlerin HİÇBİRİ ne `<`
   // ile başlar ne de eşik üstü uzundur, bu yüzden Layer 2'ye takılmadan

@@ -1,3 +1,23 @@
+/**
+ * İptal/itiraz talebi oluşturma, listeleme ve cevaplama.
+ *
+ * Buradaki en pahalı hata SESSİZDİR: iki itiraz yükü AYNI portal komutunu
+ * (`EARSIV_PORTAL_ITIRAZ_TALEBI_OLUSTUR`) kullanır ve yalnızca `pageName` ile
+ * ayrışır — kendi belgeniz `RG_TASLAKLAR`, adınıza düzenlenmiş belge
+ * `RG_ALICI_TASLAKLAR`. Yanlış eşleşme "Bu işlem için yetkiniz yok" veriyor,
+ * yani hata metni sorunu göstermiyor. Yalnızca komut adını doğrulayan bir test
+ * iki değişkeni de yeşil geçirirdi; bu yüzden `pageName` ayrıca sabitleniyor.
+ *
+ * "Dizi olmayan yanıtı boş listeye çevirir" testi, projede yakalanan yedi
+ * "adını taşıdığı davranışı sabitlemeyen test" vakasından biridir. İlk hâli
+ * BOŞ BİR DİZİ (`[]`) ile yazılmıştı — `[]` zaten geçerli bir dizidir, yani
+ * `asRows` içindeki `Array.isArray` koruması SİLİNSE DE test geçerdi ve adı
+ * ("boş listeyi tolere eder") hiçbir davranışı sabitlemiyordu. Vaka, dizi
+ * OLMAYAN bir yanıtla (`null`) değiştirildi; koruma olmadan çağıran `.map()`
+ * üzerinde `TypeError` alırdı. Aynı ders iki makbuz servisindeki benzer
+ * testlere de uygulandı.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { ApprovalStatus, DisputeAnswer, DisputeMethod } from '../../constants/index.js'
@@ -9,6 +29,8 @@ const gatewayMock = (call: ReturnType<typeof vi.fn>): DispatchGateway =>
   ({ call }) as unknown as DispatchGateway
 
 describe('DisputeService.createCancellationRequest', () => {
+  // Kapsam: iptal talebi yükü (dört alan) ve geçersiz girdide ağa HİÇ
+  // çıkılmaması. Talep geri alınamaz ve belge başına bir kez açılır.
   it('doğrulanmış yükü gönderir', async () => {
     const call = vi.fn().mockResolvedValue('Talebiniz başarıyla oluşturuldu.')
 
@@ -47,6 +69,7 @@ describe('DisputeService.createCancellationRequest', () => {
 })
 
 describe('DisputeService.createObjectionRequest', () => {
+  // Kapsam: KENDİ belgenize itiraz — yedi alanlı yük, `RG_TASLAKLAR` sayfası.
   it('yedi alanlı yükü gönderir', async () => {
     const call = vi.fn().mockResolvedValue('başarıyla')
 
@@ -72,6 +95,9 @@ describe('DisputeService.createObjectionRequest', () => {
 })
 
 describe('DisputeService.createObjectionRequestForIncoming', () => {
+  // Kapsam: ADINIZA düzenlenmiş (portal veya entegratör) belgeye itiraz — on
+  // bir alanlı yük ve FARKLI `pageName`. Kütüphanenin belgelediği asıl
+  // kullanım durumu budur.
   it('on bir alanlı yükü RG_ALICI_TASLAKLAR sayfasına gönderir', async () => {
     const call = vi.fn().mockResolvedValue('başarıyla')
 
@@ -127,6 +153,9 @@ describe('DisputeService.createObjectionRequestForIncoming', () => {
 })
 
 describe('DisputeService.listRequests', () => {
+  // Kapsam: tarih aralıklı sorgu, satır eşlemesi ve dizi OLMAYAN yanıtın
+  // tolere edilmesi (gerekçesi dosya başlığında). İptal ve itiraz talepleri
+  // aynı listede döner; ayrım `kind` (`iptalItiraz`) alanındadır.
   it('tarih aralığını gönderir ve satırları eşler', async () => {
     const call = vi.fn().mockResolvedValue([
       {
@@ -166,6 +195,8 @@ describe('DisputeService.listRequests', () => {
 })
 
 describe('DisputeService.respondToRequest', () => {
+  // Kapsam: kabul/ret cevabı. Kabulde `retAciklama` alanı KALDIRILMAZ, boş
+  // string olarak gönderilir — portal eksik anahtarı reddediyor.
   it('kabul cevabında ret açıklamasını boş gönderir', async () => {
     const call = vi.fn().mockResolvedValue('başarıyla')
 

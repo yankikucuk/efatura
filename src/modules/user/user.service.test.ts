@@ -1,3 +1,21 @@
+/**
+ * Firma bilgisi okuma/güncelleme ve VKN ile firma sorgulama.
+ *
+ * Güncellemenin tehlikesi şudur: portal `KULLANICI_BILGILERI_KAYDET` komutunu
+ * KISMİ bir yama olarak değil, kaydın tamamının yerine geçen bir yazma olarak
+ * işler — gönderilmeyen her alan SİLİNİR. Bu yüzden `updateUserInfo` önce
+ * mevcut kaydı okur, yamayı üzerine bindirir ve TAM kaydı geri yazar. Süitin
+ * çoğu iddiası bu oku-birleştir-yaz zincirinin kenar durumlarıdır.
+ *
+ * "Çakışan vknTckn yamasında sunucudaki değeri korur" testi, projede yakalanan
+ * yedi "adını taşıdığı davranışı sabitlemeyen test" vakasından biridir:
+ * `taxOrIdentityNumber` override satırını hiçbir test pinlemiyordu, çünkü
+ * mevcut test yamada hiç `vknTckn` göndermiyordu ve düz bir spread de aynı
+ * sonucu verirdi — satır silinse suite YEŞİL kalıyordu. Yamada ÇAKIŞAN bir
+ * değer taşıyan vaka eklendi; ayırt ediciliği doğrulandı (satır silinince
+ * "expected '9999999999' to be '1234567890'" ile kırılıyor).
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
@@ -10,6 +28,8 @@ const gatewayMock = (call: ReturnType<typeof vi.fn>): DispatchGateway =>
   ({ call }) as unknown as DispatchGateway
 
 describe('UserService', () => {
+  // Kapsam: oku-birleştir-yaz zinciri ve iki kenar durumu (çakışan VKN
+  // yaması, yamadaki açık `undefined`), + VKN ile firma sorgulama.
   it('firma bilgilerini çeker', async () => {
     const call = vi.fn().mockResolvedValue(portalResponses.userInfo.data)
     const info = await new UserService(gatewayMock(call)).getUserInfo()

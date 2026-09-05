@@ -1,3 +1,31 @@
+/**
+ * `EArsivClient` facade'ı — kullanıcının gerçekten dokunduğu katman.
+ *
+ * Her metot tek satırlık bir delegasyondur, bu yüzden "muhtemelen doğrudur"
+ * demek kolaydır; bu projede tam olarak o akıl yürütme beş içi boş testin
+ * geçmesine izin verdi. Süit bu yüzden ÜÇ ayrı koruma katmanı taşır:
+ *
+ * 1. `it.each` yönlendirme tablosu — her facade metodu için GÖNDERİLEN portal
+ *    komutunu sabitler. Yanlış bağlanmış bir delegasyon (ör. `listIncoming`'in
+ *    `listDrafts`'a gitmesi) yalnızca burada yakalanır; doğrulandı — yanlış
+ *    bağlanınca YALNIZCA o satır kırılıyor.
+ * 2. Tablonun YAKALAYAMADIĞI iki vaka için ayrı davranış testleri: aynı komutu
+ *    farklı `pageName` ile gönderen iki itiraz metodu ve aynı komutu farklı
+ *    belge türüne süzen iki makbuz listeleme metodu. İkisinde de `cmd` aynıdır,
+ *    yani tablo iki değişkeni de yeşil geçirirdi.
+ * 3. "public API yüzeyi eksiksiz" testi — yalnızca metodun VAR olduğunu
+ *    kontrol eder.
+ *
+ * Üçüncüsü, projede yakalanan yedi "adını taşıdığı davranışı sabitlemeyen
+ * test" vakasından biridir. Eski adı "tüm public yöntemleri açığa çıkarır"
+ * idi ve isim bir DAVRANIŞ vaat ediyordu, oysa test yalnızca
+ * `typeof === 'function'` bakıyor: `toPdf` boş bir gövdeye indirgense bile
+ * yeşil kalırdı. Test SİLİNMEDİ — bir metodun kazara silinmesi gerçek bir
+ * regresyon sınıfıdır — ama adı ne koruduğunu söyleyecek şekilde değiştirildi
+ * ve o sırada HİÇBİR testi olmayan `toPdf` için ayrı bir davranış testi
+ * yazıldı.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { portalResponses } from '../../tests/fixtures/portal-responses.js'
@@ -8,6 +36,9 @@ import { EArsivClient } from './earsiv.client.js'
 const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 })
 
 describe('EArsivClient', () => {
+  // Kapsam: facade'ın yapılandırması (ortam seçimi, token yaşam döngüsü) ve
+  // her public metodun DOĞRU servise/komuta yönlendirildiği. Servislerin
+  // kendi davranışları burada değil, modül süitlerinde sınanır.
   it('varsayılan olarak canlı ortamı seçer', () => {
     expect(new EArsivClient().environment).toBe('production')
   })

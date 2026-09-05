@@ -1,3 +1,25 @@
+/**
+ * SMS ile fatura imzalama (onaylama).
+ *
+ * Bu akışın tamamı test ortamında DOĞRULANAMAZ: portal test kullanıcılarına
+ * gerçek SMS göndermiyor ve `TELEFONNO_SORGULA` test ortamında bir yetki
+ * kısıtına takılıyor (spec §2.5). Yani buradaki her davranış varsayıma
+ * dayanıyor; süit o varsayımları açıkça yazıya döküyor.
+ *
+ * İki karar sabitlenmiştir:
+ * - `verifySmsCode` `void` DÖNER, `boolean` değil (I8). `false` dönen bir API
+ *   çağıranı sessizce görmezden gelmeye davet ederdi — oysa imzalanmamış bir
+ *   fatura hukuken düzenlenmiş sayılmaz. Başarısızlık `EArsivApiError`
+ *   fırlatır.
+ * - Portalın `sonuc` alanının string mi sayı mı olduğu hiç kanıtlanamadı, bu
+ *   yüzden İKİSİ de başarı sayılır (`String(1) === '1'`) ve iki ayrı testle
+ *   pinlenir. Buna karşılık alanın HİÇ GELMEMESİ başarı DEĞİLDİR: "belki
+ *   olmuştur" varsayımı bu akışta en pahalı hatadır.
+ *
+ * Boş fatura listesinin ağa çıkmadan reddedilmesi de kasıtlıdır — portalın boş
+ * `DATA` ile ne yapacağı bilinmiyor.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { EArsivApiError } from '../../core/index.js'
@@ -21,6 +43,9 @@ const summary: InvoiceSummary = {
 }
 
 describe('SigningService.getPhoneNumber', () => {
+  // Kapsam: kayıtlı numaranın okunması ve komut/sayfa adı. Bu komut test
+  // ortamında yetki kısıtına takıldığı için yalnızca birim düzeyinde
+  // doğrulanabiliyor.
   it('kayıtlı telefon numarasını döndürür', async () => {
     const call = vi.fn().mockResolvedValue({ telefon: '5551234567' })
     expect(await new SigningService(gatewayMock(call)).getPhoneNumber()).toBe('5551234567')
@@ -30,6 +55,8 @@ describe('SigningService.getPhoneNumber', () => {
 })
 
 describe('SigningService.sendSmsCode', () => {
+  // Kapsam: iki aşamalı akış (numara sorgula → kod gönder), numara
+  // verildiğinde ilk adımın ATLANMASI ve `oid` dönmediğinde fırlatma.
   it('önce numarayı sorgular, sonra kod gönderir', async () => {
     const call = vi
       .fn()
@@ -65,6 +92,8 @@ describe('SigningService.sendSmsCode', () => {
 })
 
 describe('SigningService.verifySmsCode (I8 — void döner, başarısızlıkta fırlatır)', () => {
+  // Kapsam: imzalama isteğinin tam yükü (faturalar portal ÖZET biçiminde
+  // gönderilir) ve BAŞARI TANIMI — bkz. dosya başlığı.
   it('faturaları portal özet biçiminde gönderir ve başarıda sessizce döner', async () => {
     const call = vi.fn().mockResolvedValue({ sonuc: '1' })
 

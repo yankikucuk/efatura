@@ -1,3 +1,26 @@
+/**
+ * Yeni oluşturulan belgenin ETTN'inin çözülmesi — kütüphanenin en kırılgan
+ * yeri, üç belge türünün ortak yolu.
+ *
+ * Portal `FATURA_OLUSTUR` (ve iki makbuz oluşturma komutu) yanıtında ETTN
+ * DÖNDÜRMEZ; istemcinin gönderdiği kimlik de YOK SAYILIR. Referans PHP
+ * kütüphanesi bu yüzden istemci tarafında bir UUID üretip "bu benim ETTN'im"
+ * diyordu — portal başka bir kimlik atadığı için o değer yanlış belgeye işaret
+ * edebiliyordu. Bu kütüphane bunun yerine oluşturma ÖNCESİ ve SONRASI taslak
+ * listesinin anlık görüntülerini karşılaştırır.
+ *
+ * Tasarımın sözü: TAHMİN ETMEZ. Fark tekile inmezse yanlış bir ETTN döndürmek
+ * yerine `EArsivAmbiguousResultError` fırlatılır ve adaylar hatanın
+ * `candidates` alanında verilir. Süit bu yüzden yalnızca mutlu yolu değil,
+ * "hiç yeni kayıt yok", "boş liste döndü" ve "daraltmadan sonra hâlâ iki aday"
+ * yollarının HEPSİNİN fırlattığını sabitler.
+ *
+ * Daraltma ipucu (VKN + alıcı adı + tarih) bilinçli olarak TOLERANSLIDIR:
+ * portal alıcı ünvanını boş bırakabiliyor ve müstahsil satırlarında bu alan
+ * hiç yok. Boş ünvan ayırt edici sayılsaydı makbuz ETTN çözümü sessizce
+ * bozulurdu.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { EArsivAmbiguousResultError } from '../core/index.js'
@@ -23,6 +46,9 @@ const hint = {
 }
 
 describe('resolveCreatedEttn', () => {
+  // Kapsam: mutlu yol (tek yeni kayıt), ipucuyla daraltma (VKN, ad, tarih) ve
+  // BAŞARISIZLIK yolları. Fırlatma testleri süitin yarısıdır çünkü tasarımın
+  // sözü "belirsizse tahmin etme"dir.
   it('tam olarak bir yeni kayıt varsa onu döndürür', () => {
     const existing = summary({ ettn: 'eski' })
     const created = summary({ ettn: 'yeni' })

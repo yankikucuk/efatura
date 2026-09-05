@@ -1,3 +1,21 @@
+/**
+ * Portal sabitleri — harfi harfine yazım denetimi.
+ *
+ * Bu dosyadaki her değer, portalın kabul ettiği ya da döndürdüğü METNİN
+ * kendisidir; "düzeltilmiş", diakritiksiz veya camel-case'e çevrilmiş bir
+ * varyant portalda SESSİZCE başarısız olur. İki somut vaka:
+ *
+ * - `belgeTuru` değerleri Türkçe diakritiklidir (`MÜSTAHSİL MAKBUZU`).
+ *   Diakritiksiz bir yazım hiçbir satırı süzmez: makbuz listeleri BOŞ döner ve
+ *   hiçbir hata verilmez — bu yüzden sessizdir.
+ * - `InvoiceListKind.STANDARD` ('Buyuk') bir filtre değil ÜST KÜMEDİR; adı
+ *   yanıltıcı olduğu için değeri burada sabitlenir.
+ *
+ * Bu, "sabit sabit mi" tekrarı değildir: değerlerin kaynağı GİB portalıdır,
+ * belgelenmiş bir sözleşme yoktur ve tek doğrulama yolu canlı gözlemdir. Test
+ * o gözlemin kaydıdır.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -14,6 +32,8 @@ import {
 } from './index.js'
 
 describe('sabitler', () => {
+  // Kapsam: para birimi, birim, fatura tipi, onay durumu, liste tipi, itiraz
+  // yöntemi/cevabı/durumu, belge türleri ve müstahsil vergi kodları.
   it('para birimi kodları ISO 4217', () => {
     expect(Currency.TURKISH_LIRA).toBe('TRY')
     expect(Currency.US_DOLLAR).toBe('USD')

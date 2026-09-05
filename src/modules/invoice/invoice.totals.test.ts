@@ -1,3 +1,23 @@
+/**
+ * Fatura aritmetiği ve `totals` override doğrulaması.
+ *
+ * Toplamlar KALEMLERDEN türetilir; çağıranın matrah/KDV/genel toplam
+ * hesaplaması gerekmez. Yine de `totals` ile bir değeri override etmek
+ * mümkündür ve asıl güvence buradadır: override HESAPLANANLA KARŞILAŞTIRILIR,
+ * uyuşmazsa istek ağa çıkmadan reddedilir. En sinsi vaka tek bir alanı
+ * "düzeltmeye" çalışan çağırandır — bu kontrol olmadan uydurulmuş bir KDV
+ * doğrudan hukuki belgeye yazılırdı.
+ *
+ * `computeLineItemForRead` ayrı bir fonksiyondur çünkü OKUMA yolu doğrulama
+ * yapmamalıdır (I4): `getInvoice` portalda ZATEN var olan bir kaydı getiriyor;
+ * boş ada veya negatif miktara sahip bir satır yüzünden fırlatmak kullanıcıyı
+ * kendi faturasını okuyamaz hâle getirirdi — `raw` alanına bile erişemezdi.
+ *
+ * Yuvarlama vakaları kuruş düzleminde yazılmıştır; ilgili kayan nokta tuzağı
+ * ve test değerlerinin nasıl seçilmesi gerektiği için bkz.
+ * `src/core/money/money.test.ts` başlığı.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { Unit } from '../../constants/index.js'
@@ -21,6 +41,8 @@ const item = (overrides: Partial<LineItemInput> = {}): LineItemInput => ({
 })
 
 describe('computeLineItem', () => {
+  // Kapsam: kalem düzeyi zincir — brüt → iskonto → net → KDV → ek vergi,
+  // kuruş hassasiyetiyle + yerel doğrulama.
   it('iskontosuz kalemi hesaplar', () => {
     expect(computeLineItem(item())).toMatchObject({
       grossAmount: 100,
@@ -81,6 +103,8 @@ describe('computeLineItem', () => {
 })
 
 describe('computeLineItemForRead (I4)', () => {
+  // Kapsam: aynı zincirin DOĞRULAMASIZ hâli ve geçerli girdide oluşturma
+  // yoluyla aynı sonucu verdiği.
   it('doğrulama yapmadan boş ada sahip bir kalemi hesaplar', () => {
     // Okuma yolu (getInvoice) portaldan gelen bir satırı REDDETMEMELİ:
     // kullanıcı zaten var olan bir kaydı okuyor, yeni bir kayıt oluşturmuyor.
@@ -105,6 +129,8 @@ describe('computeLineItemForRead (I4)', () => {
 })
 
 describe('computeTotals', () => {
+  // Kapsam: belge düzeyi toplamlar, farklı KDV oranlarının ayrı ayrı
+  // hesaplanması ve kalem toplamlarıyla tutarlılık.
   it('tek kalemli faturayı toplar', () => {
     const { totals } = computeTotals([item()])
     expect(totals).toEqual({
@@ -162,6 +188,10 @@ describe('computeTotals', () => {
 })
 
 describe('mergeAndVerifyTotals', () => {
+  // Kapsam: `totals` override'ının hesaplanana karşı doğrulanması —
+  // kütüphanenin uydurulmuş bir rakamı portala geçirmeyi reddettiği yer. Hata
+  // mesajının hem hesaplananı hem verileni içermesi de pinlenir; aksi halde
+  // çağıran neyi düzelteceğini bilemezdi.
   it('override verilmediğinde hesaplananı döndürür', () => {
     const { totals } = computeTotals([item()])
     expect(mergeAndVerifyTotals(totals, undefined)).toEqual(totals)

@@ -1,3 +1,19 @@
+/**
+ * Taslak listesi satırlarının normalizasyonu ve belge türüne göre süzülmesi.
+ *
+ * İki canlı portal gerçeği bu dosyada kilitlidir:
+ *
+ * 1. Liste satırı, AYNI belgenin detayından farklı biçimlidir: tarih tire ile
+ *    gelir ve alıcı ünvanı bazen HİÇ YOKTUR (müstahsil satırlarında alan hiç
+ *    bulunmuyor, TCKN'li alıcılarda boş dönüyor). Tek bozuk satır yüzünden
+ *    istisna fırlatmak listenin TAMAMINI düşürüyordu — I5'in kök sebebi.
+ * 2. `hangiTip: 'Buyuk'` bir belge türü FİLTRESİ DEĞİL, bir ÜST KÜMEDİR: tek
+ *    oturumda oluşturulan bir fatura + iki makbuz aynı listede döndü
+ *    (`5000/30000` ise yalnızca faturayı verdi). Portal ayrı bir "makbuz
+ *    listesi" komutu sunmadığı için makbuz listeleme yollarının TAMAMI
+ *    `filterByDocumentType`'a bağlıdır.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { portalResponses } from '../../tests/fixtures/portal-responses.js'
@@ -6,6 +22,8 @@ import { DocumentType } from '../constants/index.js'
 import { filterByDocumentType, toDocumentSummary } from './document.mapper.js'
 
 describe('toDocumentSummary', () => {
+  // Kapsam: "hiçbir satır listeyi düşüremez" kuralı — bozuk tarih ve eksik
+  // ünvan alanı hata değil, boş/ham değer üretir.
   it('taslak satırını normalize eder ve tarih ayırıcısını düzeltir', () => {
     const rows = portalResponses.draftList.data as unknown as Record<string, unknown>[]
     const summary = toDocumentSummary(rows[0]!)
@@ -54,6 +72,8 @@ describe('toDocumentSummary', () => {
 })
 
 describe('filterByDocumentType', () => {
+  // Kapsam: üst küme listesinden tek bir belge türünün süzülmesi. Makbuz
+  // listeleme ve makbuz ETTN çözümü yollarının tamamı buna bağlıdır.
   // 2026-09-05 canlı doğrulaması: hangiTip 'Buyuk' bir belge türü FİLTRESİ
   // DEĞİL, bir ÜST KÜMEDİR — tek oturumda oluşturulan fatura + iki makbuz
   // aynı listede döndü, hangiTip '5000/30000' ise yalnızca FATURA döndürdü.

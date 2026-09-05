@@ -1,3 +1,33 @@
+/**
+ * Fatura servisi: oluşturma, üç ayrı listeleme, okuma ve taslak silme.
+ *
+ * `createDraft` ÜÇ istektir (listele → oluştur → yeniden listele) çünkü portal
+ * `FATURA_OLUSTUR` yanıtında ETTN DÖNDÜRMEZ; kimlik ancak anlık görüntü
+ * farkıyla çözülebiliyor. Bu maliyet gizlenmiyor,
+ * `expect(call).toHaveBeenCalledTimes(3)` ile sabitleniyor — bir
+ * "optimizasyon" sessizce ETTN çözümünü bozamasın.
+ *
+ * Eşzamanlılık testi mlevent#101'in (açık, Mayıs 2026) doğrudan karşılığıdır:
+ * aynı alıcıya art arda fatura kesmek — nihai tüketici TCKN'i 11111111111
+ * olduğunda kaçınılmaz — ETTN'leri karıştırıyordu. Serileştirme olmadan iki
+ * eşzamanlı çağrının İKİSİ de `EArsivAmbiguousResultError` ile REDDEDİLİYORDU,
+ * oysa portalda iki fatura da GERÇEKTEN oluşmuştu: iki dosyalanmış fatura +
+ * iki hata, sıraya koymaktan kötüdür.
+ *
+ * Okuma yolunun sözü (I4/I5): `getInvoice` PORTALIN kendi rakamlarını raporlar,
+ * kalemlerden yeniden HESAPLAMAZ; ve tek bir bozuk alan (boş `malHizmet`, boş
+ * `faturaTarihi`) yüzünden fırlatmaz — kullanıcı kendi faturasını okuyamaz
+ * hâle gelmemeli, `raw` alanı her hâlükârda erişilebilir kalmalı.
+ *
+ * `cancelDraft` bloğunun DÜRÜST NOTU: bu davranış test portalında hiç
+ * doğrulanamıyor. `EARSIV_PORTAL_FATURA_SIL` her denemede "Silinirken bir
+ * sorun oluştu." döndürüyor — FATURA dahil her belge türünde, denenen tüm yük
+ * ve `pageName` varyantlarıyla (canlı doğrulandı 2026-09-05). Buradaki testler
+ * bu yüzden yalnızca İSTEĞİN doğru kurulduğunu sabitler (doğru tarih aralığı,
+ * doğru `silinecekler` satırı, bulunamayan ETTN'de anlamlı hata); portalın
+ * isteği KABUL ETTİĞİNİ kanıtlamazlar.
+ */
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { InvoiceListKind, Unit } from '../../constants/index.js'
@@ -27,6 +57,9 @@ const gatewayMock = (call: ReturnType<typeof vi.fn>): DispatchGateway =>
   ({ call }) as unknown as DispatchGateway
 
 describe('InvoiceService.createDraft', () => {
+  // Kapsam: üç istekli ETTN çözümü, yükte `faturaUuid` bulunmaması, ağa
+  // çıkmadan doğrulama (girdi ve tutarsız `totals` override'ı), belirsizlikte
+  // reddetme ve eşzamanlı çağrıların serileştirilmesi.
   it('anlık görüntü farkıyla ETTN çözer', async () => {
     const call = vi
       .fn()
@@ -138,6 +171,8 @@ describe('InvoiceService.createDraft', () => {
 })
 
 describe('InvoiceService.listDrafts', () => {
+  // Kapsam: iki liste türü — `5000/30000` (interaktif, yalnızca FATURA) ve
+  // `Buyuk` (üst küme) — ile tarih girdilerinin portal biçimine çevrilmesi.
   it('varsayılan olarak interaktif listeyi sorgular', async () => {
     const call = vi.fn().mockResolvedValue([draftRow('a')])
     const result = await new InvoiceService(gatewayMock(call)).listDrafts(
@@ -186,6 +221,8 @@ describe('InvoiceService.listDrafts', () => {
 })
 
 describe('InvoiceService.listIncoming', () => {
+  // Kapsam: PORTALIN KENDİSİ üzerinden adınıza düzenlenen belgeler.
+  // Entegratör üzerinden gelenleri GÖSTERMEZ — o ayrı bir komuttur (aşağıda).
   it('adıma düzenlenen belgeleri sorgular', async () => {
     const call = vi.fn().mockResolvedValue([draftRow('a')])
     await new InvoiceService(gatewayMock(call)).listIncoming('01/09/2026', '03/09/2026')
@@ -197,6 +234,10 @@ describe('InvoiceService.listIncoming', () => {
 })
 
 describe('InvoiceService.listIncomingExternal', () => {
+  // Kapsam: entegratör üzerinden adınıza düzenlenen belgeler — farklı komut,
+  // farklı `pageName`, farklı SATIR TİPİ (satıcı kimliği). `pageName` kasıtlı
+  // olarak `RG_ALICI_TASLAKLAR`'dan farklıdır; yanlışı "Bu işlem için
+  // yetkiniz yok" veriyor.
   const externalRow = (ettn: string): Record<string, unknown> => ({
     ettn,
     belgeNumarasi: `GIB-${ettn}`,
@@ -270,6 +311,10 @@ describe('InvoiceService.listIncomingExternal', () => {
 })
 
 describe('InvoiceService.getInvoice', () => {
+  // Kapsam: okuma yolunun iki sözü — portalın kendi rakamları raporlanır ve
+  // tek bozuk alan yüzünden fırlatılmaz (I4/I5). Toplam testi kasıtlı olarak
+  // kalemlerle ÇELİŞEN portal rakamları kullanır; ancak böyle hangi kaynağın
+  // raporlandığı ayırt edilebilir.
   it('ETTN ile detay çeker', async () => {
     const call = vi.fn().mockResolvedValue({
       faturaUuid: 'abc',
@@ -363,6 +408,10 @@ describe('InvoiceService.getInvoice', () => {
 })
 
 describe('InvoiceService.cancelDraft', () => {
+  // Kapsam: silinecek satırın listeden bulunması, silme yükünün kurulması ve
+  // tarih penceresinin `{ date }` ile geçmişe alınabilmesi (I10).
+  // DÜRÜST NOT: portal bu komutu test ortamında HİÇBİR belge türünde kabul
+  // etmiyor; ayrıntı dosya başlığında.
   it('özet satırını ve gerekçeyi gönderir', async () => {
     const call = vi
       .fn()

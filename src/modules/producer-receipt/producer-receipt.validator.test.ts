@@ -1,3 +1,18 @@
+/**
+ * Müstahsil makbuzu girdi doğrulaması — istek ağa çıkmadan.
+ *
+ * Portal makbuz alanlarını NE HESAPLIYOR NE DOĞRULUYOR: canlı doğrulandı
+ * (2026-09-05) — kasıtlı yanlış bir `odenecekTutar` (doğrusu 98,00 iken 77,77)
+ * aynen saklandı ve geri verildi. Yani makbuzda portal bir emniyet ağı
+ * DEĞİLDİR ve bu dosya gerçekten son savunma hattıdır.
+ *
+ * Süitin kayda değer kararı: BİR yerde portaldan daha katıyız. Müstahsil
+ * makbuzunda `unvan` alanı HİÇ YOKTUR — belge yalnızca gerçek kişiye kesilir —
+ * ve portal adsız makbuzu kabul ediyor (canlı doğrulandı), ama adsız bir
+ * makbuz hukuken geçersizdir. Bu yüzden ad ya da soyaddan en az biri zorunlu
+ * kılındı.
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { Unit } from '../../constants/index.js'
@@ -13,6 +28,8 @@ const base = (overrides: Partial<ProducerReceiptInput> = {}): ProducerReceiptInp
 })
 
 describe('validateProducerReceiptInput', () => {
+  // Kapsam: kimlik, ad/soyad kuralı, boş kalem listesi ve kesinti oranlarının
+  // aralığı. Hatalar ALAN YOLUYLA raporlanır ve tek seferde toplanır.
   it('geçerli makbuzu kabul eder', () => {
     expect(() => {
       validateProducerReceiptInput(base())

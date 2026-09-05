@@ -1,3 +1,28 @@
+/**
+ * Serbest meslek makbuzunun portal yüküne ve portal yanıtından tipli detaya
+ * çevrilmesi.
+ *
+ * Okuma yolunda ASİMETRİK bir kural geçerlidir ve bu dosyanın özü odur:
+ *
+ * - KALEM tutarları oranlardan YENİDEN HESAPLANIR. Portal kalem düzeyinde
+ *   türetilmiş tutarları (`gvStopajTutari`, `kdvTutari`, `kdvTevkifatTutari`)
+ *   hiç döndürmüyor; döndürdüğü `netUcret`/`netAlinan` ise portalın hesabı
+ *   değil, bizim gönderdiğimizin yankısıdır — gönderilmezse 0 olarak SAKLANIYOR
+ *   (canlı doğrulandı). Saklanan değeri olduğu gibi raporlamak, 500 ₺ brüt
+ *   ücretli bir makbuzu "net alınan: 0" diye göstermek olurdu.
+ * - BELGE toplamları ise portalın kendi kaydından OKUNUR (faturadaki I4
+ *   kararı): resmi rakam GİB'in tuttuğudur.
+ *
+ * Belge toplamı testi ayırt edici olsun diye kalemlerden çıkacak değerden
+ * BİLEREK saptırılmıştır ve bu sapma gerçekçidir: portal gönderilen toplamı
+ * doğrulamadan sakladığı için kayıtlı rakam kalemlerle çelişebilir.
+ *
+ * İki alan adı tuzağı da burada kilitlidir: adres alanı SMM'de
+ * `bulvarCaddeSokak` (büyük harfli), faturada `bulvarcaddesokak` (tamamı
+ * küçük); ve referans PHP kütüphanesinin gönderdiği `xxx` alanı GEREKSİZDİR,
+ * gönderilmez (canlı doğrulandı: onsuz oluşturma başarılı).
+ */
+
 import { describe, expect, it } from 'vitest'
 
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
@@ -33,6 +58,9 @@ const input = (overrides: Partial<SelfEmployedReceiptInput> = {}): SelfEmployedR
 })
 
 describe('toPortalSelfEmployedReceipt', () => {
+  // Kapsam: yazma yönü — kısaltılmış toplam alan adları (`brtUcret`,
+  // `gvStpjTtari`, ...), TÜRETİLMİŞ kalem tutarlarının gönderilmesi (portal
+  // hesaplamıyor), boolean `kdvTahakkukIcin` ve gönderilmeyen alanlar.
   it('kimlik alanlarını ASLA göndermez', () => {
     const payload = toPortalSelfEmployedReceipt(input())
     expect(payload).not.toHaveProperty('ettn')
@@ -130,6 +158,8 @@ describe('toPortalSelfEmployedReceipt', () => {
 })
 
 describe('toSelfEmployedReceiptDetail', () => {
+  // Kapsam: okuma yönü ve buradaki ASİMETRİ — kalem tutarları oranlardan
+  // yeniden hesaplanır, belge toplamları portaldan okunur.
   const raw = portalResponses.selfEmployedReceiptDetail.data as unknown as Record<string, unknown>
 
   it('kimlik alanı `ettn`dir (müstahsilde `uuid`)', () => {
