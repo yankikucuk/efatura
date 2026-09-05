@@ -316,12 +316,21 @@ ve tek dosyaya
 paketlenmiştir; import anında hiçbir ağ, dosya sistemi veya kripto işlemi
 yapılmaz.
 
-**Paket boyutu.** Yayınlanan paket **~250 KB tarball / ~970 KB açılmış** ve
+**Paket boyutu.** Yayınlanan paket **~500 KB tarball / ~2,0 MB açılmış** ve
 **sıfır çalışma zamanı bağımlılığı** taşır (`dependencies: {}` — bu bir testle
-sabitlenmiştir). Açılmış boyutun yarıdan fazlası kaynak haritalarıdır
-(`*.js.map`, `*.cjs.map`); çalışma zamanı JavaScript'i her biçim için ~115 KB,
-tip tanımları ~92 KB'tır. `puppeteer` yalnızca PDF isteyenler için opsiyonel
-bir peer bağımlılıktır ve kurulmadıkça indirilmez.
+sabitlenmiştir). Açılmış boyutun dağılımı: kaynak haritaları ~957 KB (%46),
+tip tanımları ~643 KB (%31), çalışma zamanı JavaScript'i ~430 KB (%21, iki
+biçim birlikte).
+
+Bu boyutun **çalışma zamanı maliyeti yoktur** — kaynak haritaları yalnızca
+hata ayıklarken okunur ve paketleyiciler bunları çıktıya dahil etmez; tip
+tanımlarının büyüklüğü ise public API'nin tamamına yazılmış Türkçe JSDoc'tan
+gelir, yani editörünüzde gördüğünüz belgelerin karşılığıdır. Kurulum boyutu
+sizin için kritikse `tsup.config.ts` içinde `sourcemap: false` paketi %46
+küçültür. Ayrıntılı ölçüm: [`docs/performans-denetimi.md`](docs/performans-denetimi.md).
+
+`puppeteer` yalnızca PDF isteyenler için opsiyonel bir peer bağımlılıktır ve
+kurulmadıkça indirilmez.
 
 **Portal istekleri.** Tek bir portal isteği yaklaşık **130–150 ms** sürüyor
 (test portalı, Türkiye'den). Buradaki asıl maliyet istek SAYISINDADIR:

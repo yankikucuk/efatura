@@ -76,6 +76,19 @@ const fail = (message: string, path: string): never => {
  * portal da kalem düzeyinde her kesintiyi ayrı bir alanda taşıdığı için
  * toplamdan geri hesaplamak bir kuruş sapma yaratabilirdi.
  *
+ * MATRAH KARARI (2026-09-05) — DÖRT kesinti de TAM kalem tutarı üzerinden
+ * hesaplanır. Referans PHP kütüphanesi (`mlevent/fatura`) yalnızca Borsa
+ * Tescil Ücreti (`8001`) için İNDİRGENMİŞ bir matrah kullanır: kalem tutarı
+ * eksi diğer kesintiler. Bu, o kütüphane yazarının yorumudur; doğrulanmış
+ * bir portal davranışı DEĞİLDİR ve canlıda ölçülemez, çünkü portal makbuz
+ * tutarlarını ne hesaplar ne doğrular (kasıtlı yanlış bir `odenecekTutar`
+ * aynen saklandı). Mevzuat okuması bizim uygulamamızı destekler: tescil
+ * ücreti satış bedeli üzerinden alınır, gelir vergisi stopajı düşülmüş tutar
+ * üzerinden değil.
+ *
+ * İki kütüphaneyi karşılaştıran biri bu farkı görüp hata sanabilir —
+ * DEĞİŞTİRMEYİN. Bilinçli bir sapmadır.
+ *
  * @param item Hesaplanacak kalem; `name`, `quantity`, `unit` ve `unitPrice`
  *   zorunludur. `taxRates` verilmezse dört kesinti de 0 kabul edilir.
  * @param index Kalemin belge içindeki sırası; YALNIZCA hata mesajlarındaki
