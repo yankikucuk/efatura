@@ -15,8 +15,8 @@ const isRetryableStatus = (status: number): boolean => status >= 500
  *
  * @example
  * ```ts
- * import { Endpoint, HttpClient, resolveClientOptions } from 'efatura'
- * import type { PostFormOptions } from 'efatura'
+ * import { Endpoint, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
+ * import type { PostFormOptions } from '@yankikucuk/efatura'
  *
  * const http = new HttpClient(resolveClientOptions({ environment: 'test' }))
  * // Salt okunur bir sorgu: yeniden denenmesi güvenli.
@@ -51,7 +51,7 @@ export interface PostFormOptions {
  *
  * @example
  * ```ts
- * import { HttpClient, resolveClientOptions } from 'efatura'
+ * import { HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
  *
  * const http = new HttpClient(resolveClientOptions({ environment: 'test', timeoutMs: 10_000 }))
  * console.log(typeof http.postForm, typeof http.getBinary)
@@ -86,7 +86,7 @@ export class HttpClient {
    *
    * @example
    * ```ts
-   * import { Command, Endpoint, HttpClient, parsePortalResponse, resolveClientOptions } from 'efatura'
+   * import { Command, Endpoint, HttpClient, parsePortalResponse, resolveClientOptions } from '@yankikucuk/efatura'
    *
    * const http = new HttpClient(resolveClientOptions({ environment: 'test' }))
    * const raw = await http.postForm(
@@ -139,7 +139,7 @@ export class HttpClient {
    *
    * @example
    * ```ts
-   * import { Command, DocumentType, Endpoint, HttpClient, resolveClientOptions } from 'efatura'
+   * import { Command, DocumentType, Endpoint, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
    *
    * const http = new HttpClient(resolveClientOptions({ environment: 'test' }))
    * const zip = await http.getBinary(Endpoint.DOWNLOAD, {

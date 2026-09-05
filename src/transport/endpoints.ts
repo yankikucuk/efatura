@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { BASE_URLS, Endpoint } from 'efatura'
+ * import { BASE_URLS, Endpoint } from '@yankikucuk/efatura'
  *
  * console.log(`${BASE_URLS.test}${Endpoint.DISPATCH}`)
  * // https://earsivportaltest.efatura.gov.tr/earsiv-services/dispatch
@@ -30,8 +30,8 @@ export const Endpoint = {
  *
  * @example
  * ```ts
- * import { Endpoint } from 'efatura'
- * import type { EndpointPath } from 'efatura'
+ * import { Endpoint } from '@yankikucuk/efatura'
+ * import type { EndpointPath } from '@yankikucuk/efatura'
  *
  * const path: EndpointPath = Endpoint.DOWNLOAD
  * console.log(path)

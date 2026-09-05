@@ -162,7 +162,7 @@ function toDetailTotals(raw: Record<string, unknown>): ProducerReceiptTotals {
  *
  * @example
  * ```ts
- * import { toProducerReceiptDetail } from 'efatura'
+ * import { toProducerReceiptDetail } from '@yankikucuk/efatura'
  *
  * const detail = toProducerReceiptDetail(
  *   {

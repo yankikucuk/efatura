@@ -8,7 +8,7 @@
  *
  * @example Karışık listeyi türe göre ayırmak
  * ```ts
- * import { DocumentType, EArsivClient, InvoiceListKind } from 'efatura'
+ * import { DocumentType, EArsivClient, InvoiceListKind } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -33,8 +33,8 @@ export const DocumentType = {
  *
  * @example
  * ```ts
- * import { DocumentType } from 'efatura'
- * import type { DocumentTypeCode } from 'efatura'
+ * import { DocumentType } from '@yankikucuk/efatura'
+ * import type { DocumentTypeCode } from '@yankikucuk/efatura'
  *
  * const type: DocumentTypeCode = DocumentType.PRODUCER_RECEIPT
  * console.log(type)
@@ -51,7 +51,7 @@ export type DocumentTypeCode = (typeof DocumentType)[keyof typeof DocumentType]
  *
  * @example
  * ```ts
- * import { ApprovalStatus, EArsivClient } from 'efatura'
+ * import { ApprovalStatus, EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -72,8 +72,8 @@ export const ApprovalStatus = {
  *
  * @example
  * ```ts
- * import { ApprovalStatus } from 'efatura'
- * import type { ApprovalStatusValue } from 'efatura'
+ * import { ApprovalStatus } from '@yankikucuk/efatura'
+ * import type { ApprovalStatusValue } from '@yankikucuk/efatura'
  *
  * const status: ApprovalStatusValue = ApprovalStatus.APPROVED
  * console.log(status)
@@ -94,7 +94,7 @@ export type ApprovalStatusValue = (typeof ApprovalStatus)[keyof typeof ApprovalS
  *
  * @example İki listenin farkını görmek
  * ```ts
- * import { EArsivClient, InvoiceListKind } from 'efatura'
+ * import { EArsivClient, InvoiceListKind } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -118,8 +118,8 @@ export const InvoiceListKind = {
  *
  * @example
  * ```ts
- * import { InvoiceListKind } from 'efatura'
- * import type { InvoiceListKindValue } from 'efatura'
+ * import { InvoiceListKind } from '@yankikucuk/efatura'
+ * import type { InvoiceListKindValue } from '@yankikucuk/efatura'
  *
  * const kind: InvoiceListKindValue = InvoiceListKind.STANDARD
  * console.log(kind)

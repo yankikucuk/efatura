@@ -45,7 +45,7 @@ async function loadPuppeteer(moduleName: string): Promise<PuppeteerLike> {
  * ```ts
  * import { writeFile } from 'node:fs/promises'
  *
- * import { EArsivClient, renderHtmlToPdf } from 'efatura'
+ * import { EArsivClient, renderHtmlToPdf } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

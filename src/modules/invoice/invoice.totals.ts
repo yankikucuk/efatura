@@ -26,7 +26,7 @@ const fail = (message: string, path: string): never => {
  *
  * @example
  * ```ts
- * import { computeLineItem, Unit } from 'efatura'
+ * import { computeLineItem, Unit } from '@yankikucuk/efatura'
  *
  * const line = computeLineItem({
  *   name: 'Danışmanlık',
@@ -167,7 +167,7 @@ export function sumTotals(lines: readonly ComputedLineItem[]): InvoiceTotals {
  *
  * @example
  * ```ts
- * import { computeTotals, Unit } from 'efatura'
+ * import { computeTotals, Unit } from '@yankikucuk/efatura'
  *
  * const { lines, totals } = computeTotals([
  *   { name: 'Hizmet', quantity: 2, unit: Unit.PIECE, unitPrice: 100, vatRate: 20 },
@@ -209,7 +209,7 @@ export function computeTotals(items: readonly LineItemInput[]): {
  *
  * @example Geçerli bir override
  * ```ts
- * import { computeTotals, mergeAndVerifyTotals, Unit } from 'efatura'
+ * import { computeTotals, mergeAndVerifyTotals, Unit } from '@yankikucuk/efatura'
  *
  * const { totals } = computeTotals([
  *   { name: 'Hizmet', quantity: 1, unit: Unit.PIECE, unitPrice: 100, vatRate: 20 },
@@ -220,7 +220,7 @@ export function computeTotals(items: readonly LineItemInput[]): {
  *
  * @example Tutarsız override reddedilir
  * ```ts
- * import { computeTotals, EArsivValidationError, mergeAndVerifyTotals, Unit } from 'efatura'
+ * import { computeTotals, EArsivValidationError, mergeAndVerifyTotals, Unit } from '@yankikucuk/efatura'
  *
  * const { totals } = computeTotals([
  *   { name: 'Hizmet', quantity: 1, unit: Unit.PIECE, unitPrice: 100, vatRate: 20 },

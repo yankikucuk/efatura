@@ -12,8 +12,8 @@
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { UserInfo } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { UserInfo } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -75,8 +75,8 @@ export interface UserInfo {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { CompanyInfo } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { CompanyInfo } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

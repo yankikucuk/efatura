@@ -16,7 +16,7 @@ import type { AddressInput, CreatedDocument, DocumentSummary } from '../../docum
  *
  * @example Tüzel kişi
  * ```ts
- * import type { SelfEmployedPayerInput } from 'efatura'
+ * import type { SelfEmployedPayerInput } from '@yankikucuk/efatura'
  *
  * const payer: SelfEmployedPayerInput = {
  *   taxOrIdentityNumber: '1111111111',
@@ -28,8 +28,8 @@ import type { AddressInput, CreatedDocument, DocumentSummary } from '../../docum
  *
  * @example Gerçek kişi ve adres
  * ```ts
- * import { Country } from 'efatura'
- * import type { SelfEmployedPayerInput } from 'efatura'
+ * import { Country } from '@yankikucuk/efatura'
+ * import type { SelfEmployedPayerInput } from '@yankikucuk/efatura'
  *
  * const payer: SelfEmployedPayerInput = {
  *   taxOrIdentityNumber: '11111111111',
@@ -70,7 +70,7 @@ export interface SelfEmployedPayerInput {
  *
  * @example
  * ```ts
- * import type { SelfEmployedReceiptLineItemInput } from 'efatura'
+ * import type { SelfEmployedReceiptLineItemInput } from '@yankikucuk/efatura'
  *
  * const item: SelfEmployedReceiptLineItemInput = {
  *   description: 'Mali müşavirlik hizmeti',
@@ -115,7 +115,7 @@ export interface SelfEmployedReceiptLineItemInput {
  *
  * @example
  * ```ts
- * import { computeSelfEmployedReceiptLineItem } from 'efatura'
+ * import { computeSelfEmployedReceiptLineItem } from '@yankikucuk/efatura'
  *
  * const line = computeSelfEmployedReceiptLineItem({
  *   description: 'Danışmanlık',
@@ -152,8 +152,8 @@ export interface ComputedSelfEmployedReceiptLineItem extends SelfEmployedReceipt
  *
  * @example
  * ```ts
- * import { computeSelfEmployedReceiptTotals } from 'efatura'
- * import type { SelfEmployedReceiptTotals } from 'efatura'
+ * import { computeSelfEmployedReceiptTotals } from '@yankikucuk/efatura'
+ * import type { SelfEmployedReceiptTotals } from '@yankikucuk/efatura'
  *
  * const { totals }: { totals: SelfEmployedReceiptTotals } = computeSelfEmployedReceiptTotals([
  *   { description: 'Danışmanlık', grossFee: 10_000, vatRate: 20, withholdingRate: 20 },
@@ -188,7 +188,7 @@ export interface SelfEmployedReceiptTotals {
  *
  * @example
  * ```ts
- * import type { SelfEmployedReceiptInput } from 'efatura'
+ * import type { SelfEmployedReceiptInput } from '@yankikucuk/efatura'
  *
  * const input: SelfEmployedReceiptInput = {
  *   date: '05/09/2026',
@@ -203,8 +203,8 @@ export interface SelfEmployedReceiptTotals {
  *
  * @example Dövizli makbuz — `currencyRate` zorunlu
  * ```ts
- * import { Currency } from 'efatura'
- * import type { SelfEmployedReceiptInput } from 'efatura'
+ * import { Currency } from '@yankikucuk/efatura'
+ * import type { SelfEmployedReceiptInput } from '@yankikucuk/efatura'
  *
  * const input: SelfEmployedReceiptInput = {
  *   currency: Currency.US_DOLLAR,
@@ -245,8 +245,8 @@ export interface SelfEmployedReceiptInput {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { SelfEmployedReceiptDetail } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { SelfEmployedReceiptDetail } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -290,8 +290,8 @@ export interface SelfEmployedReceiptDetail {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { CreatedSelfEmployedReceipt } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { CreatedSelfEmployedReceipt } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -311,8 +311,8 @@ export type CreatedSelfEmployedReceipt = CreatedDocument
  *
  * @example
  * ```ts
- * import { DocumentType, EArsivClient } from 'efatura'
- * import type { SelfEmployedReceiptSummary } from 'efatura'
+ * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
+ * import type { SelfEmployedReceiptSummary } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

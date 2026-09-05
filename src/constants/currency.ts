@@ -8,8 +8,8 @@
  *
  * @example
  * ```ts
- * import { Currency, Unit } from 'efatura'
- * import type { InvoiceInput } from 'efatura'
+ * import { Currency, Unit } from '@yankikucuk/efatura'
+ * import type { InvoiceInput } from '@yankikucuk/efatura'
  *
  * const input: InvoiceInput = {
  *   currency: Currency.EURO,
@@ -52,8 +52,8 @@ export const Currency = {
  *
  * @example
  * ```ts
- * import { Currency } from 'efatura'
- * import type { CurrencyCode } from 'efatura'
+ * import { Currency } from '@yankikucuk/efatura'
+ * import type { CurrencyCode } from '@yankikucuk/efatura'
  *
  * const code: CurrencyCode = Currency.US_DOLLAR
  * console.log(code)

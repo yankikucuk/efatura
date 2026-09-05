@@ -6,8 +6,8 @@ import { EArsivError } from './base.error.js'
  *
  * @example
  * ```ts
- * import { Command, EArsivPortalDefectError } from 'efatura'
- * import type { PortalDefectContext } from 'efatura'
+ * import { Command, EArsivPortalDefectError } from '@yankikucuk/efatura'
+ * import type { PortalDefectContext } from '@yankikucuk/efatura'
  *
  * const context: PortalDefectContext = {
  *   command: Command.SHOW_INVOICE,
@@ -52,7 +52,7 @@ export interface PortalDefectContext {
  *
  * @example
  * ```ts
- * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+ * import { EArsivClient, EArsivPortalDefectError } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

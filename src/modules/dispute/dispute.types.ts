@@ -16,7 +16,7 @@ import type { DateInput } from '../../core/index.js'
  *
  * @example
  * ```ts
- * import type { CancellationRequestInput } from 'efatura'
+ * import type { CancellationRequestInput } from '@yankikucuk/efatura'
  *
  * const input: CancellationRequestInput = {
  *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
@@ -42,8 +42,8 @@ export interface CancellationRequestInput {
  *
  * @example
  * ```ts
- * import { DisputeMethod } from 'efatura'
- * import type { ObjectionRequestInput } from 'efatura'
+ * import { DisputeMethod } from '@yankikucuk/efatura'
+ * import type { ObjectionRequestInput } from '@yankikucuk/efatura'
  *
  * const input: ObjectionRequestInput = {
  *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
@@ -88,8 +88,8 @@ export interface ObjectionRequestInput {
  *
  * @example
  * ```ts
- * import { DisputeMethod } from 'efatura'
- * import type { IncomingObjectionRequestInput } from 'efatura'
+ * import { DisputeMethod } from '@yankikucuk/efatura'
+ * import type { IncomingObjectionRequestInput } from '@yankikucuk/efatura'
  *
  * const input: IncomingObjectionRequestInput = {
  *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
@@ -121,8 +121,8 @@ export interface IncomingObjectionRequestInput extends ObjectionRequestInput {
  *
  * @example Kabul
  * ```ts
- * import { DisputeAnswer } from 'efatura'
- * import type { DisputeResponseInput } from 'efatura'
+ * import { DisputeAnswer } from '@yankikucuk/efatura'
+ * import type { DisputeResponseInput } from '@yankikucuk/efatura'
  *
  * const input: DisputeResponseInput = { disputeId: '1234', answer: DisputeAnswer.ACCEPT }
  * console.log(input.answer)
@@ -130,8 +130,8 @@ export interface IncomingObjectionRequestInput extends ObjectionRequestInput {
  *
  * @example Ret — gerekçe ZORUNLU
  * ```ts
- * import { DisputeAnswer } from 'efatura'
- * import type { DisputeResponseInput } from 'efatura'
+ * import { DisputeAnswer } from '@yankikucuk/efatura'
+ * import type { DisputeResponseInput } from '@yankikucuk/efatura'
  *
  * const input: DisputeResponseInput = {
  *   disputeId: '1234',
@@ -157,8 +157,8 @@ export interface DisputeResponseInput {
  *
  * @example
  * ```ts
- * import { DisputeKind, DisputeStatus, EArsivClient } from 'efatura'
- * import type { DisputeRequest } from 'efatura'
+ * import { DisputeKind, DisputeStatus, EArsivClient } from '@yankikucuk/efatura'
+ * import type { DisputeRequest } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

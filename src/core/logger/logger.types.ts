@@ -8,7 +8,7 @@
  *
  * @example
  * ```ts
- * import type { LogLevel } from 'efatura'
+ * import type { LogLevel } from '@yankikucuk/efatura'
  *
  * const level: LogLevel = 'debug'
  * console.log(level)
@@ -25,7 +25,7 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
  *
  * @example
  * ```ts
- * import type { LogContext } from 'efatura'
+ * import type { LogContext } from '@yankikucuk/efatura'
  *
  * const context: LogContext = { command: 'EARSIV_PORTAL_TASLAKLARI_GETIR', attempt: 2 }
  * console.log(context.attempt)
@@ -41,8 +41,8 @@ export type LogContext = Record<string, unknown>
  *
  * @example Konsola yazan basit bir uygulama
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { Logger } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { Logger } from '@yankikucuk/efatura'
  *
  * const logger: Logger = {
  *   debug: (message, context) => { console.debug(message, context) },

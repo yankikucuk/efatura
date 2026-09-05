@@ -6,8 +6,8 @@ import type { InvoiceSummary } from '../invoice/index.js'
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { SmsChallenge } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { SmsChallenge } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'production' })
  * await client.login({ username: '1111111111', password: 'gizli' })
@@ -28,7 +28,7 @@ export interface SmsChallenge {
  *
  * @example
  * ```ts
- * import type { SendSmsOptions } from 'efatura'
+ * import type { SendSmsOptions } from '@yankikucuk/efatura'
  *
  * // Numara verilmezse portaldan kayıtlı numara ayrıca sorgulanır.
  * const options: SendSmsOptions = { phoneNumber: '5551112233' }
@@ -45,8 +45,8 @@ export interface SendSmsOptions {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { VerifySmsInput } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { VerifySmsInput } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'production' })
  * await client.login({ username: '1111111111', password: 'gizli' })

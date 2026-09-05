@@ -22,7 +22,7 @@ import type { SelfEmployedReceiptInput } from './self-employed-receipt.types.js'
  *
  * @example
  * ```ts
- * import { Currency, EArsivValidationError, validateSelfEmployedReceiptInput } from 'efatura'
+ * import { Currency, EArsivValidationError, validateSelfEmployedReceiptInput } from '@yankikucuk/efatura'
  *
  * try {
  *   validateSelfEmployedReceiptInput({

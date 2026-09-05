@@ -5,8 +5,8 @@ import { EArsivError } from './base.error.js'
  *
  * @example
  * ```ts
- * import { EArsivNetworkError } from 'efatura'
- * import type { NetworkErrorContext } from 'efatura'
+ * import { EArsivNetworkError } from '@yankikucuk/efatura'
+ * import type { NetworkErrorContext } from '@yankikucuk/efatura'
  *
  * const context: NetworkErrorContext = {
  *   url: 'https://earsivportaltest.efatura.gov.tr/earsiv-services/dispatch',
@@ -44,7 +44,7 @@ export interface NetworkErrorContext {
  *
  * @example
  * ```ts
- * import { EArsivClient, EArsivNetworkError } from 'efatura'
+ * import { EArsivClient, EArsivNetworkError } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test', timeoutMs: 5_000 })
  *

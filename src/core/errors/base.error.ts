@@ -13,7 +13,7 @@
  *
  * @example Kütüphane hatalarını diğerlerinden ayırmak
  * ```ts
- * import { EArsivClient, EArsivError } from 'efatura'
+ * import { EArsivClient, EArsivError } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  *

@@ -11,7 +11,7 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
  *
  * @example
  * ```ts
- * import { toUserInfo } from 'efatura'
+ * import { toUserInfo } from '@yankikucuk/efatura'
  *
  * const info = toUserInfo({ vknTckn: '1111111111', unvan: 'ÖRNEK A.Ş.', il: 'İstanbul' })
  * console.log(info.title, info.city, info.email) // 'ÖRNEK A.Ş.' 'İstanbul' ''
@@ -53,7 +53,7 @@ export function toUserInfo(raw: Record<string, unknown>): UserInfo {
  *
  * @example
  * ```ts
- * import { toPortalUserInfo, toUserInfo } from 'efatura'
+ * import { toPortalUserInfo, toUserInfo } from '@yankikucuk/efatura'
  *
  * const info = toUserInfo({ vknTckn: '1111111111', unvan: 'ÖRNEK A.Ş.' })
  * const payload = toPortalUserInfo({ ...info, email: 'muhasebe@ornek.test' })
@@ -95,7 +95,7 @@ export function toPortalUserInfo(info: UserInfo): Record<string, unknown> {
  *
  * @example
  * ```ts
- * import { toCompanyInfo } from 'efatura'
+ * import { toCompanyInfo } from '@yankikucuk/efatura'
  *
  * const company = toCompanyInfo({ unvan: 'ÖRNEK A.Ş.', vergiDairesi: 'Kadıköy' })
  * console.log(company.title, company.taxOffice, Object.keys(company.raw))

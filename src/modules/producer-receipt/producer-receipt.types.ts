@@ -11,7 +11,7 @@ import type { CreatedDocument, DocumentSummary } from '../../documents/index.js'
  *
  * @example
  * ```ts
- * import type { ProducerReceiptTaxRates } from 'efatura'
+ * import type { ProducerReceiptTaxRates } from '@yankikucuk/efatura'
  *
  * // Yalnızca stopaj ve mera fonu kesiliyor; diğer ikisi 0 sayılır.
  * const rates: ProducerReceiptTaxRates = { incomeTaxWithholding: 2, pastureFund: 1 }
@@ -37,8 +37,8 @@ export interface ProducerReceiptTaxRates {
  *
  * @example
  * ```ts
- * import { computeProducerReceiptLineItem, Unit } from 'efatura'
- * import type { ProducerReceiptTaxAmounts } from 'efatura'
+ * import { computeProducerReceiptLineItem, Unit } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptTaxAmounts } from '@yankikucuk/efatura'
  *
  * const line = computeProducerReceiptLineItem({
  *   name: 'Buğday',
@@ -61,8 +61,8 @@ export type ProducerReceiptTaxAmounts = Required<ProducerReceiptTaxRates>
  *
  * @example
  * ```ts
- * import { Unit } from 'efatura'
- * import type { ProducerReceiptLineItemInput } from 'efatura'
+ * import { Unit } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptLineItemInput } from '@yankikucuk/efatura'
  *
  * const item: ProducerReceiptLineItemInput = {
  *   name: 'Zeytin',
@@ -92,7 +92,7 @@ export interface ProducerReceiptLineItemInput {
  *
  * @example
  * ```ts
- * import { computeProducerReceiptLineItem, Unit } from 'efatura'
+ * import { computeProducerReceiptLineItem, Unit } from '@yankikucuk/efatura'
  *
  * const line = computeProducerReceiptLineItem({
  *   name: 'Süt',
@@ -123,8 +123,8 @@ export interface ComputedProducerReceiptLineItem extends ProducerReceiptLineItem
  *
  * @example
  * ```ts
- * import { computeProducerReceiptTotals, Unit } from 'efatura'
- * import type { ProducerReceiptTotals } from 'efatura'
+ * import { computeProducerReceiptTotals, Unit } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptTotals } from '@yankikucuk/efatura'
  *
  * const { totals }: { totals: ProducerReceiptTotals } = computeProducerReceiptTotals([
  *   {
@@ -162,7 +162,7 @@ export interface ProducerReceiptTotals {
  *
  * @example
  * ```ts
- * import type { ProducerInput } from 'efatura'
+ * import type { ProducerInput } from '@yankikucuk/efatura'
  *
  * const producer: ProducerInput = {
  *   taxOrIdentityNumber: '11111111111',
@@ -191,8 +191,8 @@ export interface ProducerInput {
  *
  * @example
  * ```ts
- * import { Unit } from 'efatura'
- * import type { ProducerReceiptInput } from 'efatura'
+ * import { Unit } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptInput } from '@yankikucuk/efatura'
  *
  * const input: ProducerReceiptInput = {
  *   date: '05/09/2026',
@@ -248,8 +248,8 @@ export interface ProducerReceiptInput {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { ProducerReceiptDetail } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptDetail } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -293,8 +293,8 @@ export interface ProducerReceiptDetail {
  *
  * @example
  * ```ts
- * import { EArsivClient, Unit } from 'efatura'
- * import type { CreatedProducerReceipt } from 'efatura'
+ * import { EArsivClient, Unit } from '@yankikucuk/efatura'
+ * import type { CreatedProducerReceipt } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -317,8 +317,8 @@ export type CreatedProducerReceipt = CreatedDocument
  *
  * @example
  * ```ts
- * import { DocumentType, EArsivClient } from 'efatura'
- * import type { ProducerReceiptSummary } from 'efatura'
+ * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptSummary } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

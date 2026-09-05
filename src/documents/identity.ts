@@ -18,7 +18,7 @@ const DIGITS_ONLY = /^\d+$/
  *
  * @example
  * ```ts
- * import { isValidTaxOrIdentityNumber } from 'efatura'
+ * import { isValidTaxOrIdentityNumber } from '@yankikucuk/efatura'
  *
  * console.log(isValidTaxOrIdentityNumber('1111111111')) // true — VKN
  * console.log(isValidTaxOrIdentityNumber('11111111111')) // true — TCKN

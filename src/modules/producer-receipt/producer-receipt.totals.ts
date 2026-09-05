@@ -100,7 +100,7 @@ const fail = (message: string, path: string): never => {
  *
  * @example
  * ```ts
- * import { computeProducerReceiptLineItem, Unit } from 'efatura'
+ * import { computeProducerReceiptLineItem, Unit } from '@yankikucuk/efatura'
  *
  * const line = computeProducerReceiptLineItem({
  *   name: 'Buğday',
@@ -160,7 +160,7 @@ export function computeProducerReceiptLineItem(
  *
  * @example
  * ```ts
- * import { computeProducerReceiptLineItem, sumProducerReceiptTotals, Unit } from 'efatura'
+ * import { computeProducerReceiptLineItem, sumProducerReceiptTotals, Unit } from '@yankikucuk/efatura'
  *
  * const lines = [
  *   computeProducerReceiptLineItem({
@@ -211,7 +211,7 @@ export function sumProducerReceiptTotals(
  *
  * @example
  * ```ts
- * import { computeProducerReceiptTotals, Unit } from 'efatura'
+ * import { computeProducerReceiptTotals, Unit } from '@yankikucuk/efatura'
  *
  * const { lines, totals } = computeProducerReceiptTotals([
  *   { name: 'Süt', quantity: 500, unit: Unit.LITRE, unitPrice: 15, taxRates: { pastureFund: 1 } },

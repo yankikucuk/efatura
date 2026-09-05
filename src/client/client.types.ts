@@ -10,8 +10,8 @@ import type { PdfOptions } from '../pdf/index.js'
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { ToPdfOptions } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { ToPdfOptions } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

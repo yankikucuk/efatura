@@ -7,8 +7,8 @@ import type { DocumentTypeCode } from '../../constants/index.js'
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { DocumentOptions } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { DocumentOptions } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -40,8 +40,8 @@ export interface DocumentOptions {
  *
  * @example Müstahsil makbuzunun ZIP paketini indirmek
  * ```ts
- * import { DocumentType, EArsivClient } from 'efatura'
- * import type { DownloadOptions } from 'efatura'
+ * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
+ * import type { DownloadOptions } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

@@ -24,7 +24,7 @@ const str = (value: unknown, fallback = ''): string =>
  *
  * @example
  * ```ts
- * import { DisputeKind, toDisputeRequest } from 'efatura'
+ * import { DisputeKind, toDisputeRequest } from '@yankikucuk/efatura'
  *
  * const request = toDisputeRequest({
  *   iptalItirazOid: '1234',

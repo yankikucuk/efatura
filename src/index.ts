@@ -10,7 +10,7 @@
  *
  * @example
  * ```ts
- * import { EArsivClient, Unit } from 'efatura'
+ * import { EArsivClient, Unit } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

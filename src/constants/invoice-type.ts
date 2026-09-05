@@ -7,8 +7,8 @@
  *
  * @example
  * ```ts
- * import { InvoiceType, Unit } from 'efatura'
- * import type { InvoiceInput } from 'efatura'
+ * import { InvoiceType, Unit } from '@yankikucuk/efatura'
+ * import type { InvoiceInput } from '@yankikucuk/efatura'
  *
  * const iade: InvoiceInput = {
  *   invoiceType: InvoiceType.REFUND,
@@ -42,8 +42,8 @@ export const InvoiceType = {
  *
  * @example
  * ```ts
- * import { InvoiceType } from 'efatura'
- * import type { InvoiceTypeCode } from 'efatura'
+ * import { InvoiceType } from '@yankikucuk/efatura'
+ * import type { InvoiceTypeCode } from '@yankikucuk/efatura'
  *
  * const type: InvoiceTypeCode = InvoiceType.EXEMPTION
  * console.log(type)

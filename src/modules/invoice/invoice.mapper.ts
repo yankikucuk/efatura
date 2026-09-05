@@ -39,7 +39,7 @@ import type {
  *
  * @example
  * ```ts
- * import { toPortalInvoice, Unit } from 'efatura'
+ * import { toPortalInvoice, Unit } from '@yankikucuk/efatura'
  *
  * const payload = toPortalInvoice({
  *   date: '05/09/2026',
@@ -200,7 +200,7 @@ function toLineItemInput(raw: unknown): LineItemInput {
  *
  * @example
  * ```ts
- * import { fromPortalPayload } from 'efatura'
+ * import { fromPortalPayload } from '@yankikucuk/efatura'
  *
  * const input = fromPortalPayload({
  *   belgeNumarasi: 'EAR2026000000123',

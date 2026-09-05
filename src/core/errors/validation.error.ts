@@ -5,7 +5,7 @@ import { EArsivError } from './base.error.js'
  *
  * @example
  * ```ts
- * import type { ValidationIssue } from 'efatura'
+ * import type { ValidationIssue } from '@yankikucuk/efatura'
  *
  * const issue: ValidationIssue = {
  *   path: 'lineItems.0.vatRate',
@@ -34,7 +34,7 @@ export interface ValidationIssue {
  *
  * @example Alan bazında hata göstermek
  * ```ts
- * import { EArsivClient, EArsivValidationError, Unit } from 'efatura'
+ * import { EArsivClient, EArsivValidationError, Unit } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  *

@@ -34,7 +34,7 @@ function build(year: number, month: number, day: number, source: string): Date {
  *
  * @example
  * ```ts
- * import { parsePortalDate } from 'efatura'
+ * import { parsePortalDate } from '@yankikucuk/efatura'
  *
  * const date = parsePortalDate('03-09-2026')
  * console.log(date.getFullYear(), date.getMonth() + 1, date.getDate()) // 2026 9 3

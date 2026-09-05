@@ -19,7 +19,7 @@ import { Endpoint } from './endpoints.js'
  *
  * @example
  * ```ts
- * import { BASE_URLS, buildPortalHeaders, DEFAULT_USER_AGENT } from 'efatura'
+ * import { BASE_URLS, buildPortalHeaders, DEFAULT_USER_AGENT } from '@yankikucuk/efatura'
  *
  * const headers = buildPortalHeaders(BASE_URLS.test, DEFAULT_USER_AGENT)
  * console.log(headers.referer)

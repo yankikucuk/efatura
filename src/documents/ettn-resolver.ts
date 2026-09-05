@@ -11,7 +11,7 @@ import type { DocumentSummary } from './document.types.js'
  *
  * @example
  * ```ts
- * import type { EttnResolveHint } from 'efatura'
+ * import type { EttnResolveHint } from '@yankikucuk/efatura'
  *
  * const hint: EttnResolveHint = {
  *   buyerTaxOrIdentityNumber: '11111111111',
@@ -35,7 +35,7 @@ export interface EttnResolveHint {
  *
  * @example
  * ```ts
- * import type { EttnResolveContext } from 'efatura'
+ * import type { EttnResolveContext } from '@yankikucuk/efatura'
  *
  * const context: EttnResolveContext = {
  *   before: new Set(['eski-ettn']),
@@ -79,8 +79,8 @@ const AMBIGUOUS_ADVICE =
  *
  * @example
  * ```ts
- * import { resolveCreatedEttn } from 'efatura'
- * import type { InvoiceSummary } from 'efatura'
+ * import { resolveCreatedEttn } from '@yankikucuk/efatura'
+ * import type { InvoiceSummary } from '@yankikucuk/efatura'
  *
  * const after: InvoiceSummary[] = [
  *   {

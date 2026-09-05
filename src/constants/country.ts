@@ -23,7 +23,7 @@
  *
  * @example Fatura alıcısının ülkesini belirtmek
  * ```ts
- * import { Country, EArsivClient, Unit } from 'efatura'
+ * import { Country, EArsivClient, Unit } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -43,7 +43,7 @@
  *
  * @example Listede olmayan bir ülke adı vermek
  * ```ts
- * import type { AddressInput } from 'efatura'
+ * import type { AddressInput } from '@yankikucuk/efatura'
  *
  * // Portal doğrulama yapmadığı için düz metin de geçerlidir.
  * const address: AddressInput = { country: 'Kosova', city: 'Priştine' }

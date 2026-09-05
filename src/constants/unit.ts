@@ -7,8 +7,8 @@
  *
  * @example
  * ```ts
- * import { Unit } from 'efatura'
- * import type { LineItemInput } from 'efatura'
+ * import { Unit } from '@yankikucuk/efatura'
+ * import type { LineItemInput } from '@yankikucuk/efatura'
  *
  * const saatlik: LineItemInput = {
  *   name: 'Danışmanlık',
@@ -93,8 +93,8 @@ export const Unit = {
  *
  * @example
  * ```ts
- * import { Unit } from 'efatura'
- * import type { UnitCode } from 'efatura'
+ * import { Unit } from '@yankikucuk/efatura'
+ * import type { UnitCode } from '@yankikucuk/efatura'
  *
  * const unit: UnitCode = Unit.KILOGRAM
  * console.log(unit)

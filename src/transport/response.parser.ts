@@ -12,8 +12,8 @@ import { EArsivApiError } from '../core/index.js'
  *
  * @example
  * ```ts
- * import { Command } from 'efatura'
- * import type { ParseContext } from 'efatura'
+ * import { Command } from '@yankikucuk/efatura'
+ * import type { ParseContext } from '@yankikucuk/efatura'
  *
  * const context: ParseContext = { command: Command.GET_INVOICE, callId: 'istek-1' }
  * console.log(context.command)
@@ -124,7 +124,7 @@ function throwApi(message: string, raw: unknown, ctx: ParseContext, code?: strin
  *
  * @example Ham bir yanıtı çözmek
  * ```ts
- * import { Command, EArsivApiError, parsePortalResponse } from 'efatura'
+ * import { Command, EArsivApiError, parsePortalResponse } from '@yankikucuk/efatura'
  *
  * const ok = parsePortalResponse(
  *   { data: { hata: '', belgeNumarasi: 'EAR2026000000123' } },

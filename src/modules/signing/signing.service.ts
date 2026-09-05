@@ -18,7 +18,7 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'production' })
  * await client.login({ username: '1111111111', password: 'gizli' })
@@ -48,7 +48,7 @@ export class SigningService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * await client.login({ username: '1111111111', password: 'gizli' })
@@ -77,7 +77,7 @@ export class SigningService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * await client.login({ username: '1111111111', password: 'gizli' })
@@ -133,7 +133,7 @@ export class SigningService {
    *
    * @example
    * ```ts
-   * import { EArsivApiError, EArsivClient } from 'efatura'
+   * import { EArsivApiError, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * await client.login({ username: '1111111111', password: 'gizli' })

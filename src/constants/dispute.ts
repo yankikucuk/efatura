@@ -6,8 +6,8 @@
  *
  * @example
  * ```ts
- * import { DisputeMethod } from 'efatura'
- * import type { ObjectionRequestInput } from 'efatura'
+ * import { DisputeMethod } from '@yankikucuk/efatura'
+ * import type { ObjectionRequestInput } from '@yankikucuk/efatura'
  *
  * const input: ObjectionRequestInput = {
  *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
@@ -34,8 +34,8 @@ export const DisputeMethod = {
  *
  * @example
  * ```ts
- * import { DisputeMethod } from 'efatura'
- * import type { DisputeMethodCode } from 'efatura'
+ * import { DisputeMethod } from '@yankikucuk/efatura'
+ * import type { DisputeMethodCode } from '@yankikucuk/efatura'
  *
  * const method: DisputeMethodCode = DisputeMethod.NOTARY
  * console.log(method)
@@ -51,7 +51,7 @@ export type DisputeMethodCode = (typeof DisputeMethod)[keyof typeof DisputeMetho
  *
  * @example
  * ```ts
- * import { DisputeAnswer, EArsivClient } from 'efatura'
+ * import { DisputeAnswer, EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -73,8 +73,8 @@ export const DisputeAnswer = {
  *
  * @example
  * ```ts
- * import { DisputeAnswer } from 'efatura'
- * import type { DisputeAnswerValue } from 'efatura'
+ * import { DisputeAnswer } from '@yankikucuk/efatura'
+ * import type { DisputeAnswerValue } from '@yankikucuk/efatura'
  *
  * const answer: DisputeAnswerValue = DisputeAnswer.REJECT
  * console.log(answer)
@@ -89,7 +89,7 @@ export type DisputeAnswerValue = (typeof DisputeAnswer)[keyof typeof DisputeAnsw
  *
  * @example Yalnızca cevap bekleyen talepleri süzmek
  * ```ts
- * import { DisputeStatus, EArsivClient } from 'efatura'
+ * import { DisputeStatus, EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -114,8 +114,8 @@ export const DisputeStatus = {
  *
  * @example
  * ```ts
- * import { DisputeStatus } from 'efatura'
- * import type { DisputeStatusValue } from 'efatura'
+ * import { DisputeStatus } from '@yankikucuk/efatura'
+ * import type { DisputeStatusValue } from '@yankikucuk/efatura'
  *
  * const status: DisputeStatusValue = DisputeStatus.ACCEPTED
  * console.log(status)
@@ -128,7 +128,7 @@ export type DisputeStatusValue = (typeof DisputeStatus)[keyof typeof DisputeStat
  *
  * @example
  * ```ts
- * import { DisputeKind, EArsivClient } from 'efatura'
+ * import { DisputeKind, EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -150,8 +150,8 @@ export const DisputeKind = {
  *
  * @example
  * ```ts
- * import { DisputeKind } from 'efatura'
- * import type { DisputeKindValue } from 'efatura'
+ * import { DisputeKind } from '@yankikucuk/efatura'
+ * import type { DisputeKindValue } from '@yankikucuk/efatura'
  *
  * const kind: DisputeKindValue = DisputeKind.OBJECTION
  * console.log(kind)

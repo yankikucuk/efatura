@@ -65,7 +65,7 @@ export function normalizeSummaryDate(raw: unknown): string {
  *
  * @example
  * ```ts
- * import { toInvoiceSummary } from 'efatura'
+ * import { toInvoiceSummary } from '@yankikucuk/efatura'
  *
  * const row = toInvoiceSummary({
  *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',

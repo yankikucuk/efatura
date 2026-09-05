@@ -25,7 +25,7 @@ import type { ProducerReceiptInput } from './producer-receipt.types.js'
  *
  * @example
  * ```ts
- * import { EArsivValidationError, Unit, validateProducerReceiptInput } from 'efatura'
+ * import { EArsivValidationError, Unit, validateProducerReceiptInput } from '@yankikucuk/efatura'
  *
  * try {
  *   validateProducerReceiptInput({

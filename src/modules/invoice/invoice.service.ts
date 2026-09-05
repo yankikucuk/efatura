@@ -54,7 +54,7 @@ import { validateInvoiceInput } from './invoice.validator.js'
  *   HttpClient,
  *   InvoiceService,
  *   resolveClientOptions,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -121,7 +121,7 @@ export class InvoiceService {
    *
    * @example Eşzamanlı iki oluşturma — sıraya alınır, ikisi de başarılı olur
    * ```ts
-   * import { EArsivClient, Unit } from 'efatura'
+   * import { EArsivClient, Unit } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -206,7 +206,7 @@ export class InvoiceService {
    *
    * @example
    * ```ts
-   * import { EArsivClient, InvoiceListKind } from 'efatura'
+   * import { EArsivClient, InvoiceListKind } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -247,7 +247,7 @@ export class InvoiceService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -286,7 +286,7 @@ export class InvoiceService {
    *
    * @example
    * ```ts
-   * import { DocumentType, EArsivClient } from 'efatura'
+   * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -333,7 +333,7 @@ export class InvoiceService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -408,7 +408,7 @@ export class InvoiceService {
    *
    * @example
    * ```ts
-   * import { EArsivApiError, EArsivClient } from 'efatura'
+   * import { EArsivApiError, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()

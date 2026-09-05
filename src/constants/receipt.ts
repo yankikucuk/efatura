@@ -11,8 +11,8 @@
  *
  * @example Kalem oranlarını kütüphane alan adlarıyla vermek
  * ```ts
- * import { ProducerReceiptTax, Unit } from 'efatura'
- * import type { ProducerReceiptLineItemInput } from 'efatura'
+ * import { ProducerReceiptTax, Unit } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptLineItemInput } from '@yankikucuk/efatura'
  *
  * // `0003` kodunun kütüphanedeki adı `incomeTaxWithholding`.
  * console.log(ProducerReceiptTax.INCOME_TAX_WITHHOLDING)
@@ -44,8 +44,8 @@ export const ProducerReceiptTax = {
  *
  * @example
  * ```ts
- * import { ProducerReceiptTax } from 'efatura'
- * import type { ProducerReceiptTaxCode } from 'efatura'
+ * import { ProducerReceiptTax } from '@yankikucuk/efatura'
+ * import type { ProducerReceiptTaxCode } from '@yankikucuk/efatura'
  *
  * const code: ProducerReceiptTaxCode = ProducerReceiptTax.PASTURE_FUND
  * console.log(code)
@@ -61,7 +61,7 @@ export type ProducerReceiptTaxCode = (typeof ProducerReceiptTax)[keyof typeof Pr
  *
  * @example
  * ```ts
- * import { PRODUCER_RECEIPT_TAX_CODES } from 'efatura'
+ * import { PRODUCER_RECEIPT_TAX_CODES } from '@yankikucuk/efatura'
  *
  * console.log(PRODUCER_RECEIPT_TAX_CODES) // ['0003', '9040', '8001', 'SGK_PRIM']
  * ```
@@ -82,7 +82,7 @@ export const PRODUCER_RECEIPT_TAX_CODES: readonly ProducerReceiptTaxCode[] = [
  *
  * @example Ham yanıttan belge düzeyi kesintiyi okumak
  * ```ts
- * import { EArsivClient, PRODUCER_RECEIPT_TAX_TOTAL_FIELDS, ProducerReceiptTax } from 'efatura'
+ * import { EArsivClient, PRODUCER_RECEIPT_TAX_TOTAL_FIELDS, ProducerReceiptTax } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

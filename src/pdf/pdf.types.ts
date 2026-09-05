@@ -4,8 +4,8 @@
  *
  * @example
  * ```ts
- * import { renderHtmlToPdf } from 'efatura'
- * import type { PdfOptions } from 'efatura'
+ * import { renderHtmlToPdf } from '@yankikucuk/efatura'
+ * import type { PdfOptions } from '@yankikucuk/efatura'
  *
  * const options: PdfOptions = { format: 'A5', printBackground: false }
  * const pdf = await renderHtmlToPdf('<h1>Fatura</h1>', options)
@@ -41,7 +41,7 @@ export interface PdfOptions {
  *
  * @example Sahte bir uygulama (testlerde kullanılır)
  * ```ts
- * import type { PuppeteerLike } from 'efatura'
+ * import type { PuppeteerLike } from '@yankikucuk/efatura'
  *
  * const fake: PuppeteerLike = {
  *   launch: async () => ({

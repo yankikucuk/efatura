@@ -34,7 +34,7 @@ const raise = (issues: ValidationIssue[]): void => {
  *
  * @example
  * ```ts
- * import { EArsivValidationError, validateCancellationRequest } from 'efatura'
+ * import { EArsivValidationError, validateCancellationRequest } from '@yankikucuk/efatura'
  *
  * try {
  *   validateCancellationRequest({ ettn: '', reason: '' })
@@ -109,7 +109,7 @@ export function validateObjectionRequest(input: ObjectionRequestInput): void {
  *
  * @example
  * ```ts
- * import { DisputeMethod, EArsivValidationError, validateIncomingObjectionRequest } from 'efatura'
+ * import { DisputeMethod, EArsivValidationError, validateIncomingObjectionRequest } from '@yankikucuk/efatura'
  *
  * try {
  *   validateIncomingObjectionRequest({
@@ -164,7 +164,7 @@ export function validateIncomingObjectionRequest(input: IncomingObjectionRequest
  *
  * @example
  * ```ts
- * import { DisputeAnswer, EArsivValidationError, validateDisputeResponse } from 'efatura'
+ * import { DisputeAnswer, EArsivValidationError, validateDisputeResponse } from '@yankikucuk/efatura'
  *
  * try {
  *   validateDisputeResponse({ disputeId: '1234', answer: DisputeAnswer.REJECT })

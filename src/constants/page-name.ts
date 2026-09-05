@@ -15,7 +15,7 @@
  *   HttpClient,
  *   PageName,
  *   resolveClientOptions,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -61,8 +61,8 @@ export const PageName = {
  *
  * @example
  * ```ts
- * import { PageName } from 'efatura'
- * import type { PageNameValue } from 'efatura'
+ * import { PageName } from '@yankikucuk/efatura'
+ * import type { PageNameValue } from '@yankikucuk/efatura'
  *
  * const page: PageNameValue = PageName.DRAFTS
  * console.log(page)

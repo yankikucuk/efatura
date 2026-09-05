@@ -19,8 +19,8 @@ import { EArsivError } from './base.error.js'
  *
  * @example Adayları kendi ipucunuzla daraltmak
  * ```ts
- * import { EArsivAmbiguousResultError, EArsivClient, Unit } from 'efatura'
- * import type { InvoiceSummary } from 'efatura'
+ * import { EArsivAmbiguousResultError, EArsivClient, Unit } from '@yankikucuk/efatura'
+ * import type { InvoiceSummary } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

@@ -74,7 +74,7 @@ import type { ToPdfOptions } from './client.types.js'
  *
  * @example Test ortamında baştan sona bir akış
  * ```ts
- * import { EArsivClient, Unit } from 'efatura'
+ * import { EArsivClient, Unit } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -90,7 +90,7 @@ import type { ToPdfOptions } from './client.types.js'
  *
  * @example Canlı ortam, özel zaman aşımı ve yeniden deneme
  * ```ts
- * import { EArsivClient } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({
  *   environment: 'production',
@@ -110,7 +110,7 @@ import type { ToPdfOptions } from './client.types.js'
  *   EArsivClient,
  *   EArsivNetworkError,
  *   EArsivValidationError,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  *
@@ -157,7 +157,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const production = new EArsivClient()
    * const test = new EArsivClient({ environment: 'test' })
@@ -193,7 +193,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -217,7 +217,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * if (!client.isAuthenticated) await client.loginWithTestUser()
@@ -237,7 +237,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * client.setToken(process.env.EARSIV_TOKEN ?? '')
@@ -272,7 +272,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * const token = await client.login({
@@ -303,7 +303,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * const { username, password, token } = await client.loginWithTestUser()
@@ -326,7 +326,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -373,7 +373,7 @@ export class EArsivClient {
    *
    * @example İskontolu, notlu bir fatura
    * ```ts
-   * import { Country, Currency, EArsivClient, Unit } from 'efatura'
+   * import { Country, Currency, EArsivClient, Unit } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -408,7 +408,7 @@ export class EArsivClient {
    *
    * @example Belirsiz sonucu ele almak
    * ```ts
-   * import { EArsivAmbiguousResultError, EArsivClient, Unit } from 'efatura'
+   * import { EArsivAmbiguousResultError, EArsivClient, Unit } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -452,7 +452,7 @@ export class EArsivClient {
    *
    * @example Bugünün faturaları
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -465,7 +465,7 @@ export class EArsivClient {
    *
    * @example Tüm belge türlerini (fatura + makbuzlar) tek listede almak
    * ```ts
-   * import { EArsivClient, InvoiceListKind } from 'efatura'
+   * import { EArsivClient, InvoiceListKind } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -500,7 +500,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -538,7 +538,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { DocumentType, EArsivClient } from 'efatura'
+   * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -577,7 +577,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -623,7 +623,7 @@ export class EArsivClient {
    *
    * @example Dünkü bir taslağı hedeflemek
    * ```ts
-   * import { EArsivApiError, EArsivClient } from 'efatura'
+   * import { EArsivApiError, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -665,7 +665,7 @@ export class EArsivClient {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -711,7 +711,7 @@ export class EArsivClient {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -752,7 +752,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -788,7 +788,7 @@ export class EArsivClient {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -838,7 +838,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient, Unit } from 'efatura'
+   * import { EArsivClient, Unit } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -882,7 +882,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -911,7 +911,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -944,7 +944,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -974,7 +974,7 @@ export class EArsivClient {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1019,7 +1019,7 @@ export class EArsivClient {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1059,7 +1059,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1109,7 +1109,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1151,7 +1151,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1185,7 +1185,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1228,7 +1228,7 @@ export class EArsivClient {
    *
    * @example Çalışan alternatife düşmek
    * ```ts
-   * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+   * import { EArsivClient, EArsivPortalDefectError } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1258,7 +1258,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+   * import { EArsivClient, EArsivPortalDefectError } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    *
@@ -1305,7 +1305,7 @@ export class EArsivClient {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1349,7 +1349,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1379,7 +1379,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1409,7 +1409,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1442,7 +1442,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1472,7 +1472,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * await client.login({ username: '1111111111', password: 'gizli' })
@@ -1497,7 +1497,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * await client.login({ username: '1111111111', password: 'gizli' })
@@ -1531,7 +1531,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'production' })
    * await client.login({ username: '1111111111', password: 'gizli' })
@@ -1572,7 +1572,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1609,7 +1609,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { DisputeMethod, EArsivClient } from 'efatura'
+   * import { DisputeMethod, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1649,7 +1649,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { DisputeMethod, EArsivClient } from 'efatura'
+   * import { DisputeMethod, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1687,7 +1687,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { DisputeKind, DisputeStatus, EArsivClient } from 'efatura'
+   * import { DisputeKind, DisputeStatus, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -1718,7 +1718,7 @@ export class EArsivClient {
    *
    * @example
    * ```ts
-   * import { DisputeAnswer, EArsivClient } from 'efatura'
+   * import { DisputeAnswer, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()

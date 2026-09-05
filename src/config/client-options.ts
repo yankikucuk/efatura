@@ -12,7 +12,7 @@ import { BASE_URLS, type EnvironmentName } from './environment.js'
  *
  * @example
  * ```ts
- * import { DEFAULT_USER_AGENT } from 'efatura'
+ * import { DEFAULT_USER_AGENT } from '@yankikucuk/efatura'
  *
  * console.log(DEFAULT_USER_AGENT.startsWith('Mozilla/5.0'))
  * ```
@@ -26,8 +26,8 @@ export const DEFAULT_USER_AGENT =
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { RetryOptions } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { RetryOptions } from '@yankikucuk/efatura'
  *
  * // 5 deneme, 1 sn / 2 sn / 4 sn / 8 sn bekleyerek — YALNIZCA salt okunur
  * // komutlar için.
@@ -58,8 +58,8 @@ export interface RetryOptions {
  *
  * @example Testlerde ağa hiç çıkmayan bir istemci
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { ClientOptions } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { ClientOptions } from '@yankikucuk/efatura'
  *
  * const options: ClientOptions = {
  *   environment: 'test',
@@ -100,8 +100,8 @@ export interface ClientOptions {
  *
  * @example
  * ```ts
- * import { HttpClient, resolveClientOptions } from 'efatura'
- * import type { ResolvedClientOptions } from 'efatura'
+ * import { HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
+ * import type { ResolvedClientOptions } from '@yankikucuk/efatura'
  *
  * const options: ResolvedClientOptions = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -149,7 +149,7 @@ function fail(message: string, path: string): never {
  *
  * @example
  * ```ts
- * import { EArsivValidationError, resolveClientOptions } from 'efatura'
+ * import { EArsivValidationError, resolveClientOptions } from '@yankikucuk/efatura'
  *
  * const resolved = resolveClientOptions({ environment: 'test', retry: { attempts: 5 } })
  * // Kısmi retry varsayılanla birleşir:

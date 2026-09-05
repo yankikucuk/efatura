@@ -34,7 +34,7 @@ function assertFinite(value: number, label: string): void {
  *
  * @example
  * ```ts
- * import { toMinor } from 'efatura'
+ * import { toMinor } from '@yankikucuk/efatura'
  *
  * console.log(toMinor(100)) // 10000
  * console.log(toMinor(1.5)) // 150
@@ -57,7 +57,7 @@ export function toMinor(value: number): number {
  *
  * @example
  * ```ts
- * import { fromMinor } from 'efatura'
+ * import { fromMinor } from '@yankikucuk/efatura'
  *
  * console.log(fromMinor(10_000)) // 100
  * console.log(fromMinor(150)) // 1.5
@@ -79,7 +79,7 @@ export function fromMinor(minor: number): number {
  *
  * @example
  * ```ts
- * import { formatMinor, toMinor } from 'efatura'
+ * import { formatMinor, toMinor } from '@yankikucuk/efatura'
  *
  * console.log(formatMinor(toMinor(120))) // '120.00'
  * console.log(formatMinor(5)) // '0.05'
@@ -105,7 +105,7 @@ export function formatMinor(minor: number): string {
  *
  * @example
  * ```ts
- * import { applyPercent, toMinor } from 'efatura'
+ * import { applyPercent, toMinor } from '@yankikucuk/efatura'
  *
  * console.log(applyPercent(toMinor(100), 20)) // 2000 kuruş = 20 lira
  * // Ondalıklı oranda da kayan nokta artığı temizlenir:
@@ -132,7 +132,7 @@ export function applyPercent(minor: number, percent: number): number {
  *
  * @example
  * ```ts
- * import { sumMinor, toMinor } from 'efatura'
+ * import { sumMinor, toMinor } from '@yankikucuk/efatura'
  *
  * console.log(sumMinor([toMinor(1), toMinor(2), toMinor(3)])) // 600
  * console.log(sumMinor([])) // 0

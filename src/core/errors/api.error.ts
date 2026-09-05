@@ -5,8 +5,8 @@ import { EArsivError } from './base.error.js'
  *
  * @example
  * ```ts
- * import { Command, EArsivApiError } from 'efatura'
- * import type { ApiErrorContext } from 'efatura'
+ * import { Command, EArsivApiError } from '@yankikucuk/efatura'
+ * import type { ApiErrorContext } from '@yankikucuk/efatura'
  *
  * const context: ApiErrorContext = {
  *   command: Command.CREATE_INVOICE,
@@ -44,7 +44,7 @@ export interface ApiErrorContext {
  *
  * @example Hata kodunu ve portalın kendi mesajlarını okumak
  * ```ts
- * import { EArsivApiError, EArsivClient, Unit } from 'efatura'
+ * import { EArsivApiError, EArsivClient, Unit } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()

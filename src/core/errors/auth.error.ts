@@ -12,7 +12,7 @@ import { EArsivError } from './base.error.js'
  *
  * @example Otomatik yeniden giriş
  * ```ts
- * import { EArsivAuthError, EArsivClient } from 'efatura'
+ * import { EArsivAuthError, EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * client.setToken('bayat-token')

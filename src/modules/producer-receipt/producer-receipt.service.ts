@@ -36,7 +36,7 @@ import { validateProducerReceiptInput } from './producer-receipt.validator.js'
  *   HttpClient,
  *   ProducerReceiptService,
  *   resolveClientOptions,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -94,7 +94,7 @@ export class ProducerReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient, Unit } from 'efatura'
+   * import { EArsivClient, Unit } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -181,7 +181,7 @@ export class ProducerReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -214,7 +214,7 @@ export class ProducerReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()

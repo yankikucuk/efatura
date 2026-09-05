@@ -55,7 +55,7 @@ const PORTAL_DEFECT_MESSAGE = 'String index out of range: 4'
  *
  * @example
  * ```ts
- * import { selfEmployedReceiptHtmlUnsupported } from 'efatura'
+ * import { selfEmployedReceiptHtmlUnsupported } from '@yankikucuk/efatura'
  *
  * const error = selfEmployedReceiptHtmlUnsupported('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
  * console.log(error.kind, error.portalMessage)
@@ -105,7 +105,7 @@ export function selfEmployedReceiptHtmlUnsupported(ettn: string): EArsivPortalDe
  *   HttpClient,
  *   resolveClientOptions,
  *   SelfEmployedReceiptService,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -155,7 +155,7 @@ export class SelfEmployedReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -236,7 +236,7 @@ export class SelfEmployedReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -274,7 +274,7 @@ export class SelfEmployedReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -307,7 +307,7 @@ export class SelfEmployedReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+   * import { EArsivClient, EArsivPortalDefectError } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * const ettn = '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f'
@@ -335,7 +335,7 @@ export class SelfEmployedReceiptService {
    *
    * @example
    * ```ts
-   * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+   * import { EArsivClient, EArsivPortalDefectError } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    *

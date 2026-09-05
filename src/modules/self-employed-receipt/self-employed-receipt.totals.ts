@@ -83,7 +83,7 @@ function chain(
  *
  * @example
  * ```ts
- * import { computeSelfEmployedReceiptLineItem } from 'efatura'
+ * import { computeSelfEmployedReceiptLineItem } from '@yankikucuk/efatura'
  *
  * const line = computeSelfEmployedReceiptLineItem({
  *   description: 'Mali müşavirlik',
@@ -126,7 +126,7 @@ export function computeSelfEmployedReceiptLineItem(
  *
  * @example
  * ```ts
- * import { computeSelfEmployedReceiptLineItemForRead } from 'efatura'
+ * import { computeSelfEmployedReceiptLineItemForRead } from '@yankikucuk/efatura'
  *
  * // Portalda kayıtlı bozuk bir satır bile çağrıyı düşürmez.
  * const line = computeSelfEmployedReceiptLineItemForRead({
@@ -157,7 +157,7 @@ export function computeSelfEmployedReceiptLineItemForRead(
  * import {
  *   computeSelfEmployedReceiptLineItem,
  *   sumSelfEmployedReceiptTotals,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const lines = [
  *   computeSelfEmployedReceiptLineItem({
@@ -206,7 +206,7 @@ export function sumSelfEmployedReceiptTotals(
  *
  * @example
  * ```ts
- * import { computeSelfEmployedReceiptTotals } from 'efatura'
+ * import { computeSelfEmployedReceiptTotals } from '@yankikucuk/efatura'
  *
  * const { lines, totals } = computeSelfEmployedReceiptTotals([
  *   { description: 'Danışmanlık', grossFee: 5_000, vatRate: 20, withholdingRate: 20 },

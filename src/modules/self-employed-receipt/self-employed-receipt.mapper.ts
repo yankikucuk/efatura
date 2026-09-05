@@ -36,7 +36,7 @@ import type {
  *
  * @example
  * ```ts
- * import { toPortalSelfEmployedReceipt } from 'efatura'
+ * import { toPortalSelfEmployedReceipt } from '@yankikucuk/efatura'
  *
  * const payload = toPortalSelfEmployedReceipt({
  *   date: '05/09/2026',
@@ -165,7 +165,7 @@ function toDetailTotals(raw: Record<string, unknown>): SelfEmployedReceiptTotals
  *
  * @example
  * ```ts
- * import { toSelfEmployedReceiptDetail } from 'efatura'
+ * import { toSelfEmployedReceiptDetail } from '@yankikucuk/efatura'
  *
  * const detail = toSelfEmployedReceiptDetail(
  *   {

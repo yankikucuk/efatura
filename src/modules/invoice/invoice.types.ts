@@ -22,7 +22,7 @@ export type { AddressInput }
  *
  * @example
  * ```ts
- * import type { ContactInput } from 'efatura'
+ * import type { ContactInput } from '@yankikucuk/efatura'
  *
  * const contact: ContactInput = {
  *   phone: '02161234567',
@@ -53,7 +53,7 @@ export interface ContactInput {
  *
  * @example Tüzel kişi
  * ```ts
- * import type { BuyerInput } from 'efatura'
+ * import type { BuyerInput } from '@yankikucuk/efatura'
  *
  * const buyer: BuyerInput = {
  *   taxOrIdentityNumber: '1111111111',
@@ -65,8 +65,8 @@ export interface ContactInput {
  *
  * @example Gerçek kişi ve adres
  * ```ts
- * import { Country } from 'efatura'
- * import type { BuyerInput } from 'efatura'
+ * import { Country } from '@yankikucuk/efatura'
+ * import type { BuyerInput } from '@yankikucuk/efatura'
  *
  * const buyer: BuyerInput = {
  *   taxOrIdentityNumber: '11111111111',
@@ -105,8 +105,8 @@ export interface BuyerInput {
  *
  * @example
  * ```ts
- * import { Unit } from 'efatura'
- * import type { LineItemInput } from 'efatura'
+ * import { Unit } from '@yankikucuk/efatura'
+ * import type { LineItemInput } from '@yankikucuk/efatura'
  *
  * const item: LineItemInput = {
  *   name: 'Danışmanlık',
@@ -145,7 +145,7 @@ export interface LineItemInput {
  *
  * @example
  * ```ts
- * import type { ReceiptInput } from 'efatura'
+ * import type { ReceiptInput } from '@yankikucuk/efatura'
  *
  * const receipt: ReceiptInput = {
  *   number: '0042',
@@ -180,8 +180,8 @@ export interface ReceiptInput {
  *
  * @example
  * ```ts
- * import { InvoiceType } from 'efatura'
- * import type { SpecialBaseInput } from 'efatura'
+ * import { InvoiceType } from '@yankikucuk/efatura'
+ * import type { SpecialBaseInput } from '@yankikucuk/efatura'
  *
  * const specialBase: SpecialBaseInput = {
  *   amount: 1_000,
@@ -215,8 +215,8 @@ export interface SpecialBaseInput {
  *
  * @example Hesaplananı okumak
  * ```ts
- * import { computeTotals, Unit } from 'efatura'
- * import type { InvoiceTotals } from 'efatura'
+ * import { computeTotals, Unit } from '@yankikucuk/efatura'
+ * import type { InvoiceTotals } from '@yankikucuk/efatura'
  *
  * const { totals }: { totals: InvoiceTotals } = computeTotals([
  *   { name: 'Hizmet', quantity: 2, unit: Unit.PIECE, unitPrice: 100, vatRate: 20 },
@@ -257,7 +257,7 @@ export interface InvoiceTotals {
  *
  * @example
  * ```ts
- * import { computeLineItem, Unit } from 'efatura'
+ * import { computeLineItem, Unit } from '@yankikucuk/efatura'
  *
  * const line = computeLineItem({
  *   name: 'Danışmanlık',
@@ -292,8 +292,8 @@ export interface ComputedLineItem extends LineItemInput {
  *
  * @example En az girdiyle
  * ```ts
- * import { Unit } from 'efatura'
- * import type { InvoiceInput } from 'efatura'
+ * import { Unit } from '@yankikucuk/efatura'
+ * import type { InvoiceInput } from '@yankikucuk/efatura'
  *
  * const input: InvoiceInput = {
  *   buyer: { taxOrIdentityNumber: '11111111111', title: 'ÖRNEK A.Ş.' },
@@ -304,8 +304,8 @@ export interface ComputedLineItem extends LineItemInput {
  *
  * @example Dövizli fatura — `currencyRate` zorunlu
  * ```ts
- * import { Currency, Unit } from 'efatura'
- * import type { InvoiceInput } from 'efatura'
+ * import { Currency, Unit } from '@yankikucuk/efatura'
+ * import type { InvoiceInput } from '@yankikucuk/efatura'
  *
  * const input: InvoiceInput = {
  *   currency: Currency.EURO,
@@ -366,8 +366,8 @@ export interface InvoiceInput {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { InvoiceSummary } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { InvoiceSummary } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -387,8 +387,8 @@ export type InvoiceSummary = DocumentSummary
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { InvoiceDetail } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { InvoiceDetail } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -436,8 +436,8 @@ export interface InvoiceDetail {
  *
  * @example
  * ```ts
- * import { ApprovalStatus, EArsivClient, Unit } from 'efatura'
- * import type { CreatedInvoice } from 'efatura'
+ * import { ApprovalStatus, EArsivClient, Unit } from '@yankikucuk/efatura'
+ * import type { CreatedInvoice } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -456,8 +456,8 @@ export type CreatedInvoice = CreatedDocument
  *
  * @example
  * ```ts
- * import { EArsivClient, InvoiceListKind } from 'efatura'
- * import type { ListOptions } from 'efatura'
+ * import { EArsivClient, InvoiceListKind } from '@yankikucuk/efatura'
+ * import type { ListOptions } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -486,8 +486,8 @@ export interface ListOptions {
  *
  * @example
  * ```ts
- * import { DocumentType } from 'efatura'
- * import type { ListIncomingExternalFilters } from 'efatura'
+ * import { DocumentType } from '@yankikucuk/efatura'
+ * import type { ListIncomingExternalFilters } from '@yankikucuk/efatura'
  *
  * const filters: ListIncomingExternalFilters = {
  *   sellerTaxOrIdentityNumber: '1111111111',
@@ -520,8 +520,8 @@ export interface ListIncomingExternalFilters {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { IncomingExternalSummary } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { IncomingExternalSummary } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -557,7 +557,7 @@ export interface IncomingExternalSummary {
  *
  * @example
  * ```ts
- * import type { CancelDraftOptions } from 'efatura'
+ * import type { CancelDraftOptions } from '@yankikucuk/efatura'
  *
  * // Dünkü bir taslağı hedeflemek için arama tarihini açıkça verin.
  * const options: CancelDraftOptions = { date: '04/09/2026' }

@@ -31,7 +31,7 @@ export { isValidTaxOrIdentityNumber }
  *
  * @example
  * ```ts
- * import { EArsivValidationError, Unit, validateInvoiceInput } from 'efatura'
+ * import { EArsivValidationError, Unit, validateInvoiceInput } from '@yankikucuk/efatura'
  *
  * try {
  *   validateInvoiceInput({

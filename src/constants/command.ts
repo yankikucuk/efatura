@@ -9,7 +9,7 @@
  *
  * @example Hatanın hangi komutta oluştuğunu ayırt etmek
  * ```ts
- * import { Command, EArsivApiError, EArsivClient } from 'efatura'
+ * import { Command, EArsivApiError, EArsivClient } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -73,8 +73,8 @@ export const Command = {
  *
  * @example
  * ```ts
- * import { Command } from 'efatura'
- * import type { CommandName } from 'efatura'
+ * import { Command } from '@yankikucuk/efatura'
+ * import type { CommandName } from '@yankikucuk/efatura'
  *
  * const command: CommandName = Command.LIST_INVOICES
  * console.log(command)
@@ -119,7 +119,7 @@ export const RETRYABLE_COMMANDS: ReadonlySet<CommandName> = new Set([
  *
  * @example
  * ```ts
- * import { Command, SUCCESS_PATTERNS } from 'efatura'
+ * import { Command, SUCCESS_PATTERNS } from '@yankikucuk/efatura'
  *
  * console.log(SUCCESS_PATTERNS[Command.CREATE_INVOICE])
  * // Başarı metni bilinmeyen komutlarda undefined döner; o durumda
@@ -156,7 +156,7 @@ export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> =
  *
  * @example
  * ```ts
- * import { Command, DOCUMENT_COMMANDS } from 'efatura'
+ * import { Command, DOCUMENT_COMMANDS } from '@yankikucuk/efatura'
  *
  * // Fatura HTML'i bir belge gövdesidir; hata işareti taraması uygulanmaz.
  * console.log(DOCUMENT_COMMANDS.has(Command.SHOW_INVOICE))
@@ -179,7 +179,7 @@ export const DOCUMENT_COMMANDS: ReadonlySet<CommandName> = new Set([Command.SHOW
  *
  * @example Bir portal metninin hata sayılıp sayılmayacağını denemek
  * ```ts
- * import { FAILURE_MARKERS } from 'efatura'
+ * import { FAILURE_MARKERS } from '@yankikucuk/efatura'
  *
  * const metin = 'Bu işlem için yetkiniz yok.'
  * console.log(FAILURE_MARKERS.some((marker) => marker.test(metin))) // true

@@ -23,7 +23,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  *
  * @example Tek başına kullanmak
  * ```ts
- * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+ * import { AuthService, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const auth = new AuthService(new HttpClient(options), options)
@@ -77,7 +77,7 @@ export class AuthService implements TokenProvider {
    *
    * @example
    * ```ts
-   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   * import { AuthService, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
    *
    * const options = resolveClientOptions({ environment: 'test' })
    * const auth = new AuthService(new HttpClient(options), options)
@@ -140,7 +140,7 @@ export class AuthService implements TokenProvider {
    *
    * @example
    * ```ts
-   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   * import { AuthService, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
    *
    * const options = resolveClientOptions({ environment: 'production' })
    * const auth = new AuthService(new HttpClient(options), options)
@@ -208,7 +208,7 @@ export class AuthService implements TokenProvider {
    *
    * @example
    * ```ts
-   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   * import { AuthService, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
    *
    * const options = resolveClientOptions({ environment: 'test' })
    * const auth = new AuthService(new HttpClient(options), options)
@@ -268,7 +268,7 @@ export class AuthService implements TokenProvider {
    *
    * @example
    * ```ts
-   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   * import { AuthService, HttpClient, resolveClientOptions } from '@yankikucuk/efatura'
    *
    * const options = resolveClientOptions({ environment: 'test' })
    * const auth = new AuthService(new HttpClient(options), options)

@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import type { LoginCommand } from 'efatura'
+ * import type { LoginCommand } from '@yankikucuk/efatura'
  *
  * const command: LoginCommand = 'anologin'
  * console.log(command)
@@ -19,8 +19,8 @@ export type LoginCommand = 'login' | 'anologin'
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { Credentials } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { Credentials } from '@yankikucuk/efatura'
  *
  * const credentials: Credentials = {
  *   username: process.env.EARSIV_USER ?? '',
@@ -47,8 +47,8 @@ export interface Credentials {
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { TestUserCredentials } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { TestUserCredentials } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * const user: TestUserCredentials = await client.loginWithTestUser()

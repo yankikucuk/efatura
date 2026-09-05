@@ -1,5 +1,5 @@
 {
-  "name": "efatura",
+  "name": "@yankikucuk/efatura",
   "version": "1.0.0",
   "description": "GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi — fatura, müstahsil makbuzu ve serbest meslek makbuzu",
   "keywords": [

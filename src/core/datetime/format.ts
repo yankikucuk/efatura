@@ -13,8 +13,8 @@ import { parsePortalDate } from './parse.js'
  *
  * @example
  * ```ts
- * import { formatPortalDate } from 'efatura'
- * import type { DateInput } from 'efatura'
+ * import { formatPortalDate } from '@yankikucuk/efatura'
+ * import type { DateInput } from '@yankikucuk/efatura'
  *
  * const inputs: DateInput[] = [new Date(2026, 8, 3), '03/09/2026', '03-09-2026', '2026-09-03']
  * console.log(inputs.map((input) => formatPortalDate(input)))
@@ -55,7 +55,7 @@ function toDate(input: DateInput | undefined, label: string): Date {
  *
  * @example
  * ```ts
- * import { formatPortalDate } from 'efatura'
+ * import { formatPortalDate } from '@yankikucuk/efatura'
  *
  * console.log(formatPortalDate(new Date(2026, 8, 3))) // '03/09/2026'
  * console.log(formatPortalDate('2026-09-03')) // '03/09/2026'
@@ -86,7 +86,7 @@ export function formatPortalDate(input?: DateInput): string {
  *
  * @example
  * ```ts
- * import { formatPortalTime } from 'efatura'
+ * import { formatPortalTime } from '@yankikucuk/efatura'
  *
  * console.log(formatPortalTime(new Date(2026, 8, 3, 9, 7, 48))) // '09:07:48'
  * console.log(formatPortalTime('19:30:02')) // '19:30:02'

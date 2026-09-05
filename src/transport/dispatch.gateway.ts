@@ -23,8 +23,8 @@ import { parsePortalResponse } from './response.parser.js'
  *
  * @example Sabit token taşıyan bir uygulama
  * ```ts
- * import { EArsivAuthError } from 'efatura'
- * import type { TokenProvider } from 'efatura'
+ * import { EArsivAuthError } from '@yankikucuk/efatura'
+ * import type { TokenProvider } from '@yankikucuk/efatura'
  *
  * let token: string | undefined = 'kayitli-token'
  * const provider: TokenProvider = {
@@ -90,7 +90,7 @@ const SESSION_TIMEOUT_PATTERN = /zaman aşımına uğradı/i
  *   HttpClient,
  *   PageName,
  *   resolveClientOptions,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -159,7 +159,7 @@ export class DispatchGateway {
    *   HttpClient,
    *   PageName,
    *   resolveClientOptions,
-   * } from 'efatura'
+   * } from '@yankikucuk/efatura'
    *
    * const options = resolveClientOptions({ environment: 'test' })
    * const http = new HttpClient(options)

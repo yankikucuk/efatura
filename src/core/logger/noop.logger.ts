@@ -10,7 +10,7 @@ const ignore = (): void => undefined
  *
  * @example Günlüklemeyi açıkça kapatmak
  * ```ts
- * import { EArsivClient, noopLogger } from 'efatura'
+ * import { EArsivClient, noopLogger } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test', logger: noopLogger })
  * noopLogger.info('bu mesaj hiçbir yere gitmez')

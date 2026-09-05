@@ -1,4 +1,4 @@
-# efatura
+# @yankikucuk/efatura
 
 GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi.
 
@@ -11,7 +11,7 @@ zamanı bağımlılığı yoktur; tüm istekler `fetch` ile yapılır.
 ## Kurulum
 
 ```bash
-npm i efatura
+npm i @yankikucuk/efatura
 ```
 
 Node.js 20 veya üzeri gerekir (`fetch` global olarak kullanılabilir olmalı).
@@ -19,7 +19,7 @@ Node.js 20 veya üzeri gerekir (`fetch` global olarak kullanılabilir olmalı).
 ## Hızlı başlangıç
 
 ```ts
-import { EArsivClient, Currency, Unit } from 'efatura'
+import { EArsivClient, Currency, Unit } from '@yankikucuk/efatura'
 
 const client = new EArsivClient({ environment: 'test' })
 await client.loginWithTestUser()
@@ -274,7 +274,7 @@ gerçekten ölüdür, kütüphane onu temizler ve `EArsivAuthError` fırlatır
 olur; sıradan bir izin reddi oturumunuzu sonlandırmaz.
 
 ```ts
-import { EArsivApiError, EArsivClient } from 'efatura'
+import { EArsivApiError, EArsivClient } from '@yankikucuk/efatura'
 
 try {
   await client.createCancellationRequest({ ettn, reason: 'Yanlış tutar.' })

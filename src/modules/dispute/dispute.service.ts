@@ -38,7 +38,7 @@ const asRows = (data: unknown): Record<string, unknown>[] =>
  *   DisputeService,
  *   HttpClient,
  *   resolveClientOptions,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -69,7 +69,7 @@ export class DisputeService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -111,7 +111,7 @@ export class DisputeService {
    *
    * @example
    * ```ts
-   * import { DisputeMethod, EArsivClient } from 'efatura'
+   * import { DisputeMethod, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -159,7 +159,7 @@ export class DisputeService {
    *
    * @example
    * ```ts
-   * import { DisputeMethod, EArsivClient } from 'efatura'
+   * import { DisputeMethod, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -210,7 +210,7 @@ export class DisputeService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -244,7 +244,7 @@ export class DisputeService {
    *
    * @example
    * ```ts
-   * import { DisputeAnswer, EArsivClient } from 'efatura'
+   * import { DisputeAnswer, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()

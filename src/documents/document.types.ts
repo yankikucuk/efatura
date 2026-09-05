@@ -14,8 +14,8 @@ import type { ApprovalStatusValue, CountryName, DocumentTypeCode } from '../cons
  *
  * @example
  * ```ts
- * import { EArsivClient } from 'efatura'
- * import type { InvoiceSummary } from 'efatura'
+ * import { EArsivClient } from '@yankikucuk/efatura'
+ * import type { InvoiceSummary } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -63,8 +63,8 @@ export interface DocumentSummary {
  *
  * @example
  * ```ts
- * import { EArsivClient, Unit } from 'efatura'
- * import type { CreatedInvoice } from 'efatura'
+ * import { EArsivClient, Unit } from '@yankikucuk/efatura'
+ * import type { CreatedInvoice } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: 'test' })
  * await client.loginWithTestUser()
@@ -104,8 +104,8 @@ export interface CreatedDocument {
  *
  * @example
  * ```ts
- * import { Country } from 'efatura'
- * import type { AddressInput } from 'efatura'
+ * import { Country } from '@yankikucuk/efatura'
+ * import type { AddressInput } from '@yankikucuk/efatura'
  *
  * const address: AddressInput = {
  *   country: Country.TURKIYE,

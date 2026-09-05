@@ -77,7 +77,7 @@ function showDocumentPortalDefect(ettn: string, cause: EArsivApiError): EArsivPo
  *   DocumentService,
  *   HttpClient,
  *   resolveClientOptions,
- * } from 'efatura'
+ * } from '@yankikucuk/efatura'
  *
  * const options = resolveClientOptions({ environment: 'test' })
  * const http = new HttpClient(options)
@@ -123,7 +123,7 @@ export class DocumentService {
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -189,7 +189,7 @@ export class DocumentService {
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { DocumentType, EArsivClient } from 'efatura'
+   * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
@@ -230,7 +230,7 @@ export class DocumentService {
    *
    * @example
    * ```ts
-   * import { DocumentType, EArsivClient } from 'efatura'
+   * import { DocumentType, EArsivClient } from '@yankikucuk/efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()

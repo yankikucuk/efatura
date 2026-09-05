@@ -7,7 +7,7 @@
  *
  * @example
  * ```ts
- * import { EArsivClient, Environment } from 'efatura'
+ * import { EArsivClient, Environment } from '@yankikucuk/efatura'
  *
  * const client = new EArsivClient({ environment: Environment.TEST })
  * console.log(client.environment)
@@ -29,8 +29,8 @@ export const Environment = {
  *
  * @example
  * ```ts
- * import { Environment } from 'efatura'
- * import type { EnvironmentName } from 'efatura'
+ * import { Environment } from '@yankikucuk/efatura'
+ * import type { EnvironmentName } from '@yankikucuk/efatura'
  *
  * const name: EnvironmentName = Environment.PRODUCTION
  * console.log(name)
@@ -47,7 +47,7 @@ export type EnvironmentName = (typeof Environment)[keyof typeof Environment]
  *
  * @example
  * ```ts
- * import { BASE_URLS } from 'efatura'
+ * import { BASE_URLS } from '@yankikucuk/efatura'
  *
  * console.log(BASE_URLS.test) // https://earsivportaltest.efatura.gov.tr
  * console.log(BASE_URLS.production) // https://earsivportal.efatura.gov.tr
