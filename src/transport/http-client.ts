@@ -10,6 +10,21 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 /** 5xx geçicidir ve yeniden denenir; 4xx kalıcıdır ve denenmez. */
 const isRetryableStatus = (status: number): boolean => status >= 500
 
+/**
+ * `HttpClient.postForm` seçenekleri.
+ *
+ * @example
+ * ```ts
+ * import { Endpoint, HttpClient, resolveClientOptions } from 'efatura'
+ * import type { PostFormOptions } from 'efatura'
+ *
+ * const http = new HttpClient(resolveClientOptions({ environment: 'test' }))
+ * // Salt okunur bir sorgu: yeniden denenmesi güvenli.
+ * const options: PostFormOptions = { retryable: true }
+ * const raw = await http.postForm(Endpoint.ESIGN, { assoscmd: 'kullaniciOner', rtype: 'json' }, options)
+ * console.log(raw)
+ * ```
+ */
 export interface PostFormOptions {
   /**
    * İstek yeniden denenebilir mi? VARSAYILAN: `false`.
@@ -25,15 +40,64 @@ export interface PostFormOptions {
   retryable?: boolean
 }
 
-/** Portalın iki endpoint ailesi için ince fetch sarmalayıcısı. */
+/**
+ * Portalın iki endpoint ailesi için ince fetch sarmalayıcısı.
+ *
+ * Zaman aşımını, üstel geri çekilmeli yeniden denemeyi ve hata çevrimini
+ * yönetir; portal ZARFINI çözmez — o `parsePortalResponse`'un işidir.
+ *
+ * Normalde `EArsivClient` bunu kendisi kurar; doğrudan örneklemeniz yalnızca
+ * servisleri tek başına kullanacaksanız gerekir.
+ *
+ * @example
+ * ```ts
+ * import { HttpClient, resolveClientOptions } from 'efatura'
+ *
+ * const http = new HttpClient(resolveClientOptions({ environment: 'test', timeoutMs: 10_000 }))
+ * console.log(typeof http.postForm, typeof http.getBinary)
+ * ```
+ */
 export class HttpClient {
   private readonly headers: Record<string, string>
 
+  /**
+   * @param options `resolveClientOptions()` ile üretilmiş, doğrulanmış
+   *   yapılandırma. Başlıklar kurulumda bir kez üretilir ve tüm isteklerde
+   *   yeniden kullanılır.
+   */
   constructor(private readonly options: ResolvedClientOptions) {
     this.headers = buildPortalHeaders(options.baseUrl, options.userAgent)
   }
 
-  /** Form-urlencoded POST; yanıtı JSON olarak çözer. */
+  /**
+   * Form-urlencoded POST; yanıtı JSON olarak çözer.
+   *
+   * @param path Hedef uç nokta; `Endpoint` sabitlerinden biri.
+   * @param fields Gövdeye `application/x-www-form-urlencoded` olarak
+   *   kodlanacak alanlar. Değerlerin tamamı string olmalıdır — iç içe yapılar
+   *   çağıran tarafından `JSON.stringify` ile düzleştirilir.
+   * @param options `retryable` VARSAYILAN `false`'tur: bayrak açıkça `true`
+   *   verilmedikçe istek TEK KEZ denenir. Yalnızca salt okunur komutlar
+   *   `true` göndermelidir.
+   * @returns Ayrıştırılmış JSON — portal zarfının kendisi. Zarf ÇÖZÜLMEZ;
+   *   hata tespiti için `parsePortalResponse` kullanın.
+   * @throws {EArsivNetworkError} Portala ulaşılamazsa, zaman aşımı olursa,
+   *   HTTP hata durumu dönerse veya yanıt JSON olarak ayrıştırılamazsa.
+   *
+   * @example
+   * ```ts
+   * import { Command, Endpoint, HttpClient, parsePortalResponse, resolveClientOptions } from 'efatura'
+   *
+   * const http = new HttpClient(resolveClientOptions({ environment: 'test' }))
+   * const raw = await http.postForm(
+   *   Endpoint.LOGIN,
+   *   { assoscmd: 'login', rtype: 'json', userid: '33333307', sifre: '1', sifre2: '1', parola: '1' },
+   *   { retryable: true },
+   * )
+   * parsePortalResponse(raw, { command: Command.LOGIN, callId: 'login' })
+   * console.log(raw)
+   * ```
+   */
   async postForm(
     path: EndpointPath,
     fields: Record<string, string>,
@@ -61,7 +125,33 @@ export class HttpClient {
     }
   }
 
-  /** İkili GET; belge paketi indirmek için. Her zaman yeniden denenebilir: idempotent bir okumadır. */
+  /**
+   * İkili GET; belge paketi indirmek için. Her zaman yeniden denenebilir:
+   * idempotent bir okumadır.
+   *
+   * @param path Hedef uç nokta; pratikte `Endpoint.DOWNLOAD`.
+   * @param query Sorgu dizesine kodlanacak alanlar — `token`, `ettn`,
+   *   `belgeTip`, `onayDurumu`, `cmd`. Günlüklerde ve hata nesnesinde `token`
+   *   GİZLENİR.
+   * @returns İndirilen dosyanın ham baytları; ZIP olarak gelir.
+   * @throws {EArsivNetworkError} Portala ulaşılamazsa, HTTP hata durumu
+   *   dönerse ya da paket BOŞ gelirse (ETTN veya onay durumu hatalı olabilir).
+   *
+   * @example
+   * ```ts
+   * import { Command, DocumentType, Endpoint, HttpClient, resolveClientOptions } from 'efatura'
+   *
+   * const http = new HttpClient(resolveClientOptions({ environment: 'test' }))
+   * const zip = await http.getBinary(Endpoint.DOWNLOAD, {
+   *   token: 'oturum-tokeni',
+   *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+   *   belgeTip: DocumentType.INVOICE,
+   *   onayDurumu: 'Onaylanmadı',
+   *   cmd: Command.DOWNLOAD_DOCUMENT,
+   * })
+   * console.log(zip.byteLength)
+   * ```
+   */
   async getBinary(path: EndpointPath, query: Record<string, string>): Promise<Uint8Array> {
     const url = `${this.options.baseUrl}${path}?${new URLSearchParams(query).toString()}`
     const { response, attempts } = await this.send(

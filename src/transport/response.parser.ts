@@ -6,8 +6,23 @@ import {
 } from '../constants/index.js'
 import { EArsivApiError } from '../core/index.js'
 
+/**
+ * `parsePortalResponse` çağrısının bağlamı. Hata fırlatılırsa bu iki alan
+ * `EArsivApiError` üzerine aynen taşınır.
+ *
+ * @example
+ * ```ts
+ * import { Command } from 'efatura'
+ * import type { ParseContext } from 'efatura'
+ *
+ * const context: ParseContext = { command: Command.GET_INVOICE, callId: 'istek-1' }
+ * console.log(context.command)
+ * ```
+ */
 export interface ParseContext {
+  /** Portala gönderilen `cmd`; başarı/başarısızlık sezgisi buna göre seçilir. */
   command: CommandName
+  /** İsteğin `callid` korelasyon kimliği; hata nesnesine aynen aktarılır. */
   callId: string
 }
 
@@ -89,6 +104,43 @@ function throwApi(message: string, raw: unknown, ctx: ParseContext, code?: strin
  * üst seviye `error`, `data.hata` ve düz string `data`. Üçüncüsü sessiz
  * başarısızlığa en açık olanı; bu yüzden string dönen komutlar için beklenen
  * başarı metni `SUCCESS_PATTERNS` üzerinden doğrulanır.
+ *
+ * Başarı metni bilinmeyen komutlarda ters yönde çalışılır: metin
+ * `FAILURE_MARKERS` işaretlerinden birini taşıyorsa hata sayılır. Belge
+ * gövdesi döndüren komutlar (`DOCUMENT_COMMANDS`) bu taramaya HİÇ girmez —
+ * 47-55 KB'lık bir fatura HTML'i kullanıcı metni taşır ve kısa durum
+ * mesajları için tasarlanmış bir sezgi orada yanlış pozitif üretirdi.
+ *
+ * @param payload Portalın ham yanıtı — `HttpClient.postForm` çıktısı.
+ *   JSON nesnesi değilse doğrudan hata fırlatılır.
+ * @param ctx Komut ve `callid`; hangi başarı/başarısızlık kuralının
+ *   uygulanacağını komut belirler.
+ * @returns Zarfın `data` alanı, ham `unknown` olarak. Tip iddiası çağırana
+ *   aittir.
+ * @throws {EArsivApiError} Üst seviye `error` bayrağı DOLU ise, `data.hata`
+ *   dolu bir stringse veya düz string `data` başarı kuralını sağlamıyorsa.
+ *   Hata nesnesi komutu, `callId`'yi, ham yanıtı, varsa `Hata kodu:`
+ *   kalıbından ayrıştırılan kodu ve `messages` metinlerini taşır.
+ *
+ * @example Ham bir yanıtı çözmek
+ * ```ts
+ * import { Command, EArsivApiError, parsePortalResponse } from 'efatura'
+ *
+ * const ok = parsePortalResponse(
+ *   { data: { hata: '', belgeNumarasi: 'EAR2026000000123' } },
+ *   { command: Command.GET_INVOICE, callId: 'istek-1' },
+ * )
+ * console.log(ok)
+ *
+ * try {
+ *   parsePortalResponse(
+ *     { error: '1', messages: [{ text: 'Bu işlem için yetkiniz yok' }] },
+ *     { command: Command.GET_INVOICE, callId: 'istek-2' },
+ *   )
+ * } catch (error) {
+ *   if (error instanceof EArsivApiError) console.error(error.messages)
+ * }
+ * ```
  */
 export function parsePortalResponse(payload: unknown, ctx: ParseContext): unknown {
   if (!isRecord(payload)) {

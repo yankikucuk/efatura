@@ -14,6 +14,39 @@ import type { ProducerReceiptInput } from './producer-receipt.types.js'
  * kontrolün kopyası değil, TEK kontroldür.
  *
  * Tüm sorunlar toplanır; ilk hatada durulmaz.
+ *
+ * @param input Denetlenecek makbuz girdisi.
+ * @returns Doğrulama geçerse hiçbir şey (`void`).
+ * @throws {EArsivValidationError} Müstahsilin VKN/TCKN'i geçersizse, adı ve
+ *   soyadı BİRLİKTE boşsa (portal boş adı kabul ediyor, biz etmiyoruz),
+ *   kalem listesi boşsa ya da bir kalemin adı/miktarı/birim fiyatı veya dört
+ *   kesinti oranından biri geçersizse. Kesinti sorunlarının yolu hangi
+ *   kesintinin bozuk olduğunu söyler (ör. `lineItems.0.taxRates.pastureFund`).
+ *
+ * @example
+ * ```ts
+ * import { EArsivValidationError, Unit, validateProducerReceiptInput } from 'efatura'
+ *
+ * try {
+ *   validateProducerReceiptInput({
+ *     producer: { taxOrIdentityNumber: '11111111111' },
+ *     lineItems: [
+ *       {
+ *         name: 'Buğday',
+ *         quantity: 1,
+ *         unit: Unit.KILOGRAM,
+ *         unitPrice: 12,
+ *         taxRates: { pastureFund: 150 },
+ *       },
+ *     ],
+ *   })
+ * } catch (error) {
+ *   if (error instanceof EArsivValidationError) {
+ *     console.error(error.issues.map((issue) => issue.path))
+ *     // ['producer', 'lineItems.0.taxRates.pastureFund']
+ *   }
+ * }
+ * ```
  */
 export function validateProducerReceiptInput(input: ProducerReceiptInput): void {
   const issues: ValidationIssue[] = []

@@ -2,7 +2,21 @@ import type { CompanyInfo, UserInfo } from './user.types.js'
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 
-/** Portal yanıtını İngilizce alanlı `UserInfo` nesnesine çevirir. */
+/**
+ * Portal yanıtını İngilizce alanlı `UserInfo` nesnesine çevirir.
+ *
+ * @param raw `EARSIV_PORTAL_KULLANICI_BILGILERI_GETIR` yanıtının `data`
+ *   alanı. Eksik veya string olmayan her alan boş stringe düşer.
+ * @returns Tüm alanları dolu (boş string dahil) `UserInfo`.
+ *
+ * @example
+ * ```ts
+ * import { toUserInfo } from 'efatura'
+ *
+ * const info = toUserInfo({ vknTckn: '1111111111', unvan: 'ÖRNEK A.Ş.', il: 'İstanbul' })
+ * console.log(info.title, info.city, info.email) // 'ÖRNEK A.Ş.' 'İstanbul' ''
+ * ```
+ */
 export function toUserInfo(raw: Record<string, unknown>): UserInfo {
   return {
     taxOrIdentityNumber: str(raw.vknTckn),
@@ -29,7 +43,23 @@ export function toUserInfo(raw: Record<string, unknown>): UserInfo {
   }
 }
 
-/** `UserInfo` nesnesini portalın kaydetme yüküne çevirir. */
+/**
+ * `UserInfo` nesnesini portalın kaydetme yüküne çevirir.
+ *
+ * @param info TAM bir `UserInfo` — kısmi nesne kabul etmez. Portal yükün
+ *   tamamını beklediği ve eksik alanları sildiği için birleştirme
+ *   `UserService.updateUserInfo` içinde yapılır.
+ * @returns Portalın Türkçe anahtarlı kaydetme yükü.
+ *
+ * @example
+ * ```ts
+ * import { toPortalUserInfo, toUserInfo } from 'efatura'
+ *
+ * const info = toUserInfo({ vknTckn: '1111111111', unvan: 'ÖRNEK A.Ş.' })
+ * const payload = toPortalUserInfo({ ...info, email: 'muhasebe@ornek.test' })
+ * console.log(payload.unvan, payload.ePostaAdresi)
+ * ```
+ */
 export function toPortalUserInfo(info: UserInfo): Record<string, unknown> {
   return {
     vknTckn: info.taxOrIdentityNumber,
@@ -56,7 +86,21 @@ export function toPortalUserInfo(info: UserInfo): Record<string, unknown> {
   }
 }
 
-/** VKN sorgusu sonucunu eşler. */
+/**
+ * VKN sorgusu sonucunu eşler.
+ *
+ * @param raw `SICIL_VEYA_MERNISTEN_BILGILERI_GETIR` yanıtının `data` alanı.
+ * @returns Eşlenmiş dört alan ve ham yanıtın kendisi (`raw`) — eşlemede
+ *   kapsanmayan alanlara oradan erişilir.
+ *
+ * @example
+ * ```ts
+ * import { toCompanyInfo } from 'efatura'
+ *
+ * const company = toCompanyInfo({ unvan: 'ÖRNEK A.Ş.', vergiDairesi: 'Kadıköy' })
+ * console.log(company.title, company.taxOffice, Object.keys(company.raw))
+ * ```
+ */
 export function toCompanyInfo(raw: Record<string, unknown>): CompanyInfo {
   return {
     title: str(raw.unvan),

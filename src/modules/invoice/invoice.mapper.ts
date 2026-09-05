@@ -26,6 +26,29 @@ import type {
  *
  * `faturaUuid` bilinçli olarak YOKTUR: güncel portal istemci tarafından
  * verilen ETTN'i reddediyor ve kendisi atıyor (spec §2.3).
+ *
+ * Tutarlar burada LİRADAN KURUŞA çevrilir ve portalın beklediği iki
+ * ondalıklı, NOKTA ayırıcılı metin biçimine (`'120.00'`) getirilir.
+ *
+ * @param input Fatura girdisi. Toplamlar kalemlerden hesaplanır; `totals`
+ *   verilmişse üzerine yazılır ve eşitlikler doğrulanır.
+ * @returns Portalın Türkçe anahtarlı yükü — `jp` alanına
+ *   `JSON.stringify` ile yazılmaya hazır.
+ * @throws {EArsivValidationError} Kalemler boşsa, bir kalem geçersizse ya da
+ *   `totals` override'ı tutarsızsa.
+ *
+ * @example
+ * ```ts
+ * import { toPortalInvoice, Unit } from 'efatura'
+ *
+ * const payload = toPortalInvoice({
+ *   date: '05/09/2026',
+ *   buyer: { taxOrIdentityNumber: '11111111111', title: 'ÖRNEK A.Ş.' },
+ *   lineItems: [{ name: 'Hizmet', quantity: 1, unit: Unit.PIECE, unitPrice: 100, vatRate: 20 }],
+ * })
+ * console.log(payload.faturaTarihi, payload.vergilerDahilToplamTutar)
+ * // '05/09/2026' '120.00'
+ * ```
  */
 export function toPortalInvoice(input: InvoiceInput): Record<string, unknown> {
   const { lines, totals: computed } = computeTotals(input.lineItems)
@@ -121,6 +144,20 @@ export function toPortalInvoice(input: InvoiceInput): Record<string, unknown> {
  * `aliciVknTckn`/`aliciUnvanAdSoyad` değil. Entegratörün kendi fatura
  * numarası (`faturaNo`) da portalın belge numarasından (`belgeNumarasi`)
  * ayrı bir alan olarak taşınır.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz —
+ * `InvoiceService.listIncomingExternal` bunu zaten uygular.
+ *
+ * @param raw Entegratör liste yanıtının bir satırı.
+ * @returns Eşlenmiş satır; eksik alanlar boş stringe, `belgeTuru` `'FATURA'`,
+ *   `onayDurumu` `'Onaylanmadı'` varsayılanlarına düşer.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * { saticiVknTckn: '1111111111', faturaNo: 'ABC2026000000001', belgeTarihi: '03-09-2026' }
+ *   -> { sellerTaxOrIdentityNumber: '1111111111', invoiceNumber: 'ABC2026000000001',
+ *        date: '03/09/2026', documentType: 'FATURA', approvalStatus: 'Onaylanmadı', ... }
+ * ```
  */
 export function toIncomingExternalSummary(raw: Record<string, unknown>): IncomingExternalSummary {
   return {
@@ -152,6 +189,27 @@ function toLineItemInput(raw: unknown): LineItemInput {
 /**
  * Portalın Türkçe alan adlarıyla hazırlanmış ham nesneyi `InvoiceInput`'a
  * çevirir. PHP projesindeki `mapWithTurkishKeys` işlevinin karşılığıdır.
+ *
+ * Okuma yönünde çalışır ve HİÇBİR doğrulama yapmaz; eksik ya da beklenmedik
+ * tipteki her alan güvenli bir varsayılana düşer.
+ *
+ * @param raw `EARSIV_PORTAL_FATURA_GETIR` yanıtının `data` alanı.
+ * @returns `InvoiceInput` şeklinde eşlenmiş girdi. DİKKAT: `date`/`time`
+ *   alanları portal boş döndürdüğünde BOŞ STRING kalır — bu değeri doğrudan
+ *   `formatPortalDate`'e vermeyin.
+ *
+ * @example
+ * ```ts
+ * import { fromPortalPayload } from 'efatura'
+ *
+ * const input = fromPortalPayload({
+ *   belgeNumarasi: 'EAR2026000000123',
+ *   vknTckn: '11111111111',
+ *   aliciUnvan: 'ÖRNEK A.Ş.',
+ *   malHizmetTable: [{ malHizmet: 'Hizmet', miktar: 1, birimFiyat: '100.00', kdvOrani: 20 }],
+ * })
+ * console.log(input.buyer.title, input.lineItems[0]?.unitPrice)
+ * ```
  */
 export function fromPortalPayload(raw: Record<string, unknown>): InvoiceInput {
   const table = Array.isArray(raw.malHizmetTable) ? raw.malHizmetTable : []
@@ -204,6 +262,20 @@ export function fromPortalPayload(raw: Record<string, unknown>): InvoiceInput {
  * olsun (Türkçe ondalık biçimiyle) `num()` ile ayrıştırılıp aynen aktarılır.
  * `additionalTaxes` portalda ayrı bir alan olarak gelmiyor (bkz.
  * `InvoiceTotals.additionalTaxes` belgesi), bu yüzden her zaman hesaplanır.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz.
+ *
+ * @param raw Portalın detay yanıtı; toplam alanları burada aranır.
+ * @param computed Kalemlerden hesaplanmış toplamlar — YALNIZCA ilgili alan
+ *   yanıtta HİÇ YOKSA kullanılır.
+ * @returns Sekiz alanlı toplamlar; `additionalTaxes` her zaman `computed`'ten
+ *   gelir.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * portalTotals({ matrah: '1.234,56' }, hesaplanan)
+ *   -> taxBase = 1234.56 (portalın rakamı), diğer alanlar hesaplanandan
+ * ```
  */
 export function portalTotals(raw: Record<string, unknown>, computed: InvoiceTotals): InvoiceTotals {
   const pick = (key: string, fallback: number): number =>

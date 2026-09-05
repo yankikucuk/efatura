@@ -1,3 +1,17 @@
+/**
+ * Portalın HTTP uç noktaları. Yollar taban adrese (bkz. `BASE_URLS`) eklenir.
+ *
+ * `HttpClient` bu değerleri `EndpointPath` olarak alır; başka bir yol
+ * gönderilemez.
+ *
+ * @example
+ * ```ts
+ * import { BASE_URLS, Endpoint } from 'efatura'
+ *
+ * console.log(`${BASE_URLS.test}${Endpoint.DISPATCH}`)
+ * // https://earsivportaltest.efatura.gov.tr/earsiv-services/dispatch
+ * ```
+ */
 export const Endpoint = {
   /** Test kullanıcısı önerme. */
   ESIGN: '/earsiv-services/esign',
@@ -11,4 +25,16 @@ export const Endpoint = {
   REFERRER: '/intragiris.html',
 } as const
 
+/**
+ * {@link Endpoint} sabitlerinden türetilen birleşim tipi.
+ *
+ * @example
+ * ```ts
+ * import { Endpoint } from 'efatura'
+ * import type { EndpointPath } from 'efatura'
+ *
+ * const path: EndpointPath = Endpoint.DOWNLOAD
+ * console.log(path)
+ * ```
+ */
 export type EndpointPath = (typeof Endpoint)[keyof typeof Endpoint]

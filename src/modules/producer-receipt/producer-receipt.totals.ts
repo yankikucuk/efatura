@@ -25,6 +25,14 @@ import type {
  * Kodlar `constants` katmanında (portal gerçeği), İngilizce alan adları
  * burada (kütüphane sözleşmesi). İkisini ayrı tutmak, portal bir kod
  * eklerse alan adının bizim seçimimiz olarak kalmasını sağlar.
+ *
+ * DAHİLİ tablo: paket kökünden dışa açılmaz.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * PRODUCER_RECEIPT_TAX_KEYS['0003']     -> 'incomeTaxWithholding'
+ * PRODUCER_RECEIPT_TAX_KEYS['SGK_PRIM'] -> 'socialSecurityPremium'
+ * ```
  */
 export const PRODUCER_RECEIPT_TAX_KEYS: Readonly<
   Record<ProducerReceiptTaxCode, keyof ProducerReceiptTaxRates>
@@ -35,7 +43,20 @@ export const PRODUCER_RECEIPT_TAX_KEYS: Readonly<
   [ProducerReceiptTax.SOCIAL_SECURITY_PREMIUM]: 'socialSecurityPremium',
 }
 
-/** Dört alanı da sıfırla açan boş bir kesinti tablosu. */
+/**
+ * Dört alanı da sıfırla açan boş bir kesinti tablosu.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz. Her çağrıda YENİ bir nesne
+ * döner — paylaşılan bir sabit değildir, çünkü çağıranlar üzerine yazar.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * emptyTaxAmounts() -> {
+ *   incomeTaxWithholding: 0, pastureFund: 0,
+ *   stockExchangeRegistration: 0, socialSecurityPremium: 0
+ * }
+ * ```
+ */
 export const emptyTaxAmounts = (): ProducerReceiptTaxAmounts => ({
   incomeTaxWithholding: 0,
   pastureFund: 0,
@@ -54,6 +75,30 @@ const fail = (message: string, path: string): never => {
  * tutarının (miktar × birim fiyat) yüzdesidir ve AYRI AYRI yuvarlanır —
  * portal da kalem düzeyinde her kesintiyi ayrı bir alanda taşıdığı için
  * toplamdan geri hesaplamak bir kuruş sapma yaratabilirdi.
+ *
+ * @param item Hesaplanacak kalem; `name`, `quantity`, `unit` ve `unitPrice`
+ *   zorunludur. `taxRates` verilmezse dört kesinti de 0 kabul edilir.
+ * @param index Kalemin belge içindeki sırası; YALNIZCA hata mesajlarındaki
+ *   yol için kullanılır. Varsayılan 0.
+ * @returns Girdi alanlarının tamamını, kalem tutarını, dört kesinti tutarını
+ *   ve bunların toplamını taşıyan kalem.
+ * @throws {EArsivValidationError} `name` boşsa, `quantity` pozitif değilse,
+ *   `unitPrice` negatifse ya da bir kesinti oranı [0, 100] dışındaysa.
+ *
+ * @example
+ * ```ts
+ * import { computeProducerReceiptLineItem, Unit } from 'efatura'
+ *
+ * const line = computeProducerReceiptLineItem({
+ *   name: 'Buğday',
+ *   quantity: 100,
+ *   unit: Unit.KILOGRAM,
+ *   unitPrice: 12,
+ *   taxRates: { incomeTaxWithholding: 2, pastureFund: 1 },
+ * })
+ * // 1200 tutar, 24 stopaj, 12 mera fonu, 36 toplam kesinti.
+ * console.log(line.amount, line.taxAmounts.incomeTaxWithholding, line.totalTaxes)
+ * ```
  */
 export function computeProducerReceiptLineItem(
   item: ProducerReceiptLineItemInput,
@@ -95,6 +140,28 @@ export function computeProducerReceiptLineItem(
  * `odenecekTutar` bu belgenin ayırt edici noktasıdır: faturada olduğu gibi
  * vergiler EKLENMEZ, KESİLİR — müstahsile ödenecek tutar, vergiler dahil
  * toplamdan dört kesintinin düşülmüş hâlidir.
+ *
+ * @param lines Hesaplanmış kalemler; boş dizi geçerlidir (tüm toplamlar 0).
+ * @returns Belge düzeyi toplamlar. `grandTotal` kalem toplamına EŞİTTİR
+ *   (kesintiler eklenmez), `payableAmount` ise kesintiler düşülmüş hâlidir.
+ *
+ * @example
+ * ```ts
+ * import { computeProducerReceiptLineItem, sumProducerReceiptTotals, Unit } from 'efatura'
+ *
+ * const lines = [
+ *   computeProducerReceiptLineItem({
+ *     name: 'Buğday',
+ *     quantity: 100,
+ *     unit: Unit.KILOGRAM,
+ *     unitPrice: 12,
+ *     taxRates: { incomeTaxWithholding: 2 },
+ *   }),
+ * ]
+ * const totals = sumProducerReceiptTotals(lines)
+ * // 1200 kalem toplamı, 1200 genel toplam, 1176 ödenecek.
+ * console.log(totals.lineTotal, totals.grandTotal, totals.payableAmount)
+ * ```
  */
 export function sumProducerReceiptTotals(
   lines: readonly ComputedProducerReceiptLineItem[],
@@ -120,7 +187,25 @@ export function sumProducerReceiptTotals(
   }
 }
 
-/** Kalemleri DOĞRULAYARAK hesaplar ve belge düzeyi toplamları türetir. */
+/**
+ * Kalemleri DOĞRULAYARAK hesaplar ve belge düzeyi toplamları türetir.
+ *
+ * @param items Hesaplanacak kalemler. BOŞ OLAMAZ.
+ * @returns `lines` (hesaplanmış kalemler) ve `totals` (belge düzeyi
+ *   toplamlar).
+ * @throws {EArsivValidationError} Liste boşsa ya da bir kalem
+ *   `computeProducerReceiptLineItem` doğrulamasından geçemezse.
+ *
+ * @example
+ * ```ts
+ * import { computeProducerReceiptTotals, Unit } from 'efatura'
+ *
+ * const { lines, totals } = computeProducerReceiptTotals([
+ *   { name: 'Süt', quantity: 500, unit: Unit.LITRE, unitPrice: 15, taxRates: { pastureFund: 1 } },
+ * ])
+ * console.log(lines.length, totals.totalTaxes, totals.payableAmount)
+ * ```
+ */
 export function computeProducerReceiptTotals(items: readonly ProducerReceiptLineItemInput[]): {
   lines: ComputedProducerReceiptLineItem[]
   totals: ProducerReceiptTotals

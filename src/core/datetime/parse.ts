@@ -19,7 +19,27 @@ function build(year: number, month: number, day: number, source: string): Date {
   return date
 }
 
-/** `dd/MM/yyyy`, `dd-MM-yyyy` veya `yyyy-MM-dd` biçimindeki metni Date'e çevirir. */
+/**
+ * `dd/MM/yyyy`, `dd-MM-yyyy` veya `yyyy-MM-dd` biçimindeki metni Date'e çevirir.
+ *
+ * Dönen `Date` YEREL saat diliminde, gün başında (00:00:00) kurulur; saat
+ * bilgisi taşımaz.
+ *
+ * @param value Ayrıştırılacak metin. Üç biçimden biri olmalıdır; ISO
+ *   girdisinde tarihten sonrası (`T10:00:00Z` gibi) YOK SAYILIR.
+ * @returns Ayrıştırılmış `Date`.
+ * @throws {EArsivValidationError} Biçim tanınmazsa ya da tarih takvimde
+ *   yoksa (`31/02/2026`) — JavaScript'in sessizce kaydırdığı bu durum burada
+ *   yakalanır.
+ *
+ * @example
+ * ```ts
+ * import { parsePortalDate } from 'efatura'
+ *
+ * const date = parsePortalDate('03-09-2026')
+ * console.log(date.getFullYear(), date.getMonth() + 1, date.getDate()) // 2026 9 3
+ * ```
+ */
 export function parsePortalDate(value: string): Date {
   const dayFirst = DAY_FIRST.exec(value)
   if (dayFirst) {

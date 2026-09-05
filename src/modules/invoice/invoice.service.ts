@@ -38,8 +38,37 @@ import type {
 } from './invoice.types.js'
 import { validateInvoiceInput } from './invoice.validator.js'
 
-/** Fatura oluşturma, listeleme, okuma ve silme işlemleri. */
+/**
+ * Fatura oluşturma, listeleme, okuma ve silme işlemleri.
+ *
+ * `EArsivClient` bunu kendisi kurar ve fatura yöntemlerini buraya delege eder;
+ * doğrudan örneklemeniz yalnızca kendi servis birleşiminizi kuracaksanız
+ * gerekir. DİKKAT: oluşturma serileştirmesi ÖRNEK BAŞINADIR — iki ayrı
+ * `InvoiceService` örneği birbirinin kuyruğunu görmez.
+ *
+ * @example Tek başına kullanmak
+ * ```ts
+ * import {
+ *   AuthService,
+ *   DispatchGateway,
+ *   HttpClient,
+ *   InvoiceService,
+ *   resolveClientOptions,
+ * } from 'efatura'
+ *
+ * const options = resolveClientOptions({ environment: 'test' })
+ * const http = new HttpClient(options)
+ * const auth = new AuthService(http, options)
+ * await auth.loginWithTestUser()
+ *
+ * const invoices = new InvoiceService(new DispatchGateway(http, auth))
+ * console.log((await invoices.listDrafts(new Date(), new Date())).length)
+ * ```
+ */
 export class InvoiceService {
+  /**
+   * @param gateway Komutları gönderecek dispatch geçidi; token'ı o taşır.
+   */
   constructor(private readonly gateway: DispatchGateway) {}
 
   /**
@@ -75,6 +104,40 @@ export class InvoiceService {
    * Bu döngü (anlık görüntü → oluştur → yeniden listele) bu örnek üzerinde
    * `this.pending` zinciriyle serileştirilir: bir çağrı bitmeden bir sonraki
    * başlamaz (bkz. `pending` belgesi).
+   *
+   * @param input Fatura girdisi; zorunlu alanlar `buyer` ve en az bir
+   *   `lineItems` kalemidir. Tutarlar LİRA cinsindendir; `date` verilmezse
+   *   bugüne düşer. Ayrıntı için bkz. {@link InvoiceInput}.
+   * @returns Oluşan faturanın `ettn`, `documentNumber`, `date` ve
+   *   `approvalStatus` alanları.
+   * @throws {EArsivValidationError} Girdi doğrulaması başarısızsa ya da
+   *   `totals` override'ı kendi içinde tutarsızsa. Bu kontroller KUYRUĞA
+   *   GİRMEDEN önce çalışır: geçersiz girdi başka bir çağrıyı beklemez ve ağa
+   *   hiç çıkılmaz.
+   * @throws {EArsivAmbiguousResultError} Fatura oluşturuldu ancak ETTN tekil
+   *   olarak belirlenemedi.
+   * @throws {EArsivApiError} Portal oluşturmayı iş kuralıyla reddederse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example Eşzamanlı iki oluşturma — sıraya alınır, ikisi de başarılı olur
+   * ```ts
+   * import { EArsivClient, Unit } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const [first, second] = await Promise.all([
+   *   client.createDraft({
+   *     buyer: { taxOrIdentityNumber: '11111111111', title: 'ÖRNEK A.Ş.' },
+   *     lineItems: [{ name: 'A', quantity: 1, unit: Unit.PIECE, unitPrice: 100, vatRate: 20 }],
+   *   }),
+   *   client.createDraft({
+   *     buyer: { taxOrIdentityNumber: '11111111111', title: 'ÖRNEK A.Ş.' },
+   *     lineItems: [{ name: 'B', quantity: 1, unit: Unit.PIECE, unitPrice: 200, vatRate: 20 }],
+   *   }),
+   * ])
+   * console.log(first.ettn !== second.ettn)
+   * ```
    */
   async createDraft(input: InvoiceInput): Promise<CreatedInvoice> {
     validateInvoiceInput(input)
@@ -124,7 +187,36 @@ export class InvoiceService {
     }
   }
 
-  /** Belirtilen tarih aralığındaki düzenlenen belgeleri listeler. */
+  /**
+   * Belirtilen tarih aralığındaki düzenlenen belgeleri listeler.
+   *
+   * @param from Aralığın başlangıç tarihi; `Date` ya da `dd/MM/yyyy`,
+   *   `dd-MM-yyyy`, `yyyy-MM-dd` metni.
+   * @param to Aralığın bitiş tarihi; aynı biçimler. Tek gün için `from` ile
+   *   aynı değeri verin.
+   * @param options `kind` varsayılan `InvoiceListKind.INTERACTIVE` — YALNIZCA
+   *   faturalar. `STANDARD` bir filtre DEĞİL, ÜST KÜMEDİR: fatura ve her iki
+   *   makbuz türü birlikte döner.
+   * @returns Özet satırları; kayıt yoksa boş dizi. Tek bir satırın alanı
+   *   bozuksa (ör. ayrıştırılamayan tarih) fonksiyon FIRLATMAZ — o satır ham
+   *   değeriyle döner.
+   * @throws {EArsivValidationError} Tarih biçimi tanınmazsa.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   * @throws {EArsivApiError} Portal isteği reddederse.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient, InvoiceListKind } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const hepsi = await client.listDrafts('01/09/2026', '30/09/2026', {
+   *   kind: InvoiceListKind.STANDARD,
+   * })
+   * console.log(hepsi.map((row) => row.documentType))
+   * ```
+   */
   async listDrafts(
     from: DateInput,
     to: DateInput,
@@ -139,7 +231,29 @@ export class InvoiceService {
     return asRows(data).map(toDocumentSummary)
   }
 
-  /** Adına düzenlenen belgeleri listeler. */
+  /**
+   * Adına düzenlenen belgeleri listeler.
+   *
+   * YALNIZCA portalın KENDİSİNDEN düzenlenen belgeleri kapsar; entegratör
+   * üzerinden gelenler için `listIncomingExternal` kullanın.
+   *
+   * @param from Aralığın başlangıç tarihi; `Date` ya da `dd/MM/yyyy`,
+   *   `dd-MM-yyyy`, `yyyy-MM-dd` metni.
+   * @param to Aralığın bitiş tarihi; aynı biçimler.
+   * @returns Özet satırları; kayıt yoksa boş dizi.
+   * @throws {EArsivValidationError} Tarih biçimi tanınmazsa.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   * @throws {EArsivApiError} Portal isteği reddederse.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   * console.log((await client.listIncoming('01/09/2026', '30/09/2026')).length)
+   * ```
+   */
   async listIncoming(from: DateInput, to: DateInput): Promise<InvoiceSummary[]> {
     const data = await this.gateway.call<unknown>(Command.LIST_INCOMING, PageName.INCOMING_DRAFTS, {
       baslangic: formatPortalDate(from),
@@ -157,6 +271,32 @@ export class InvoiceService {
    * gelen B2B faturaların çoğu bir entegratör üzerinden gelir ve o listede
    * GÖRÜNMEZ. Üç filtre alanı da portalın kendi ekranında opsiyoneldir; boş
    * bırakılan alan "filtre yok" anlamına gelir.
+   *
+   * @param from Aralığın başlangıç tarihi; `Date` ya da `dd/MM/yyyy`,
+   *   `dd-MM-yyyy`, `yyyy-MM-dd` metni.
+   * @param to Aralığın bitiş tarihi; aynı biçimler.
+   * @param filters `sellerTaxOrIdentityNumber`, `documentType` ve
+   *   `invoiceNumber`; üçü de opsiyoneldir ve verilmeyen alan portala boş
+   *   string olarak gider.
+   * @returns Entegratör satırları; `InvoiceSummary`'den farklı olarak SATICI
+   *   kimliği ve ayrı bir `invoiceNumber` taşır.
+   * @throws {EArsivValidationError} Tarih biçimi tanınmazsa.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   * @throws {EArsivApiError} Portal isteği reddederse.
+   *
+   * @example
+   * ```ts
+   * import { DocumentType, EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const rows = await client.listIncomingExternal('01/09/2026', '30/09/2026', {
+   *   sellerTaxOrIdentityNumber: '1111111111',
+   *   documentType: DocumentType.INVOICE,
+   * })
+   * console.log(rows.map((row) => row.invoiceNumber))
+   * ```
    */
   async listIncomingExternal(
     from: DateInput,
@@ -177,7 +317,31 @@ export class InvoiceService {
     return asRows(data).map(toIncomingExternalSummary)
   }
 
-  /** Tek bir faturanın tam detayını getirir. */
+  /**
+   * Tek bir faturanın tam detayını getirir.
+   *
+   * Okuma yolu girdi doğrulaması YAPMAZ ve `EArsivValidationError`
+   * ÜRETMEZ: portalda kayıtlı bir tuhaflık (boş kalem adı, bozuk tarih)
+   * çağrıyı düşürmez — düşürseydi çağıran `detail.raw`'a bile erişemezdi.
+   *
+   * @param ettn Faturanın ETTN'i; liste satırından dönen değerle birebir aynı
+   *   olmalıdır.
+   * @returns Eşlenmiş detay. Toplamlar ÖNCELİKLE portalın kendi yanıtından
+   *   okunur; alan yanıtta hiç yoksa kalemlerden hesaplanana düşülür.
+   * @throws {EArsivApiError} ETTN bulunamazsa veya portal isteği reddederse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const detail = await client.getInvoice('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * console.log(detail.totals.grandTotal, detail.lineItems.length, detail.raw.faturaTipi)
+   * ```
+   */
   async getInvoice(ettn: string): Promise<InvoiceDetail> {
     const raw = await this.gateway.call<Record<string, unknown>>(
       Command.GET_INVOICE,
@@ -223,6 +387,40 @@ export class InvoiceService {
    *
    * Arama tarihi varsayılan olarak bugündür; `options.date` ile dünün (veya
    * başka bir günün) bir taslağı da hedeflenebilir (bkz. I10).
+   *
+   * DİKKAT — DOĞRULANMIŞ KISIT: portalın silme komutu TEST ortamında hiçbir
+   * belge türünde çalışmıyor; her denemede `"Silinirken bir sorun oluştu."`
+   * döndürüyor (canlı doğrulandı 2026-09-05). Bu kütüphanenin getirdiği bir
+   * gerileme değil, portalın önceden var olan davranışıdır ve üretimde
+   * doğrulanamamıştır.
+   *
+   * @param ettn Silinecek taslağın ETTN'i.
+   * @param reason Portala gönderilen silme gerekçesi; varsayılan
+   *   `'Yanlış İşlem'`.
+   * @param options `date` verilmezse BUGÜN aranır; dünkü bir taslağı silmek
+   *   için o günün tarihini verin.
+   * @returns Silme isteği gönderildiğinde çözülen söz.
+   * @throws {EArsivValidationError} Taslak aranan tarihte bulunamazsa; mesaj
+   *   `options.date` ipucunu içerir.
+   * @throws {EArsivApiError} Portal silmeyi reddederse — test ortamında
+   *   BEKLENEN durum.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivApiError, EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * try {
+   *   await client.cancelDraft('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f', 'Yanlış tutar', {
+   *     date: '04/09/2026',
+   *   })
+   * } catch (error) {
+   *   if (error instanceof EArsivApiError) console.error(error.message)
+   * }
+   * ```
    */
   async cancelDraft(
     ettn: string,

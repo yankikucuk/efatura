@@ -62,7 +62,40 @@ function chain(
   }
 }
 
-/** Tek bir kalemi DOĞRULAYARAK hesaplar (yazma yolu). */
+/**
+ * Tek bir kalemi DOĞRULAYARAK hesaplar (yazma yolu).
+ *
+ * Zincir: stopaj = brüt × stopaj oranı; net ücret = brüt − stopaj;
+ * KDV = BRÜT × KDV oranı (matrah net ücret DEĞİL); KDV tevkifatı = KDV ×
+ * tevkifat oranı; tahsil edilen KDV = KDV − tevkifat; net alınan = net ücret
+ * + tahsil edilen KDV.
+ *
+ * @param item Hesaplanacak kalem; `description`, `grossFee` ve `vatRate`
+ *   zorunludur. `withholdingRate` ve `vatWithholdingRate` verilmezse 0
+ *   sayılır. Oranlar KELEPÇELENMEZ — aralık dışı bir değer `applyPercent`
+ *   içinde hataya yol açar.
+ * @param index Kalemin belge içindeki sırası; YALNIZCA hata mesajlarındaki
+ *   yol için kullanılır. Varsayılan 0.
+ * @returns Girdi alanlarının tamamını ve hesaplanan altı tutarı taşıyan
+ *   kalem.
+ * @throws {EArsivValidationError} `description` boşsa, `grossFee` sonlu
+ *   değilse ya da negatifse, veya bir oran [0, 100] dışındaysa.
+ *
+ * @example
+ * ```ts
+ * import { computeSelfEmployedReceiptLineItem } from 'efatura'
+ *
+ * const line = computeSelfEmployedReceiptLineItem({
+ *   description: 'Mali müşavirlik',
+ *   grossFee: 10_000,
+ *   vatRate: 20,
+ *   withholdingRate: 20,
+ *   vatWithholdingRate: 50,
+ * })
+ * // 2000 stopaj, 8000 net ücret, 2000 KDV, 1000 tevkifat, 1000 tahsil, 9000 net alınan.
+ * console.log(line.withholdingAmount, line.netFee, line.vatAmount, line.netReceived)
+ * ```
+ */
 export function computeSelfEmployedReceiptLineItem(
   item: SelfEmployedReceiptLineItemInput,
   index = 0,
@@ -85,6 +118,24 @@ export function computeSelfEmployedReceiptLineItem(
  * kayıt reddedilecek bir "girdi" değildir ve reddedilirse çağıran
  * `detail.raw`'a bile erişemez (faturadaki I4 kararı). Oranlar [0, 100]
  * aralığına kelepçelenir, böylece `applyPercent` hiçbir koşulda fırlatamaz.
+ *
+ * @param item Portaldan okunmuş kalem; alanları bozuk olabilir. Negatif ya da
+ *   sonlu olmayan `grossFee` 0 sayılır, oranlar [0, 100] aralığına
+ *   kelepçelenir.
+ * @returns Aynı zincirle hesaplanmış kalem; HİÇBİR koşulda fırlatmaz.
+ *
+ * @example
+ * ```ts
+ * import { computeSelfEmployedReceiptLineItemForRead } from 'efatura'
+ *
+ * // Portalda kayıtlı bozuk bir satır bile çağrıyı düşürmez.
+ * const line = computeSelfEmployedReceiptLineItemForRead({
+ *   description: '',
+ *   grossFee: -5,
+ *   vatRate: 500,
+ * })
+ * console.log(line.netFee, line.vatAmount) // 0 0
+ * ```
  */
 export function computeSelfEmployedReceiptLineItemForRead(
   item: SelfEmployedReceiptLineItemInput,
@@ -92,7 +143,34 @@ export function computeSelfEmployedReceiptLineItemForRead(
   return chain(item, true)
 }
 
-/** Hesaplanmış kalemlerden yedi belge toplamını türetir. */
+/**
+ * Hesaplanmış kalemlerden yedi belge toplamını türetir.
+ *
+ * Her toplam, ilgili kalem alanlarının KURUŞ üzerinden toplamıdır; belge
+ * toplamı ile kalem toplamı arasında bir kuruş sapma oluşmaz.
+ *
+ * @param lines Hesaplanmış kalemler; boş dizi geçerlidir (tüm toplamlar 0).
+ * @returns Yedi alanlı belge toplamları.
+ *
+ * @example
+ * ```ts
+ * import {
+ *   computeSelfEmployedReceiptLineItem,
+ *   sumSelfEmployedReceiptTotals,
+ * } from 'efatura'
+ *
+ * const lines = [
+ *   computeSelfEmployedReceiptLineItem({
+ *     description: 'Danışmanlık',
+ *     grossFee: 10_000,
+ *     vatRate: 20,
+ *     withholdingRate: 20,
+ *   }),
+ * ]
+ * const totals = sumSelfEmployedReceiptTotals(lines)
+ * console.log(totals.grossFee, totals.withholding, totals.netFee, totals.netReceived)
+ * ```
+ */
 export function sumSelfEmployedReceiptTotals(
   lines: readonly ComputedSelfEmployedReceiptLineItem[],
 ): SelfEmployedReceiptTotals {
@@ -118,7 +196,24 @@ export function sumSelfEmployedReceiptTotals(
   }
 }
 
-/** Kalemleri DOĞRULAYARAK hesaplar ve belge toplamlarını türetir. */
+/**
+ * Kalemleri DOĞRULAYARAK hesaplar ve belge toplamlarını türetir.
+ *
+ * @param items Hesaplanacak kalemler. BOŞ OLAMAZ.
+ * @returns `lines` (hesaplanmış kalemler) ve `totals` (yedi belge toplamı).
+ * @throws {EArsivValidationError} Liste boşsa ya da bir kalem
+ *   `computeSelfEmployedReceiptLineItem` doğrulamasından geçemezse.
+ *
+ * @example
+ * ```ts
+ * import { computeSelfEmployedReceiptTotals } from 'efatura'
+ *
+ * const { lines, totals } = computeSelfEmployedReceiptTotals([
+ *   { description: 'Danışmanlık', grossFee: 5_000, vatRate: 20, withholdingRate: 20 },
+ * ])
+ * console.log(lines.length, totals.netReceived)
+ * ```
+ */
 export function computeSelfEmployedReceiptTotals(
   items: readonly SelfEmployedReceiptLineItemInput[],
 ): {

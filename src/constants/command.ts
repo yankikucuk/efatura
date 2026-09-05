@@ -1,6 +1,27 @@
 /**
  * Portal `cmd` değerleri. Tamamı canlı test portalına karşı doğrulandı.
  * `VERIFY_SMS_CODE` adı portalın kendi tanımıdır; kısaltılmış değildir.
+ *
+ * Bu sabitler doğrudan çağrılmaz — `EArsivClient` ve modül servisleri
+ * kullanır. Dışa açık olmalarının nedeni, bir hatanın hangi komutta
+ * oluştuğunu ayırt edebilmek (`EArsivApiError.command`) ve servisleri tek
+ * başına kullanan ileri düzey tüketiciye portal sözlüğünü vermektir.
+ *
+ * @example Hatanın hangi komutta oluştuğunu ayırt etmek
+ * ```ts
+ * import { Command, EArsivApiError, EArsivClient } from 'efatura'
+ *
+ * const client = new EArsivClient({ environment: 'test' })
+ * await client.loginWithTestUser()
+ *
+ * try {
+ *   await client.getPhoneNumber()
+ * } catch (error) {
+ *   if (error instanceof EArsivApiError && error.command === Command.QUERY_PHONE) {
+ *     console.error('İmzalama komutlarına test ortamı yetki vermiyor.')
+ *   }
+ * }
+ * ```
  */
 export const Command = {
   GET_USER_MENU: 'getUserMenu',
@@ -46,6 +67,19 @@ export const Command = {
   RESPOND_TO_DISPUTE: 'EARSIV_PORTAL_IPTAL_ITIRAZ_TALEP_DURUM_GUNCELLE',
 } as const
 
+/**
+ * {@link Command} sabitlerinden türetilen birleşim tipi — geçerli her portal
+ * `cmd` değeri.
+ *
+ * @example
+ * ```ts
+ * import { Command } from 'efatura'
+ * import type { CommandName } from 'efatura'
+ *
+ * const command: CommandName = Command.LIST_INVOICES
+ * console.log(command)
+ * ```
+ */
 export type CommandName = (typeof Command)[keyof typeof Command]
 
 /**
@@ -79,6 +113,19 @@ export const RETRYABLE_COMMANDS: ReadonlySet<CommandName> = new Set([
  * Bazı komutlar hatayı HTTP 200 ve düz string `data` ile bildirir. Bu tabloda
  * kayıtlı bir komut string döndürdüğünde, metin bu kalıplardan en az birini
  * ALT METİN olarak içermiyorsa hata sayılır.
+ *
+ * Belge türü adı kalıbın İÇİNDE bırakıldı: böylece yanlış türe ait bir yanıt
+ * beyaz listeden geçemez.
+ *
+ * @example
+ * ```ts
+ * import { Command, SUCCESS_PATTERNS } from 'efatura'
+ *
+ * console.log(SUCCESS_PATTERNS[Command.CREATE_INVOICE])
+ * // Başarı metni bilinmeyen komutlarda undefined döner; o durumda
+ * // FAILURE_MARKERS taraması yapılır.
+ * console.log(SUCCESS_PATTERNS[Command.GET_USER_INFO])
+ * ```
  */
 export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> = {
   [Command.CREATE_INVOICE]: ['Faturanız başarıyla oluşturulmuştur'],
@@ -106,6 +153,14 @@ export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> =
  * `error` veya `data.hata` alanlarından bildirilir (`parsePortalResponse`
  * bunları düz string dalından ÖNCE kontrol eder); düz string dalı bu
  * komutlar için yalnızca BAŞARI biçimidir.
+ *
+ * @example
+ * ```ts
+ * import { Command, DOCUMENT_COMMANDS } from 'efatura'
+ *
+ * // Fatura HTML'i bir belge gövdesidir; hata işareti taraması uygulanmaz.
+ * console.log(DOCUMENT_COMMANDS.has(Command.SHOW_INVOICE))
+ * ```
  */
 export const DOCUMENT_COMMANDS: ReadonlySet<CommandName> = new Set([Command.SHOW_INVOICE])
 
@@ -121,6 +176,14 @@ export const DOCUMENT_COMMANDS: ReadonlySet<CommandName> = new Set([Command.SHOW
  * İlk yedi desen canlı portaldan yakalanan gerçek hata metinlerinden geldi.
  * Sonuncusu Türkçe yeterlilik olumsuzluğunu yakalar: tamamlanamadı,
  * kaydedilemedi, oluşturulamaz, düzenlenememiştir.
+ *
+ * @example Bir portal metninin hata sayılıp sayılmayacağını denemek
+ * ```ts
+ * import { FAILURE_MARKERS } from 'efatura'
+ *
+ * const metin = 'Bu işlem için yetkiniz yok.'
+ * console.log(FAILURE_MARKERS.some((marker) => marker.test(metin))) // true
+ * ```
  */
 export const FAILURE_MARKERS: readonly RegExp[] = [
   // "hata" harfle önceden gelmemeli: aksi halde faturacılıkta standart bir

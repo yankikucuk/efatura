@@ -32,6 +32,24 @@ const PORTAL_DEFECT_MESSAGE = 'String index out of range: 4'
  * metnini, (c) bizim tarafımızda denenmiş ve başarısız olmuş varyantları,
  * (d) müstahsilin AYNI komutla çalıştığını ve (e) çalışan alternatifi
  * söyler.
+ *
+ * Hatayı FIRLATMAZ, yalnızca ÜRETİR — çağıran `throw` eder. Bu, aynı mesajın
+ * hem `getHtml` hem `toPdf` yolunda birebir aynı olmasını sağlar.
+ *
+ * @param ettn Kullanıcının verdiği ETTN; mesajın içinde yankılanır. Hiçbir
+ *   istekte KULLANILMAZ ve doğrulanmaz.
+ * @returns Fırlatılmaya hazır `EArsivPortalDefectError`; `command` alanı
+ *   `EARSIV_PORTAL_FATURA_GOSTER`, `portalMessage` alanı portalın kendi Java
+ *   istisna metnidir.
+ *
+ * @example
+ * ```ts
+ * import { selfEmployedReceiptHtmlUnsupported } from 'efatura'
+ *
+ * const error = selfEmployedReceiptHtmlUnsupported('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+ * console.log(error.kind, error.portalMessage)
+ * // 'portal-defect' 'String index out of range: 4'
+ * ```
  */
 export function selfEmployedReceiptHtmlUnsupported(ettn: string): EArsivPortalDefectError {
   return new EArsivPortalDefectError(
@@ -48,8 +66,39 @@ export function selfEmployedReceiptHtmlUnsupported(ettn: string): EArsivPortalDe
   )
 }
 
-/** Serbest meslek makbuzu oluşturma, listeleme ve okuma işlemleri. */
+/**
+ * Serbest meslek makbuzu oluşturma, listeleme ve okuma işlemleri.
+ *
+ * HTML gösterimi ve PDF DESTEKLENMEZ: portal kusuru nedeniyle `getHtml` ve
+ * `toPdf` her zaman `EArsivPortalDefectError` fırlatır ve ağa hiç çıkmaz.
+ * Belge SİLME de yoktur.
+ *
+ * Tutar zincirinin tamamı bu kütüphanede hesaplanır — portal hiçbirini
+ * hesaplamaz ve gönderilmeyen türetilmiş alanı 0 olarak saklar.
+ *
+ * @example Tek başına kullanmak
+ * ```ts
+ * import {
+ *   AuthService,
+ *   DispatchGateway,
+ *   HttpClient,
+ *   resolveClientOptions,
+ *   SelfEmployedReceiptService,
+ * } from 'efatura'
+ *
+ * const options = resolveClientOptions({ environment: 'test' })
+ * const http = new HttpClient(options)
+ * const auth = new AuthService(http, options)
+ * await auth.loginWithTestUser()
+ *
+ * const receipts = new SelfEmployedReceiptService(new DispatchGateway(http, auth))
+ * console.log((await receipts.listReceipts(new Date(), new Date())).length)
+ * ```
+ */
 export class SelfEmployedReceiptService {
+  /**
+   * @param gateway Komutları gönderecek dispatch geçidi; token'ı o taşır.
+   */
   constructor(private readonly gateway: DispatchGateway) {}
 
   /**
@@ -65,6 +114,40 @@ export class SelfEmployedReceiptService {
    * Portal ETTN'i kendisi atar ve istemcinin gönderdiğini yok sayar; kimlik
    * bu yüzden anlık görüntü farkıyla çözülür ve fark tekile inmezse
    * tahmin yerine `EArsivAmbiguousResultError` fırlatılır.
+   *
+   * ÜÇ portal isteği yapar: listele → oluştur → yeniden listele. Aynı örnek
+   * üzerindeki eşzamanlı çağrılar sıraya alınır.
+   *
+   * @param input Makbuz girdisi; zorunlu alanlar `payer` (VKN/TCKN ve ünvan
+   *   ya da ad/soyad) ve en az bir `lineItems` kalemidir. `currency`
+   *   varsayılan `'TRY'`; TRY dışında `currencyRate` zorunludur.
+   *   `vatWithholdingRate` YÜZDE olarak verilir (5/10 → `50`). Bkz.
+   *   {@link SelfEmployedReceiptInput}.
+   * @returns Oluşan makbuzun `ettn`, `documentNumber`, `date` ve
+   *   `approvalStatus` alanları.
+   * @throws {EArsivValidationError} Girdi doğrulaması başarısızsa — kontrol
+   *   KUYRUĞA GİRMEDEN önce çalışır ve ağa hiç çıkılmaz.
+   * @throws {EArsivAmbiguousResultError} Makbuz oluşturuldu ancak ETTN tekil
+   *   olarak belirlenemedi.
+   * @throws {EArsivApiError} Portal oluşturmayı reddederse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const created = await client.createSelfEmployedReceipt({
+   *   payer: { taxOrIdentityNumber: '1111111111', title: 'ÖRNEK A.Ş.' },
+   *   description: 'Eylül 2026 danışmanlık',
+   *   lineItems: [
+   *     { description: 'Mali müşavirlik', grossFee: 10_000, vatRate: 20, withholdingRate: 20 },
+   *   ],
+   * })
+   * console.log(created.ettn)
+   * ```
    */
   async createReceipt(input: SelfEmployedReceiptInput): Promise<CreatedSelfEmployedReceipt> {
     validateSelfEmployedReceiptInput(input)
@@ -118,6 +201,28 @@ export class SelfEmployedReceiptService {
    * Fatura ile aynı komut kullanılır; `hangiTip: 'Buyuk'` bir belge türü
    * filtresi DEĞİL, bir ÜST KÜMEDİR, bu yüzden sonuç `belgeTuru` ile
    * süzülür.
+   *
+   * @param from Aralığın başlangıç tarihi; `Date` ya da `dd/MM/yyyy`,
+   *   `dd-MM-yyyy`, `yyyy-MM-dd` metni.
+   * @param to Aralığın bitiş tarihi; aynı biçimler.
+   * @returns Yalnızca `documentType === 'SERBEST MESLEK MAKBUZU'` olan
+   *   satırlar; kayıt yoksa boş dizi. DİKKAT: satırın `buyerName` alanı
+   *   `adi` + `soyadi` birleşimidir — yalnızca ünvan verilmiş bir makbuzda
+   *   BOŞ döner.
+   * @throws {EArsivValidationError} Tarih biçimi tanınmazsa.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   * @throws {EArsivApiError} Portal isteği reddederse.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const rows = await client.listSelfEmployedReceipts('01/09/2026', '30/09/2026')
+   * console.log(rows.map((row) => row.ettn))
+   * ```
    */
   async listReceipts(from: DateInput, to: DateInput): Promise<SelfEmployedReceiptSummary[]> {
     const data = await this.gateway.call<unknown>(Command.LIST_INVOICES, PageName.DRAFTS, {
@@ -131,7 +236,32 @@ export class SelfEmployedReceiptService {
     )
   }
 
-  /** Tek bir serbest meslek makbuzunun tam detayını getirir. */
+  /**
+   * Tek bir serbest meslek makbuzunun tam detayını getirir.
+   *
+   * KALEM tutarları oranlardan YENİDEN HESAPLANIR: portal türetilmiş kalem
+   * tutarlarını hiç döndürmez ve `netUcret`/`netAlinan` alanları portalın
+   * hesabı değil, oluşturma sırasında gönderilenin yankısıdır. BELGE düzeyi
+   * toplamlar ise portalın kendi kaydından okunur.
+   *
+   * @param ettn Makbuzun ETTN'i; liste satırından dönen değerle birebir aynı
+   *   olmalıdır.
+   * @returns Eşlenmiş detay. Kimlik alanı portal yanıtındaki `ettn`'dir;
+   *   bulunamazsa istenen ETTN'e düşülür.
+   * @throws {EArsivApiError} ETTN bulunamazsa veya portal isteği reddederse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const detail = await client.getSelfEmployedReceipt('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * console.log(detail.totals.netReceived, detail.lineItems[0]?.vatAmount, detail.raw.netUcretTtr)
+   * ```
+   */
   async getReceipt(ettn: string): Promise<SelfEmployedReceiptDetail> {
     const raw = await this.gateway.call<Record<string, unknown>>(
       Command.GET_SELF_EMPLOYED_RECEIPT,
@@ -145,12 +275,50 @@ export class SelfEmployedReceiptService {
    * HTML gösterimi DESTEKLENMEZ — portal kusuru. Her zaman
    * `EArsivPortalDefectError` fırlatır; ağa hiç çıkılmaz, çünkü çıkılsaydı
    * kullanıcı ham Java istisnasını görürdü.
+   *
+   * @param ettn Makbuzun ETTN'i; yalnızca hata mesajında yankılanır.
+   * @returns Hiçbir zaman dönmez (`never`).
+   * @throws {EArsivPortalDefectError} HER ZAMAN.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * const ettn = '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f'
+   *
+   * try {
+   *   client.getSelfEmployedReceiptHtml(ettn)
+   * } catch (error) {
+   *   console.log(error instanceof EArsivPortalDefectError) // true
+   * }
+   * ```
    */
   getHtml(ettn: string): never {
     throw selfEmployedReceiptHtmlUnsupported(ettn)
   }
 
-  /** PDF, HTML gösterimi üzerine kurulu olduğu için o da desteklenmez. */
+  /**
+   * PDF, HTML gösterimi üzerine kurulu olduğu için o da desteklenmez.
+   *
+   * @param ettn Makbuzun ETTN'i; yalnızca hata mesajında yankılanır.
+   * @returns Hiçbir zaman dönmez (`never`).
+   * @throws {EArsivPortalDefectError} HER ZAMAN; `getHtml` ile birebir aynı
+   *   mesaj ve bağlam.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient, EArsivPortalDefectError } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   *
+   * try {
+   *   client.selfEmployedReceiptToPdf('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * } catch (error) {
+   *   console.log(error instanceof EArsivPortalDefectError) // true
+   * }
+   * ```
+   */
   toPdf(ettn: string): never {
     throw selfEmployedReceiptHtmlUnsupported(ettn)
   }

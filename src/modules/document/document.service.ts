@@ -56,8 +56,40 @@ function showDocumentPortalDefect(ettn: string, cause: EArsivApiError): EArsivPo
   )
 }
 
-/** Belge görüntüleme ve indirme. İndirme `/download` GET endpoint'ini kullanır. */
+/**
+ * Belge görüntüleme ve indirme. İndirme `/download` GET endpoint'ini kullanır.
+ *
+ * Belge TÜRÜNDEN bağımsızdır: aynı komut fatura ve müstahsil makbuzunda
+ * çalışır. Serbest meslek makbuzunda portal bozuktur; istemci o türü ayrı bir
+ * yolla (bkz. `SelfEmployedReceiptService.getHtml`) reddeder.
+ *
+ * @example Tek başına kullanmak
+ * ```ts
+ * import {
+ *   AuthService,
+ *   DispatchGateway,
+ *   DocumentService,
+ *   HttpClient,
+ *   resolveClientOptions,
+ * } from 'efatura'
+ *
+ * const options = resolveClientOptions({ environment: 'test' })
+ * const http = new HttpClient(options)
+ * const auth = new AuthService(http, options)
+ * await auth.loginWithTestUser()
+ *
+ * const documents = new DocumentService(new DispatchGateway(http, auth), http, auth, options)
+ * const html = await documents.getHtml('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+ * console.log(html.length)
+ * ```
+ */
 export class DocumentService {
+  /**
+   * @param gateway `dispatch` komutlarını gönderecek geçit (HTML gösterimi).
+   * @param http İkili indirme için kullanılan HTTP istemcisi.
+   * @param tokens İndirme URL'sine konacak token'ın kaynağı.
+   * @param options Taban adresi (`baseUrl`) için çözülmüş yapılandırma.
+   */
   constructor(
     private readonly gateway: DispatchGateway,
     private readonly http: HttpClient,
@@ -71,6 +103,28 @@ export class DocumentService {
    * Fatura ve müstahsil makbuzu için çalışır. Serbest meslek makbuzunda
    * portal bir Java istisnası sızdırıyor; o metin yakalanıp
    * `EArsivPortalDefectError`'a çevrilir (bkz. `PORTAL_DEFECT_MESSAGE`).
+   *
+   * @param ettn Belgenin ETTN'i; listeleme yöntemlerinden dönen değerle
+   *   birebir aynı olmalıdır.
+   * @param options `signed: true` imzalı (onaylanmış) sürümü ister;
+   *   varsayılan `false`.
+   * @returns Tam bir HTML belgesi (canlı portalda 47-55 KB).
+   * @throws {EArsivPortalDefectError} Portal Java istisnası sızdırırsa. Metin
+   *   İKİ durumu birden ifade eder: ETTN hatalı VEYA belge bir Serbest Meslek
+   *   Makbuzu. Önce ETTN'i doğrulayın.
+   * @throws {EArsivApiError} Portal isteği başka bir gerekçeyle reddederse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const html = await client.getInvoiceHtml('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * console.log(html.includes('<html'))
+   * ```
    */
   async getHtml(ettn: string, options: DocumentOptions = {}): Promise<string> {
     try {
@@ -89,6 +143,31 @@ export class DocumentService {
   /**
    * Resmi belge paketini indirir. ZIP içinde `<ettn>_f.html` ve imzalı
    * `<ettn>_f.xml` (UBL-TR) bulunur; PDF yoktur.
+   *
+   * DİKKAT: indirme sorgusunda `belgeTip` alanı SABİT olarak `FATURA`
+   * gönderilir. Makbuz belge paketinin indirilmesi hiç test EDİLMEDİ; makbuz
+   * ETTN'i ile çağırmanın davranışı bilinmiyor — "çalışıyor" varsayarak akış
+   * kurmayın.
+   *
+   * @param ettn Faturanın ETTN'i.
+   * @param options `signed: true` imzalı sürümü ister; varsayılan `false`.
+   * @returns ZIP dosyasının ham baytları.
+   * @throws {EArsivNetworkError} Portal BOŞ paket döndürürse (ETTN veya onay
+   *   durumu hatalı olabilir) ya da portala ulaşılamazsa.
+   * @throws {EArsivAuthError} Oturum açık değilse.
+   *
+   * @example
+   * ```ts
+   * import { writeFile } from 'node:fs/promises'
+   *
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const zip = await client.downloadPackage('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * await writeFile('belge.zip', zip)
+   * ```
    */
   async downloadPackage(ettn: string, options: DocumentOptions = {}): Promise<Uint8Array> {
     return this.http.getBinary(Endpoint.DOWNLOAD, this.downloadQuery(ettn, options))
@@ -104,6 +183,30 @@ export class DocumentService {
    * geçmişinde ve — URL'ye giden herhangi bir isteğin `Referer` başlığında
    * — açığa çıkar. URL'yi yalnızca güvendiğiniz bir bağlamda kullanın ve
    * paylaşmayın.
+   *
+   * DİKKAT: indirme sorgusunda `belgeTip` alanı SABİT olarak `FATURA`
+   * gönderilir. Makbuz belge paketinin indirilmesi hiç test EDİLMEDİ; makbuz
+   * ETTN'i ile çağırmanın davranışı bilinmiyor — "çalışıyor" varsayarak akış
+   * kurmayın.
+   *
+   * @param ettn Faturanın ETTN'i.
+   * @param options `signed: true` imzalı sürümün adresini üretir; varsayılan
+   *   `false`.
+   * @returns Tam indirme adresi. AĞA ÇIKMAZ; yalnızca URL kurar.
+   * @throws {EArsivAuthError} Oturum açık değilse — URL token olmadan
+   *   kurulamaz.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const url = client.getDownloadUrl('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f', { signed: true })
+   * // CANLI token taşır: günlüğe yazmayın, paylaşmayın.
+   * console.log(url.includes('token='))
+   * ```
    */
   getDownloadUrl(ettn: string, options: DocumentOptions = {}): string {
     const query = new URLSearchParams(this.downloadQuery(ettn, options)).toString()

@@ -16,6 +16,21 @@
  * DİKKAT: boş string GEÇERLİ bir stringtir ve varsayılanı TETİKLEMEZ. Bu kör
  * nokta I5'in kaynağıydı (`formatPortalDate('')` fırlatıyordu); tarih alanları
  * için doğrudan bu değil `normalizeSummaryDate` kullanılmalıdır.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz.
+ *
+ * @param value Portal yanıtındaki ham alan; her tip kabul edilir.
+ * @param fallback String ve sayı DIŞINDAKİ değerlerde dönecek değer.
+ *   Varsayılan boş string.
+ * @returns Stringe çevrilmiş alan; sayı `String()` ile çevrilir.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * str('abc')            -> 'abc'
+ * str(42)               -> '42'
+ * str('', 'VARSAYILAN') -> ''            // boş string varsayılanı TETİKLEMEZ
+ * str(null, 'VARSAYILAN') -> 'VARSAYILAN'
+ * ```
  */
 export const str = (value: unknown, fallback = ''): string =>
   typeof value === 'string' ? value : typeof value === 'number' ? String(value) : fallback
@@ -34,6 +49,20 @@ export const str = (value: unknown, fallback = ''): string =>
  * Makbuz detay yanıtları tutarları STRING değil SAYI olarak döndürüyor
  * (canlı doğrulandı 2026-09-05: `birimFiyat: 100`); sayı dalı bu yüzden
  * yalnızca bir kısayol değil, makbuz okuma yolunun ana dalıdır.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz.
+ *
+ * @param value Portal yanıtındaki ham alan; sayı, string ya da başka bir tip.
+ * @param fallback Ayrıştırma başarısız olursa dönecek değer. Varsayılan 0.
+ * @returns Ayrıştırılmış sayı; sonlu olmayan ya da boş girdide `fallback`.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * num(100)         -> 100        // makbuz detaylarının ana dalı
+ * num('1234.56')   -> 1234.56    // virgül yoksa nokta ondalıktır
+ * num('1.234,56')  -> 1234.56    // Türkçe biçim: binlik nokta ayıklanır
+ * num('', 7)       -> 7
+ * ```
  */
 export const num = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -51,6 +80,19 @@ export const num = (value: unknown, fallback = 0): number => {
 /**
  * Liste yanıtını satır dizisine çevirir. Portal bir hata durumunda dizi
  * yerine string veya `null` döndürebiliyor; bu durumda boş liste döner.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz.
+ *
+ * @param data Portal zarfının `data` alanı; her tip kabul edilir.
+ * @returns Dizi ise AYNI dizi (kopyalanmaz), değilse boş dizi. Elemanların
+ *   gerçekten nesne olduğu DOĞRULANMAZ — bu bir tip iddiasıdır.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * asRows([{ ettn: 'a' }]) -> [{ ettn: 'a' }]
+ * asRows(null)            -> []
+ * asRows('Teknik bir hata oluştu.') -> []
+ * ```
  */
 export const asRows = (data: unknown): Record<string, unknown>[] =>
   Array.isArray(data) ? (data as Record<string, unknown>[]) : []

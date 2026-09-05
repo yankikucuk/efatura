@@ -10,6 +10,31 @@ import type { SelfEmployedReceiptInput } from './self-employed-receipt.types.js'
  * Portal makbuz alanlarını ve tutarlarını DOĞRULAMIYOR (canlı doğrulandı);
  * bu doğrulayıcı bir ikinci kontrol değil, TEK kontroldür. Tüm sorunlar
  * toplanır; ilk hatada durulmaz.
+ *
+ * @param input Denetlenecek makbuz girdisi.
+ * @returns Doğrulama geçerse hiçbir şey (`void`).
+ * @throws {EArsivValidationError} `payer.taxOrIdentityNumber` geçersizse;
+ *   ünvan ve ad/soyad BİRLİKTE boşsa (müstahsilden FARKLI olarak burada ünvan
+ *   tek başına yeterlidir); kalem listesi boşsa; bir kalemin açıklaması
+ *   boşsa, brüt ücreti negatifse ya da üç oranından biri [0, 100] dışındaysa;
+ *   veya TRY dışı bir para biriminde `currencyRate` verilmemiş/pozitif
+ *   değilse.
+ *
+ * @example
+ * ```ts
+ * import { Currency, EArsivValidationError, validateSelfEmployedReceiptInput } from 'efatura'
+ *
+ * try {
+ *   validateSelfEmployedReceiptInput({
+ *     currency: Currency.EURO, // kur verilmedi
+ *     payer: { taxOrIdentityNumber: '1111111111', title: 'ÖRNEK A.Ş.' },
+ *     lineItems: [{ description: 'Danışmanlık', grossFee: 1_000, vatRate: 20 }],
+ *   })
+ * } catch (error) {
+ *   if (error instanceof EArsivValidationError) console.error(error.issues[0]?.path)
+ *   // 'currencyRate'
+ * }
+ * ```
  */
 export function validateSelfEmployedReceiptInput(input: SelfEmployedReceiptInput): void {
   const issues: ValidationIssue[] = []

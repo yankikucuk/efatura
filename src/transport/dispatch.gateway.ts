@@ -17,6 +17,27 @@ import { parsePortalResponse } from './response.parser.js'
  * Oturum token'ını sağlayan sözleşme. `transport` katmanı `modules/auth`
  * içine bakamayacağı için bağımlılık tersine çevrilir: `AuthService` bunu
  * uygular.
+ *
+ * Kendi token yönetiminizi (ör. paylaşımlı bir önbellek) takmak isterseniz
+ * bu iki metodu sağlamanız yeterlidir.
+ *
+ * @example Sabit token taşıyan bir uygulama
+ * ```ts
+ * import { EArsivAuthError } from 'efatura'
+ * import type { TokenProvider } from 'efatura'
+ *
+ * let token: string | undefined = 'kayitli-token'
+ * const provider: TokenProvider = {
+ *   getToken: () => {
+ *     if (token === undefined) throw new EArsivAuthError('Oturum açılmamış.')
+ *     return token
+ *   },
+ *   clearToken: () => {
+ *     token = undefined
+ *   },
+ * }
+ * console.log(provider.getToken())
+ * ```
  */
 export interface TokenProvider {
   /** Geçerli token; yoksa `EArsivAuthError` fırlatır. */
@@ -52,8 +73,46 @@ const AUTH_EXPIRED_PATTERN = /yetkiniz yok/i
  */
 const SESSION_TIMEOUT_PATTERN = /zaman aşımına uğradı/i
 
-/** `/dispatch` endpoint'ine komut gönderen ince katman. */
+/**
+ * `/dispatch` endpoint'ine komut gönderen ince katman.
+ *
+ * Üç işi vardır: isteğe `cmd`/`callid`/`pageName`/`token`/`jp` alanlarını
+ * kurmak, yanıt zarfını `parsePortalResponse` ile çözmek ve OTURUM SÜRESİ
+ * DOLUMUNU tespit edip token'ı temizlemek. Yeniden deneme kararı komuta göre
+ * `RETRYABLE_COMMANDS`'tan okunur — çağıran bunu ayarlayamaz.
+ *
+ * @example Servisleri kendiniz kurmak
+ * ```ts
+ * import {
+ *   AuthService,
+ *   Command,
+ *   DispatchGateway,
+ *   HttpClient,
+ *   PageName,
+ *   resolveClientOptions,
+ * } from 'efatura'
+ *
+ * const options = resolveClientOptions({ environment: 'test' })
+ * const http = new HttpClient(options)
+ * const auth = new AuthService(http, options)
+ * await auth.loginWithTestUser()
+ *
+ * const gateway = new DispatchGateway(http, auth)
+ * const rows = await gateway.call<unknown>(Command.LIST_INVOICES, PageName.INTERACTIVE_DRAFTS, {
+ *   baslangic: '01/09/2026',
+ *   bitis: '30/09/2026',
+ *   hangiTip: '5000/30000',
+ * })
+ * console.log(rows)
+ * ```
+ */
 export class DispatchGateway {
+  /**
+   * @param http İstekleri gönderecek HTTP istemcisi.
+   * @param tokens Token sağlayıcı; süre dolumu doğrulandığında
+   *   `clearToken()` bu nesne üzerinde çağrılır. `AuthService` bu sözleşmeyi
+   *   uygular.
+   */
   constructor(
     private readonly http: HttpClient,
     private readonly tokens: TokenProvider,
@@ -73,6 +132,48 @@ export class DispatchGateway {
    * `dispatch()`'i çağırır; bu yüzden prob'un kendi başarısızlığı ikinci bir
    * prob TETİKLEYEMEZ (özyineleme yapısal olarak imkânsız, bir bayrakla
    * değil).
+   *
+   * @typeParam T Çağıranın beklediği `data` tipi. Ayrıştırıcı yapıyı
+   *   DOĞRULAMAZ — bu bir iddiadır, garanti değil.
+   * @param command Portal `cmd` değeri; `Command` sabitlerinden biri.
+   *   Yeniden denenebilirlik bu değere göre belirlenir.
+   * @param pageName Portal `pageName` değeri; `PageName` sabitlerinden biri.
+   *   YANLIŞ ekran adı "Bu işlem için yetkiniz yok" hatasına yol açar.
+   * @param payload Komutun gövdesi; `jp` alanına `JSON.stringify` ile
+   *   yazılır. Boş komutlarda `{}` verin.
+   * @returns Portal zarfının `data` alanı, `T` olarak.
+   * @throws {EArsivAuthError} Oturum yoksa; portal açık zaman aşımı metni
+   *   döndürürse (token temizlenir, prob atılmaz); ya da yetki-şekilli bir
+   *   hata `getUserMenu` probuyla süre dolumu olarak DOĞRULANIRSA (token
+   *   temizlenir).
+   * @throws {EArsivApiError} Portal isteği reddederse — prob token'ın SAĞLAM
+   *   olduğunu gösterdiğinde orijinal hata aynen yükselir.
+   * @throws {EArsivNetworkError} Portala ulaşılamazsa.
+   *
+   * @example
+   * ```ts
+   * import {
+   *   AuthService,
+   *   Command,
+   *   DispatchGateway,
+   *   HttpClient,
+   *   PageName,
+   *   resolveClientOptions,
+   * } from 'efatura'
+   *
+   * const options = resolveClientOptions({ environment: 'test' })
+   * const http = new HttpClient(options)
+   * const auth = new AuthService(http, options)
+   * await auth.loginWithTestUser()
+   *
+   * const gateway = new DispatchGateway(http, auth)
+   * const user = await gateway.call<Record<string, unknown>>(
+   *   Command.GET_USER_INFO,
+   *   PageName.USER,
+   *   {},
+   * )
+   * console.log(user.unvan)
+   * ```
    */
   async call<T>(
     command: CommandName,

@@ -21,6 +21,21 @@ import { str } from './portal-field.js'
  * vardı, `input.date` boş geldiğinde `formatPortalDate(input.date)`
  * fırlatıyor ve çağıran `detail.raw`'a bile erişemiyordu) tarafından
  * paylaşılır.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz.
+ *
+ * @param raw Portal yanıtındaki ham alan. String, sayı ya da başka herhangi
+ *   bir şey olabilir; string/sayı değilse BUGÜNÜN tarihine düşülür.
+ * @returns `dd/MM/yyyy` biçiminde tarih; ayrıştırılamayan bir metin geldiyse
+ *   metnin kendisi (FIRLATMAZ).
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * normalizeSummaryDate('03-09-2026') -> '03/09/2026'
+ * normalizeSummaryDate('2026-09-03') -> '03/09/2026'
+ * normalizeSummaryDate('yarın')      -> 'yarın'   (fırlatmaz)
+ * normalizeSummaryDate(undefined)    -> bugün, dd/MM/yyyy
+ * ```
  */
 export function normalizeSummaryDate(raw: unknown): string {
   const rawDate = str(raw, formatPortalDate())
@@ -41,6 +56,28 @@ export function normalizeSummaryDate(raw: unknown): string {
  * kayıt yüzünden tamamen başarısız olurdu (bkz. I5; `createDraft` içindeki
  * ikinci `listDrafts` çağrısı özellikle risklidir: ETTN çözümü bu listeye
  * bağlıdır).
+ *
+ * Paket kökünden `toInvoiceSummary` adıyla dışa açılır.
+ *
+ * @param raw Portal liste yanıtının bir satırı. Eksik veya beklenmedik tipte
+ *   her alan güvenli bir varsayılana düşer; hiçbir alan `undefined` dönmez.
+ * @returns Normalize edilmiş özet satırı.
+ *
+ * @example
+ * ```ts
+ * import { toInvoiceSummary } from 'efatura'
+ *
+ * const row = toInvoiceSummary({
+ *   ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+ *   belgeNumarasi: 'EAR2026000000123',
+ *   aliciVknTckn: '11111111111',
+ *   aliciUnvanAdSoyad: 'Ali Yılmaz',
+ *   belgeTarihi: '03-09-2026',
+ *   belgeTuru: 'FATURA',
+ *   onayDurumu: 'Onaylanmadı',
+ * })
+ * console.log(row.date) // '03/09/2026' — tire eğik çizgiye çevrildi
+ * ```
  */
 export function toDocumentSummary(raw: Record<string, unknown>): DocumentSummary {
   return {
@@ -64,6 +101,22 @@ export function toDocumentSummary(raw: Record<string, unknown>): DocumentSummary
  * `Buyuk` üç satır döndürdü). Bu yüzden makbuz listeleyen her servis sonucu
  * `belgeTuru` ile süzmek ZORUNDADIR; süzmemek "makbuzlarınız" diye
  * faturalarınızı da göstermek olurdu.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz — istemcinin
+ * `listProducerReceipts` / `listSelfEmployedReceipts` yöntemleri süzmeyi
+ * zaten uygular. Aynı işi kendi kodunuzda yapmak isterseniz satırların
+ * `documentType` alanını `DocumentType` sabitleriyle karşılaştırın.
+ *
+ * @param rows Süzülecek özet satırları.
+ * @param documentType Tutulacak tek belge türü; `DocumentType` sabitlerinden
+ *   biri, portalın diakritikli yazımıyla.
+ * @returns Yalnızca istenen türdeki satırlar; eşleşme yoksa boş dizi.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * filterByDocumentType(satirlar, DocumentType.PRODUCER_RECEIPT)
+ *   -> yalnızca belgeTuru === 'MÜSTAHSİL MAKBUZU' olan satırlar
+ * ```
  */
 export function filterByDocumentType(
   rows: readonly DocumentSummary[],

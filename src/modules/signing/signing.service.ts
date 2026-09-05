@@ -10,12 +10,51 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
  * SMS ile fatura imzalama.
  *
  * Test ortamı bu komutlara yetki vermiyor; akış yalnızca gerçek hesapla
- * çalışır (spec §2.5).
+ * çalışır (spec §2.5). Test ortamında portal "Bu işlem için yetkiniz yok"
+ * döndürür ve bu KALICI bir izin kısıtlamasıdır — bayat token değildir.
+ *
+ * Akış üç adımdır: `getPhoneNumber()` (opsiyonel) → `sendSmsCode()` →
+ * `verifySmsCode()`.
+ *
+ * @example
+ * ```ts
+ * import { EArsivClient } from 'efatura'
+ *
+ * const client = new EArsivClient({ environment: 'production' })
+ * await client.login({ username: '1111111111', password: 'gizli' })
+ *
+ * const challenge = await client.sendSmsCode()
+ * const drafts = await client.listDrafts(new Date(), new Date())
+ * await client.verifySmsCode({
+ *   code: '123456',
+ *   operationId: challenge.operationId,
+ *   invoices: drafts,
+ * })
+ * ```
  */
 export class SigningService {
+  /**
+   * @param gateway Komutları gönderecek dispatch geçidi; token'ı o taşır.
+   */
   constructor(private readonly gateway: DispatchGateway) {}
 
-  /** Portalda kayıtlı cep telefonu numarası. */
+  /**
+   * Portalda kayıtlı cep telefonu numarası.
+   *
+   * @returns Kayıtlı numara; portal alanı boş bırakırsa boş string.
+   * @throws {EArsivApiError} Portal komutu reddederse — TEST ortamında
+   *   beklenen durum budur.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi gerçekten dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'production' })
+   * await client.login({ username: '1111111111', password: 'gizli' })
+   * console.log(await client.getPhoneNumber())
+   * ```
+   */
   async getPhoneNumber(): Promise<string> {
     const data = await this.gateway.call<Record<string, unknown>>(
       Command.QUERY_PHONE,
@@ -25,7 +64,29 @@ export class SigningService {
     return str(data.telefon)
   }
 
-  /** Doğrulama kodu gönderir ve işlem kimliğini döndürür. */
+  /**
+   * Doğrulama kodu gönderir ve işlem kimliğini döndürür.
+   *
+   * @param options `phoneNumber` verilmezse portaldan kayıtlı numara ayrıca
+   *   sorgulanır — bu, fazladan BİR portal isteği demektir.
+   * @returns `operationId` (doğrulama adımına aynen geri verilir) ve kodun
+   *   gönderildiği `phoneNumber`.
+   * @throws {EArsivApiError} Portal işlem kimliği (`oid`) döndürmezse veya
+   *   komutu reddederse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'production' })
+   * await client.login({ username: '1111111111', password: 'gizli' })
+   *
+   * // Numarayı biliyorsanız fazladan sorguyu atlayın.
+   * const challenge = await client.sendSmsCode({ phoneNumber: '5551112233' })
+   * console.log(challenge.operationId)
+   * ```
+   */
   async sendSmsCode(options: SendSmsOptions = {}): Promise<SmsChallenge> {
     const phoneNumber = options.phoneNumber ?? (await this.getPhoneNumber())
 
@@ -58,6 +119,37 @@ export class SigningService {
    * kanıtlanmamıştı — `str()` (yalnızca string/number'ı kabul eden, sayıyı
    * `String()`'e çeviren o yardımcı DEĞİL, burada tanımsız/null için `''`
    * döndüren özel bir coercion) her iki biçimi de kabul eder.
+   *
+   * @param input `code` SMS ile gelen doğrulama kodu, `operationId`
+   *   `sendSmsCode` sonucundaki kimlik, `invoices` imzalanacak faturaların
+   *   ÖZET SATIRLARI (listeleme yöntemlerinden dönen nesneler doğrudan
+   *   verilebilir). Liste BOŞ OLAMAZ.
+   * @returns İmzalama tamamlandığında çözülen söz. Dönüş değeri YOKTUR:
+   *   çağrı dönerse imzalama gerçekleşmiştir.
+   * @throws {EArsivValidationError} `invoices` boşsa — ağa hiç çıkılmaz.
+   * @throws {EArsivApiError} Kod reddedilirse veya portal `sonuc` alanında
+   *   `"1"` dışında bir değer döndürürse.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { EArsivApiError, EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'production' })
+   * await client.login({ username: '1111111111', password: 'gizli' })
+   *
+   * const challenge = await client.sendSmsCode()
+   * try {
+   *   await client.verifySmsCode({
+   *     code: '123456',
+   *     operationId: challenge.operationId,
+   *     invoices: await client.listDrafts(new Date(), new Date()),
+   *   })
+   *   console.log('İmzalandı.')
+   * } catch (error) {
+   *   if (error instanceof EArsivApiError) console.error('Kod reddedildi:', error.message)
+   * }
+   * ```
    */
   async verifySmsCode(input: VerifySmsInput): Promise<void> {
     if (input.invoices.length === 0) {

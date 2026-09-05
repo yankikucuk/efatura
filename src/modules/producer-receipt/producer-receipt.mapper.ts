@@ -153,6 +153,31 @@ function toDetailTotals(raw: Record<string, unknown>): ProducerReceiptTotals {
  *
  * Kimlik alanı `uuid`'dir (faturada `faturaUuid`, SMM'de `ettn`); yanıtta
  * bulunamazsa istenen ETTN'e düşülür.
+ *
+ * @param raw `EARSIV_PORTAL_MUSTAHSIL_GETIR` yanıtının `data` alanı.
+ * @param requestedEttn İstekte kullanılan ETTN; yanıtta `uuid` yoksa bu
+ *   değer kullanılır.
+ * @returns Eşlenmiş detay. Tutarlar YENİDEN HESAPLANMAZ; portalın kendi
+ *   rakamları okunur. `note` alanının sonundaki tek satır sonu kırpılır.
+ *
+ * @example
+ * ```ts
+ * import { toProducerReceiptDetail } from 'efatura'
+ *
+ * const detail = toProducerReceiptDetail(
+ *   {
+ *     uuid: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+ *     belgeNumarasi: 'EAR2026000000123',
+ *     tarih: '05-09-2026',
+ *     not: 'Makbuz notu\n',
+ *     mustahsilTable: [{ malHizmet: 'Buğday', miktar: 100, birimFiyat: 12 }],
+ *     odenecekTutar: 1176,
+ *   },
+ *   '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+ * )
+ * console.log(detail.date, detail.note, detail.totals.payableAmount)
+ * // '05/09/2026' 'Makbuz notu' 1176
+ * ```
  */
 export function toProducerReceiptDetail(
   raw: Record<string, unknown>,

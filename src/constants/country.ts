@@ -25,6 +25,9 @@
  * ```ts
  * import { Country, EArsivClient, Unit } from 'efatura'
  *
+ * const client = new EArsivClient({ environment: 'test' })
+ * await client.loginWithTestUser()
+ *
  * await client.createDraft({
  *   buyer: {
  *     taxOrIdentityNumber: '11111111111',
@@ -40,8 +43,11 @@
  *
  * @example Listede olmayan bir ülke adı vermek
  * ```ts
+ * import type { AddressInput } from 'efatura'
+ *
  * // Portal doğrulama yapmadığı için düz metin de geçerlidir.
- * address: { country: 'Kosova', city: 'Priştine' }
+ * const address: AddressInput = { country: 'Kosova', city: 'Priştine' }
+ * console.log(address.country)
  * ```
  */
 export const Country = {

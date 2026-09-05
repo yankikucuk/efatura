@@ -13,24 +13,78 @@ import type { Credentials, LoginCommand, TestUserCredentials } from './auth.type
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
-/** Oturum açma, token saklama ve kapatma. `TokenProvider` sözleşmesini uygular. */
+/**
+ * Oturum açma, token saklama ve kapatma. `TokenProvider` sözleşmesini uygular.
+ *
+ * `EArsivClient` bunu kendisi kurar ve oturum yöntemlerini buraya delege
+ * eder; doğrudan örneklemeniz yalnızca kendi servis birleşiminizi kuracaksanız
+ * gerekir. Token YALNIZCA bu örneğin belleğinde tutulur — hiçbir yere yazılmaz
+ * ve süreçler arasında paylaşılmaz.
+ *
+ * @example Tek başına kullanmak
+ * ```ts
+ * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+ *
+ * const options = resolveClientOptions({ environment: 'test' })
+ * const auth = new AuthService(new HttpClient(options), options)
+ *
+ * await auth.loginWithTestUser()
+ * console.log(auth.isAuthenticated, auth.token?.length)
+ * await auth.logout()
+ * ```
+ */
 export class AuthService implements TokenProvider {
   private currentToken: string | undefined
 
+  /**
+   * @param http İstekleri gönderecek HTTP istemcisi.
+   * @param options `resolveClientOptions()` çıktısı; `environment` alanı
+   *   varsayılan giriş komutunu ve test kullanıcısı korumasını belirler.
+   */
   constructor(
     private readonly http: HttpClient,
     private readonly options: ResolvedClientOptions,
   ) {}
 
+  /**
+   * Bellekteki oturum token'ı.
+   *
+   * @returns Oturum açıksa token, açık değilse `undefined`. SIR
+   *   niteliğindedir — günlüğe yazmayın.
+   */
   get token(): string | undefined {
     return this.currentToken
   }
 
+  /**
+   * Bellekte bir token bulunup bulunmadığı.
+   *
+   * @returns Token varsa `true`. Token'ın portalda HÂLÂ GEÇERLİ olduğunu
+   *   garanti ETMEZ; süre dolumu ilk çağrıda anlaşılır.
+   */
   get isAuthenticated(): boolean {
     return this.currentToken !== undefined
   }
 
-  /** Önceden alınmış bir token ile oturuma devam et. */
+  /**
+   * Önceden alınmış bir token ile oturuma devam et.
+   *
+   * @param token Daha önce `login()`/`loginWithTestUser()` ile alınmış token.
+   *   Boş veya yalnızca boşluk olamaz.
+   * @throws {EArsivValidationError} Token boş ya da yalnızca boşluk ise —
+   *   öyle bir değer `isAuthenticated`'ı `true` yapar ama hiçbir isteğe yetki
+   *   vermezdi (bkz. I7).
+   *
+   * @example
+   * ```ts
+   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   *
+   * const options = resolveClientOptions({ environment: 'test' })
+   * const auth = new AuthService(new HttpClient(options), options)
+   * auth.setToken(process.env.EARSIV_TOKEN ?? 'kayitli-token')
+   * console.log(auth.isAuthenticated)
+   * ```
+   */
   setToken(token: string): void {
     // Boş veya yalnızca boşluktan oluşan bir token, `isAuthenticated`'ı
     // `true` yapar ama hiçbir isteğe yetki vermez (bkz. I7) — bu durum
@@ -44,6 +98,14 @@ export class AuthService implements TokenProvider {
     this.currentToken = token
   }
 
+  /**
+   * `TokenProvider` sözleşmesinin okuma tarafı; `DispatchGateway` ve
+   * `DocumentService` her istekte bunu çağırır.
+   *
+   * @returns Geçerli token.
+   * @throws {EArsivAuthError} Hiç oturum açılmamışsa. `token` özelliğinin
+   *   aksine `undefined` DÖNDÜRMEZ, fırlatır.
+   */
   getToken(): string {
     if (this.currentToken === undefined) {
       throw new EArsivAuthError('Oturum açılmamış. Önce login() veya setToken() çağırın.')
@@ -51,12 +113,42 @@ export class AuthService implements TokenProvider {
     return this.currentToken
   }
 
-  /** Token'ı temizler; `TokenProvider` sözleşmesinin bir parçası (bkz. I7). */
+  /**
+   * Token'ı temizler; `TokenProvider` sözleşmesinin bir parçası (bkz. I7).
+   *
+   * `DispatchGateway`, portalın oturum süresi dolumunu DOĞRULADIĞINDA bunu
+   * çağırır. Ağa çıkmaz; uzak oturumu KAPATMAZ — bunun için `logout()`
+   * kullanın.
+   */
   clearToken(): void {
     this.currentToken = undefined
   }
 
-  /** Kullanıcı adı ve şifre ile giriş yapar, token'ı saklar ve döndürür. */
+  /**
+   * Kullanıcı adı ve şifre ile giriş yapar, token'ı saklar ve döndürür.
+   *
+   * @param credentials `username` portalın kullanıcı kodu (genellikle
+   *   VKN/TCKN), `password` portal şifresi. `loginCommand` verilmezse ortama
+   *   göre seçilir: test → `'login'`, canlı → `'anologin'`.
+   * @returns Portalın verdiği oturum token'ı; aynı değer `token`
+   *   özelliğinden de okunur.
+   * @throws {EArsivAuthError} Portal token döndürmezse — kullanıcı adı veya
+   *   şifre hatalı olabilir. Bu durumda token temizlenmiş kalır.
+   * @throws {EArsivApiError} Portal girişi açık bir hata mesajıyla
+   *   reddederse.
+   * @throws {EArsivNetworkError} Portala ulaşılamazsa.
+   *
+   * @example
+   * ```ts
+   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   *
+   * const options = resolveClientOptions({ environment: 'production' })
+   * const auth = new AuthService(new HttpClient(options), options)
+   *
+   * const token = await auth.login({ username: '1111111111', password: 'gizli' })
+   * console.log(token.length > 0)
+   * ```
+   */
   async login(credentials: Credentials): Promise<string> {
     const command: LoginCommand =
       credentials.loginCommand ?? (this.options.environment === 'test' ? 'login' : 'anologin')
@@ -103,6 +195,27 @@ export class AuthService implements TokenProvider {
   /**
    * Test ortamının otomatik kullanıcı önerme akışı. Portal bir kullanıcı
    * kodu üretir, şifre her zaman `"1"` olur.
+   *
+   * İKİ portal isteği yapar: önce `kullaniciOner`, sonra o kullanıcıyla
+   * `login`. HER çağrıda YENİ bir kullanıcı tahsis edilir; iki ayrı
+   * çalıştırmanın belge listeleri kıyaslanamaz ve tahsis edilen kullanıcı
+   * havuzdan geldiği için önceki çalıştırmalardan kalma belgeler taşıyabilir.
+   *
+   * @returns Üretilen `username`, sabit `password` (`"1"`) ve alınan `token`.
+   * @throws {EArsivAuthError} İstemci `environment: 'test'` ile kurulmamışsa
+   *   (ağa hiç çıkılmaz) ya da portal kullanıcı kodu döndürmezse.
+   * @throws {EArsivNetworkError} Portala ulaşılamazsa.
+   *
+   * @example
+   * ```ts
+   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   *
+   * const options = resolveClientOptions({ environment: 'test' })
+   * const auth = new AuthService(new HttpClient(options), options)
+   *
+   * const { username, password } = await auth.loginWithTestUser()
+   * console.log(username, password) // password her zaman '1'
+   * ```
    */
   async loginWithTestUser(): Promise<TestUserCredentials> {
     if (this.options.environment !== 'test') {
@@ -148,6 +261,22 @@ export class AuthService implements TokenProvider {
    * kimliğinin doğrulandığına inanmaya devam etmesi, sunucuda bir oturumun
    * açık kalmasından daha tehlikelidir. Hata yine de yukarı iletilir, böylece
    * çağıran uzak oturumun kapatılamadığını bilir.
+   *
+   * @returns İşlem tamamlandığında çözülen söz. Token yoksa AĞA ÇIKMAZ.
+   * @throws {EArsivNetworkError} Portala ulaşılamazsa — yerel token yine de
+   *   temizlenmiş olur.
+   *
+   * @example
+   * ```ts
+   * import { AuthService, HttpClient, resolveClientOptions } from 'efatura'
+   *
+   * const options = resolveClientOptions({ environment: 'test' })
+   * const auth = new AuthService(new HttpClient(options), options)
+   * await auth.loginWithTestUser()
+   *
+   * await auth.logout()
+   * console.log(auth.isAuthenticated) // false
+   * ```
    */
   async logout(): Promise<void> {
     const token = this.currentToken

@@ -16,6 +16,34 @@ export { isValidTaxOrIdentityNumber }
  * Faturayı portala göndermeden önce doğrular.
  * Tüm sorunlar toplanır; ilk hatada durulmaz, böylece çağıran tek seferde
  * hepsini düzeltebilir.
+ *
+ * `InvoiceService.createDraft` bunu kendisi çağırır; doğrudan çağırmanız
+ * yalnızca bir formu göndermeden ÖNCE denetlemek isterseniz gerekir.
+ * Denetlenenler: alıcının VKN/TCKN'i, ünvan ya da ad/soyaddan en az birinin
+ * varlığı, en az bir kalem, her kalemin adı/miktarı/birim fiyatı ve üç oranı,
+ * özel matrah alanları ve TRY dışı para biriminde döviz kurunun zorunluluğu.
+ *
+ * @param input Denetlenecek fatura girdisi.
+ * @returns Doğrulama geçerse hiçbir şey (`void`).
+ * @throws {EArsivValidationError} En az bir sorun bulunursa. `message`
+ *   sorunların METİNLERİNİ de içerir; `issues` her sorunun yolunu taşır
+ *   (ör. `lineItems.2.vatRate`).
+ *
+ * @example
+ * ```ts
+ * import { EArsivValidationError, Unit, validateInvoiceInput } from 'efatura'
+ *
+ * try {
+ *   validateInvoiceInput({
+ *     buyer: { taxOrIdentityNumber: '123' },
+ *     lineItems: [{ name: '', quantity: 0, unit: Unit.PIECE, unitPrice: -1, vatRate: 150 }],
+ *   })
+ * } catch (error) {
+ *   if (error instanceof EArsivValidationError) {
+ *     console.error(error.issues.map((issue) => issue.path))
+ *   }
+ * }
+ * ```
  */
 export function validateInvoiceInput(input: InvoiceInput): void {
   const issues: ValidationIssue[] = []

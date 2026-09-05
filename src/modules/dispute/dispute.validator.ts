@@ -21,7 +21,30 @@ const raise = (issues: ValidationIssue[]): void => {
   }
 }
 
-/** Portalın kendi istemci kontrolü: iptal gerekçesi boş olamaz. */
+/**
+ * Portalın kendi istemci kontrolü: iptal gerekçesi boş olamaz.
+ *
+ * `DisputeService.createCancellationRequest` bunu kendisi çağırır; doğrudan
+ * çağırmanız yalnızca formu göndermeden ÖNCE doğrulamak isterseniz gerekir.
+ *
+ * @param input Denetlenecek iptal talebi girdisi.
+ * @returns Doğrulama geçerse hiçbir şey (`void`).
+ * @throws {EArsivValidationError} `ettn` veya `reason` boş/yalnızca boşluksa.
+ *   Tüm sorunlar tek hatada toplanır.
+ *
+ * @example
+ * ```ts
+ * import { EArsivValidationError, validateCancellationRequest } from 'efatura'
+ *
+ * try {
+ *   validateCancellationRequest({ ettn: '', reason: '' })
+ * } catch (error) {
+ *   if (error instanceof EArsivValidationError) {
+ *     console.error(error.issues.map((issue) => issue.path)) // ['ettn', 'reason']
+ *   }
+ * }
+ * ```
+ */
 export function validateCancellationRequest(input: CancellationRequestInput): void {
   const issues: ValidationIssue[] = []
   if (isBlank(input.ettn)) issues.push({ path: 'ettn', message: 'ETTN boş olamaz.' })
@@ -77,6 +100,33 @@ export function validateObjectionRequest(input: ObjectionRequestInput): void {
  * `IncomingObjectionRequestInput`'ta zaten (opsiyonel değil) ZORUNLU
  * olduğundan burada "ikisi verilip ikisi unutulur" durumu YOKTUR — yalnızca
  * her birinin boş/geçersiz OLUP OLMADIĞI kontrol edilir.
+ *
+ * @param input Denetlenecek gelen-belge itiraz girdisi.
+ * @returns Doğrulama geçerse hiçbir şey (`void`).
+ * @throws {EArsivValidationError} Ortak yedi alandan biri boşsa; `invoiceOid`,
+ *   `sellerTaxOrIdentityNumber` veya `documentNumber` boşsa; ya da
+ *   `totalAmount` sonlu bir sayı değilse veya negatifse.
+ *
+ * @example
+ * ```ts
+ * import { DisputeMethod, EArsivValidationError, validateIncomingObjectionRequest } from 'efatura'
+ *
+ * try {
+ *   validateIncomingObjectionRequest({
+ *     ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+ *     invoiceOid: '4021',
+ *     totalAmount: -1,
+ *     sellerTaxOrIdentityNumber: '1111111111',
+ *     documentNumber: 'EAR2026000000123',
+ *     method: DisputeMethod.KEP,
+ *     referenceDocumentId: '2026/1234',
+ *     referenceDocumentDate: '05/09/2026',
+ *     reason: 'Sipariş edilmedi.',
+ *   })
+ * } catch (error) {
+ *   if (error instanceof EArsivValidationError) console.error(error.issues[0]?.path) // 'totalAmount'
+ * }
+ * ```
  */
 export function validateIncomingObjectionRequest(input: IncomingObjectionRequestInput): void {
   const issues = objectionCommonIssues(input)
@@ -103,7 +153,27 @@ export function validateIncomingObjectionRequest(input: IncomingObjectionRequest
   raise(issues)
 }
 
-/** Portalın kendi istemci kontrolü: ret cevabında gerekçe zorunludur. */
+/**
+ * Portalın kendi istemci kontrolü: ret cevabında gerekçe zorunludur.
+ *
+ * @param input Denetlenecek cevap girdisi.
+ * @returns Doğrulama geçerse hiçbir şey (`void`).
+ * @throws {EArsivValidationError} `disputeId` boşsa ya da `answer`
+ *   `DisputeAnswer.REJECT` iken `rejectionReason` boşsa. KABUL cevabında
+ *   gerekçe aranmaz.
+ *
+ * @example
+ * ```ts
+ * import { DisputeAnswer, EArsivValidationError, validateDisputeResponse } from 'efatura'
+ *
+ * try {
+ *   validateDisputeResponse({ disputeId: '1234', answer: DisputeAnswer.REJECT })
+ * } catch (error) {
+ *   if (error instanceof EArsivValidationError) console.error(error.issues[0]?.path)
+ *   // 'rejectionReason'
+ * }
+ * ```
+ */
 export function validateDisputeResponse(input: DisputeResponseInput): void {
   const issues: ValidationIssue[] = []
   if (isBlank(input.disputeId)) {

@@ -27,6 +27,27 @@ import type {
  * gönderilir: portal bunları hesaplamıyor, gönderilmezse 0 olarak saklıyor
  * (canlı doğrulandı — 500 ₺ brüt ücretli bir makbuz "net alınan: 0" olarak
  * kaydedildi).
+ *
+ * @param input Makbuz girdisi. Toplamlar kalemlerden hesaplanır; override
+ *   YOKTUR.
+ * @returns Portalın Türkçe anahtarlı yükü. Tutarlar iki ondalıklı, NOKTA
+ *   ayırıcılı metindir; `kdvTahakkukIcin` BOOLEAN olarak gider.
+ * @throws {EArsivValidationError} Kalemler boşsa ya da bir kalem geçersizse.
+ *
+ * @example
+ * ```ts
+ * import { toPortalSelfEmployedReceipt } from 'efatura'
+ *
+ * const payload = toPortalSelfEmployedReceipt({
+ *   date: '05/09/2026',
+ *   payer: { taxOrIdentityNumber: '1111111111', title: 'ÖRNEK A.Ş.' },
+ *   lineItems: [
+ *     { description: 'Danışmanlık', grossFee: 10_000, vatRate: 20, withholdingRate: 20 },
+ *   ],
+ * })
+ * console.log(payload.brtUcret, payload.gvStpjTtari, payload.netAlinanToplam)
+ * // '10000.00' '2000.00' '10000.00'
+ * ```
  */
 export function toPortalSelfEmployedReceipt(
   input: SelfEmployedReceiptInput,
@@ -135,6 +156,31 @@ function toDetailTotals(raw: Record<string, unknown>): SelfEmployedReceiptTotals
 /**
  * Portalın SMM detay yanıtını `SelfEmployedReceiptDetail`'e çevirir.
  * Kimlik alanı `ettn`'dir (müstahsilde `uuid`).
+ *
+ * @param raw `EARSIV_PORTAL_SERBEST_MESLEK_GETIR` yanıtının `data` alanı.
+ * @param requestedEttn İstekte kullanılan ETTN; yanıtta `ettn` yoksa bu değer
+ *   kullanılır.
+ * @returns Eşlenmiş detay. KALEM tutarları oranlardan yeniden hesaplanır;
+ *   BELGE toplamları portalın kendi kaydından okunur.
+ *
+ * @example
+ * ```ts
+ * import { toSelfEmployedReceiptDetail } from 'efatura'
+ *
+ * const detail = toSelfEmployedReceiptDetail(
+ *   {
+ *     ettn: '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+ *     tarih: '05-09-2026',
+ *     kdvTahakkukIcin: true,
+ *     serbestTable: [{ neIcinAlindigi: 'Danışmanlık', brutUcret: 10000, kdv: 20, stopaj: 20 }],
+ *     netAlinanToplam: 10000,
+ *   },
+ *   '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f',
+ * )
+ * // Kalem tutarı oranlardan hesaplandı, belge toplamı portalın kaydından okundu.
+ * console.log(detail.date, detail.lineItems[0]?.netFee, detail.totals.netReceived)
+ * // '05/09/2026' 8000 10000
+ * ```
  */
 export function toSelfEmployedReceiptDetail(
   raw: Record<string, unknown>,

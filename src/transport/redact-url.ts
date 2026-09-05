@@ -7,6 +7,25 @@
  * çağıranın hata mesajına — sızabilir. `core/logger/logger.types.ts` "hassas
  * veri (token, şifre) buraya konmaz" diye söz veriyor; bu yardımcı o sözü
  * tutar.
+ *
+ * DİKKAT: `EArsivClient.getDownloadUrl` bu gizlemeyi UYGULAMAZ — orada amaç
+ * çalışan bir indirme adresi vermektir; o URL canlı token taşır.
+ *
+ * @param url Gizlenecek adres. Mutlak olmayan veya ayrıştırılamayan bir metin
+ *   de kabul edilir; o durumda `token=...` kalıbı regex ile temizlenir.
+ * @returns `token` parametresinin değeri `***` ile değiştirilmiş adres.
+ *   `token` parametresi yoksa adres olduğu gibi döner.
+ *
+ * DAHİLİ yardımcı: paket kökünden dışa açılmaz, `HttpClient` kullanır.
+ *
+ * @example Girdi ve çıktı
+ * ```text
+ * redactUrl('https://ornek.test/download?token=gizli&ettn=abc')
+ *   -> 'https://ornek.test/download?token=***&ettn=abc'
+ *
+ * redactUrl('/download?token=gizli')   // mutlak olmayan adres de temizlenir
+ *   -> '/download?token=***'
+ * ```
  */
 export function redactUrl(url: string): string {
   try {
