@@ -3,6 +3,10 @@ import prettier from 'eslint-config-prettier'
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
 
+/** Kardeş izolasyonu için modül listesi. Yeni modül eklenince buraya yazılır. */
+const MODULES = ['auth', 'invoice', 'document', 'user', 'signing', 'dispute']
+const SIBLING_MESSAGE = 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.'
+
 /** Bir katmanın import etmesi YASAK olan yolları üretir. */
 const forbid = (patterns, message) => ({
   'no-restricted-imports': [
@@ -59,87 +63,31 @@ export default tseslint.config(
       'Modüller client/pdf katmanlarına bağımlı olamaz.',
     ),
   },
-  // Kardeş modül izolasyonu. Glob tabanlı no-restricted-imports burada
-  // yanlış pozitif üretir (`../*/**` deseni `../../core/...` yolunu da
-  // yakalar), bu yüzden gerçek dosya yolu çözen no-restricted-paths kullanılır.
-  {
-    files: ['src/modules/**/*.ts'],
+  // Kardeş modül izolasyonu.
+  //
+  // İki tuzak var. (1) Joker desen: `../*/**` deseni `../../core/index.js`
+  // yolunu da yakalar, çünkü minimatch'te `*` `..` segmentiyle eşleşir —
+  // her meşru core import'u yanlış pozitif olurdu. (2) no-restricted-paths:
+  // gerçek dosya yolu çözer ama bunun için bir resolver gerekir; `.js`
+  // uzantılı TS import'ları çözemediğinden kural HİÇ ateşlenmez ve izolasyon
+  // sessizce yok olur.
+  //
+  // Çözüm ikisi de değil: kardeş adlarını AÇIK yazmak. `../invoice/**`
+  // deseni `../../core/index.js` ile eşleşmez (ikinci segment `invoice` vs
+  // `..`), resolver gerektirmez ve specifier metnine bakar.
+  ...MODULES.map((self) => ({
+    files: [`src/modules/${self}/**/*.ts`],
     rules: {
-      'import-x/no-restricted-paths': [
+      'no-restricted-imports': [
         'error',
         {
-          zones: [
-            {
-              target: './src/modules/auth',
-              from: [
-                './src/modules/invoice',
-                './src/modules/document',
-                './src/modules/user',
-                './src/modules/signing',
-                './src/modules/dispute',
-              ],
-              message: 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.',
-            },
-            {
-              target: './src/modules/invoice',
-              from: [
-                './src/modules/auth',
-                './src/modules/document',
-                './src/modules/user',
-                './src/modules/signing',
-                './src/modules/dispute',
-              ],
-              message: 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.',
-            },
-            {
-              target: './src/modules/document',
-              from: [
-                './src/modules/auth',
-                './src/modules/invoice',
-                './src/modules/user',
-                './src/modules/signing',
-                './src/modules/dispute',
-              ],
-              message: 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.',
-            },
-            {
-              target: './src/modules/user',
-              from: [
-                './src/modules/auth',
-                './src/modules/invoice',
-                './src/modules/document',
-                './src/modules/signing',
-                './src/modules/dispute',
-              ],
-              message: 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.',
-            },
-            {
-              target: './src/modules/signing',
-              from: [
-                './src/modules/auth',
-                './src/modules/invoice',
-                './src/modules/document',
-                './src/modules/user',
-                './src/modules/dispute',
-              ],
-              message: 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.',
-            },
-            {
-              target: './src/modules/dispute',
-              from: [
-                './src/modules/auth',
-                './src/modules/invoice',
-                './src/modules/document',
-                './src/modules/user',
-                './src/modules/signing',
-              ],
-              message: 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.',
-            },
-          ],
+          patterns: MODULES.filter((other) => other !== self)
+            .flatMap((other) => [`../${other}/**`, `../../modules/${other}/**`])
+            .map((group) => ({ group: [group], message: SIBLING_MESSAGE })),
         },
       ],
     },
-  },
+  })),
   // Katman: constants ve config yapraktır.
   {
     files: ['src/constants/**/*.ts', 'src/config/**/*.ts'],

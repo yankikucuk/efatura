@@ -1,7 +1,4 @@
-// import-x/no-restricted-paths istisnası: yalnızca tip import'u, çalışma zamanı bağımlılığı yok.
-// (Bu satırda `eslint-disable-next-line` kullanılmadı: kural bu importu hiç yakalamıyor —
-// bkz. görev raporu — ve gerçek bir uyarı bastırmayan directive, pre-commit `eslint --fix`
-// tarafından "unused directive" olarak otomatik siliniyor.)
+// eslint-disable-next-line no-restricted-imports -- yalnızca tip import'u, çalışma zamanı bağımlılığı yok
 import type { InvoiceSummary } from '../invoice/index.js'
 
 export interface SmsChallenge {

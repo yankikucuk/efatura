@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { DispatchGateway } from '../../transport/index.js'
+// eslint-disable-next-line no-restricted-imports -- yalnızca tip import'u, çalışma zamanı bağımlılığı yok
 import type { InvoiceSummary } from '../invoice/index.js'
 
 import { SigningService } from './signing.service.js'

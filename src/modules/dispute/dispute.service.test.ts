@@ -102,8 +102,8 @@ describe('DisputeService.listRequests', () => {
     })
   })
 
-  it('boş listeyi tolere eder', async () => {
-    const call = vi.fn().mockResolvedValue([])
+  it('dizi olmayan yanıtı boş listeye çevirir', async () => {
+    const call = vi.fn().mockResolvedValue(null)
     expect(
       await new DisputeService(gatewayMock(call)).listRequests('01/09/2026', '03/09/2026'),
     ).toEqual([])
