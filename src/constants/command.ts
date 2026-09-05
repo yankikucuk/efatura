@@ -58,7 +58,11 @@ export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> =
  * kaydedilemedi, oluşturulamaz, düzenlenememiştir.
  */
 export const FAILURE_MARKERS: readonly RegExp[] = [
-  /hata/i,
+  // "hata" harfle önceden gelmemeli: aksi halde faturacılıkta standart bir
+  // terim olan "muhatap" kelimesi hata sanılırdı. Kalıntı bir yanlış pozitif
+  // olarak "Hatay" il adı kalıyor; başarı metinlerinde adres yankılanmadığı
+  // için kabul edildi.
+  /(^|[^\p{L}])hata/iu,
   /sorun var/i,
   /yetkiniz yok/i,
   /sağlamıyor/i,

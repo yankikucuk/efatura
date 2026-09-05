@@ -86,6 +86,12 @@ describe('FAILURE_MARKERS', () => {
     expect(isFailure('Talebiniz başarıyla kaydedilemedi.')).toBe(true)
   })
 
+  it('masum kelimeleri hata saymaz', () => {
+    // "muhatap" faturacılıkta standart bir terim ve "hata" alt metnini içerir.
+    expect(isFailure('Muhatap firma bilgileri güncellendi.')).toBe(false)
+    expect(isFailure('Ödemeniz başarıyla alınmıştır.')).toBe(false)
+  })
+
   it('gerçek başarı metinlerini hata saymaz', () => {
     expect(
       isFailure(
