@@ -18,7 +18,7 @@ export interface EttnResolveContext {
 }
 
 const AMBIGUOUS_ADVICE =
-  'Fatura oluşturuldu ancak ETTN tekil olarak belirlenemedi. ' +
+  'Belge oluşturuldu ancak ETTN tekil olarak belirlenemedi. ' +
   'Yanlış ETTN döndürmemek için işlem durduruldu; adaylar hatanın candidates alanındadır. ' +
   'Doğru kaydı listeden seçebilirsiniz.'
 

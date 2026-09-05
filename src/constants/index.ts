@@ -1,6 +1,7 @@
 export {
   Command,
   type CommandName,
+  DOCUMENT_COMMANDS,
   FAILURE_MARKERS,
   RETRYABLE_COMMANDS,
   SUCCESS_PATTERNS,

@@ -1,4 +1,9 @@
-import { type CommandName, FAILURE_MARKERS, SUCCESS_PATTERNS } from '../constants/index.js'
+import {
+  type CommandName,
+  DOCUMENT_COMMANDS,
+  FAILURE_MARKERS,
+  SUCCESS_PATTERNS,
+} from '../constants/index.js'
 import { EArsivApiError } from '../core/index.js'
 
 export interface ParseContext {
@@ -8,6 +13,29 @@ export interface ParseContext {
 
 /** `... Hata kodu: 2-1109` kalıbından kodu çeker. */
 const ERROR_CODE = /Hata kodu:\s*([\w-]+)/
+
+/**
+ * Layer 2 (savunma): `DOCUMENT_COMMANDS`e kaydedilmeyi UNUTAN gelecekteki bir
+ * komut, belge gövdesini yine de durum mesajı sanıp taramaya sokmamalı. İki
+ * bağımsız işaret kullanılır:
+ *
+ * - `<` ile başlama: gerçek bir portal durum mesajı HTML/XML biçiminde
+ *   gelmez; bu her zaman bir belge gövdesidir.
+ * - Uzunluk eşiği: canlı portalda gözlenen durum mesajlarının en uzunu 166
+ *   karakterlik `disputePrecondition` metni (bkz.
+ *   `tests/fixtures/portal-responses.ts`); görev tanımındaki "~100 karakter"
+ *   tahmini fatura oluşturma cümlesine dayanıyordu, ancak gerçek en uzun
+ *   örnek 166. Eşik 500 seçildi: en uzun gerçek mesajın ~3 katı — ileride
+ *   biraz daha uzun bir durum cümlesi eklenirse eşiği YANLIŞLIKLA
+ *   tetiklemeyecek kadar geniş bir pay — ama en küçük gerçek belge
+ *   gövdesinden (~47 KB) yüz kat daha küçük, yani gerçek bir belgeyi asla
+ *   durum mesajı sanmaz.
+ */
+const MAX_STATUS_MESSAGE_LENGTH = 500
+
+function looksLikeDocumentPayload(text: string): boolean {
+  return text.trimStart().startsWith('<') || text.length > MAX_STATUS_MESSAGE_LENGTH
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -87,12 +115,16 @@ export function parsePortalResponse(payload: unknown, ctx: ParseContext): unknow
     throwApi(text, payload, ctx, ERROR_CODE.exec(text)?.[1])
   }
 
-  if (typeof data === 'string') {
+  if (typeof data === 'string' && !DOCUMENT_COMMANDS.has(ctx.command)) {
+    // DOCUMENT_COMMANDS'ta kayıtlı komutlar (Layer 1) bu bloğa hiç girmez:
+    // gövde bir belge, taranacak bir durum mesajı değildir.
     const patterns = SUCCESS_PATTERNS[ctx.command]
     const failed =
       patterns === undefined
-        ? // Başarı metnini bilmediğimiz komutlar: hata işaretlerine bakılır.
-          FAILURE_MARKERS.some((marker) => marker.test(data))
+        ? // Başarı metnini bilmediğimiz komutlar: hata işaretlerine bakılır —
+          // ama önce Layer 2 savunması: gövde belge gibi görünüyorsa
+          // (HTML/XML ya da aşırı uzun) tarama hiç yapılmaz.
+          !looksLikeDocumentPayload(data) && FAILURE_MARKERS.some((marker) => marker.test(data))
         : // Başarı metnini bildiğimiz komutlar: beyaz liste eşleşmeli.
           !patterns.some((pattern) => data.includes(pattern))
     if (failed) {

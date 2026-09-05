@@ -72,6 +72,25 @@ export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> =
 }
 
 /**
+ * Bu komutların düz string `data`sı bir DURUM MESAJI DEĞİL, BELGE
+ * GÖVDESİDİR (ör. render edilmiş HTML). `SHOW_INVOICE` yanıtı 47-55 KB'lık
+ * bir fatura HTML'i döndürür ve bu HTML kullanıcı tarafından girilen metin
+ * taşır: fatura notu, alıcı ünvanı, kalem açıklaması. Bu metinler
+ * `FAILURE_MARKERS`in aradığı Türkçe olumsuzluk/ret sözcükleriyle
+ * (ör. "teslim edilemedi", "iade alınmıştır" içindeki "hata" alt metni gibi
+ * rastlantısal eşleşmeler) çakışabilir — kısa durum mesajları için
+ * tasarlanmış bir sezgi, tam bir belge gövdesine uygulanınca geçerli bir
+ * faturayı hataya çevirir. Bu tabloda kayıtlı bir komut için parser,
+ * FAILURE_MARKERS taramasını TAMAMEN ATLAR ve gövdeyi olduğu gibi döndürür.
+ *
+ * Bu güvenlidir: bu komutlar için gerçek başarısızlıklar zaten üst seviye
+ * `error` veya `data.hata` alanlarından bildirilir (`parsePortalResponse`
+ * bunları düz string dalından ÖNCE kontrol eder); düz string dalı bu
+ * komutlar için yalnızca BAŞARI biçimidir.
+ */
+export const DOCUMENT_COMMANDS: ReadonlySet<CommandName> = new Set([Command.SHOW_INVOICE])
+
+/**
  * Başarı metni bilinmeyen komutlar için hata tespiti.
  *
  * Yalnızca "başarıyla" kelimesini aramak güvenli değildi: Türkçede
