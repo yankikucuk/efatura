@@ -24,6 +24,10 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+      # Kilit dosyası npm 11 ile üretiliyor; Node 20 ve 22 npm 10 ile gelir
+      # ve isteğe bağlı platform paketlerini (@esbuild/*) çözemeyip `npm ci`yi
+      # EUSAGE ile reddeder. Matristeki tüm sürümler aynı npm ile çalışsın.
+      - run: npm i -g npm@11
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
