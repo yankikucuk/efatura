@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
 
 import { toPortalUserInfo, toUserInfo } from './user.mapper.js'
+import type { UserInfo } from './user.types.js'
 
 const raw = portalResponses.userInfo.data as unknown as Record<string, unknown>
 
@@ -41,11 +42,36 @@ describe('toUserInfo', () => {
 
 describe('toPortalUserInfo', () => {
   it('gidiş-dönüş TÜM alanları korur', () => {
-    // Alanları tek tek listelemek 21 alandan 16'sını kapsıyordu ve testin
-    // adı "tüm alanlar" diyordu. Tam gidiş-dönüş eşitliği, eşlemelerden
-    // birinde bir alan düşerse ya da yer değiştirirse kesin olarak kırılır.
-    const info = toUserInfo(raw)
-    expect(toUserInfo(toPortalUserInfo(info))).toEqual(info)
+    // Gerçek fixture ile gidiş-dönüş yapmak YETMEZ: fixture'da ad, soyad,
+    // kasaba, faksNo ve webSitesiAdresi boş string ve boş değerde gidiş-dönüş
+    // ayırt edici değil — bir alan eşlemeden düşse bile toUserInfo yine ''
+    // üretir ve eşitlik bozulmaz. (Eski toMatchObject listesinin atladığı beş
+    // alan tam olarak bunlardı.) Bu yüzden her alana benzersiz bir değer veren
+    // sentetik bir kayıt kullanıyoruz; böylece düşen HER alan eşitliği bozar.
+    const full: UserInfo = {
+      taxOrIdentityNumber: 'v-vkn',
+      title: 'v-unvan',
+      firstName: 'v-ad',
+      lastName: 'v-soyad',
+      registryNumber: 'v-sicil',
+      mersisNumber: 'v-mersis',
+      taxOffice: 'v-vd',
+      street: 'v-cadde',
+      buildingName: 'v-apt',
+      buildingNumber: 'v-aptno',
+      doorNumber: 'v-kapi',
+      town: 'v-kasaba',
+      district: 'v-ilce',
+      city: 'v-il',
+      postalCode: 'v-posta',
+      country: 'v-ulke',
+      phone: 'v-tel',
+      fax: 'v-faks',
+      email: 'v-eposta',
+      website: 'v-web',
+      businessCenter: 'v-merkez',
+    }
+    expect(toUserInfo(toPortalUserInfo(full))).toEqual(full)
   })
 
   it('portal alan adlarını doğru yazar', () => {
