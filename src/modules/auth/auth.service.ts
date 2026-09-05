@@ -90,6 +90,12 @@ export class AuthService implements TokenProvider {
       )
     }
 
+    // login() denemeden önce token'ı temizliyor, ama buradaki esign aşaması
+    // ondan ÖNCE çalışıyor. Bu adımda hata alınırsa login() hiç çağrılmaz ve
+    // eski oturumun token'ı bayat kalırdı — Bulgu 1'in aynısı, bir kademe
+    // yukarıda. Üretim koruması geçildikten sonra burada da temizliyoruz.
+    this.currentToken = undefined
+
     const raw = await this.http.postForm(Endpoint.ESIGN, {
       assoscmd: 'kullaniciOner',
       rtype: 'json',

@@ -187,6 +187,37 @@ describe('AuthService token yaşam döngüsü', () => {
     expect(service.isAuthenticated).toBe(false)
   })
 
+  it('test kullanıcısı alma aşaması başarısız olsa da eski token temizlenir', async () => {
+    // login() temizliği yapıyor ama esign aşaması ondan önce çalışıyor;
+    // orada hata alınırsa login() hiç çağrılmazdı.
+    const fetchMock = vi.fn((url: string) =>
+      url.endsWith('/esign') ? json({ userid: 'u1' }) : json({ token: 'eski-oturum' }),
+    )
+    const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch)
+    await service.loginWithTestUser()
+    expect(service.isAuthenticated).toBe(true)
+
+    fetchMock.mockImplementation(() => json({ userid: '' }))
+    await expect(service.loginWithTestUser()).rejects.toThrow(EArsivAuthError)
+
+    expect(service.isAuthenticated).toBe(false)
+    expect(service.token).toBeUndefined()
+  })
+
+  it('canlı ortamda loginWithTestUser mevcut oturumu BOZMAZ', async () => {
+    // Üretim koruması temizlikten önce gelmeli: yanlışlıkla çağıran biri
+    // çalışan oturumunu kaybetmemeli.
+    const fetchMock = vi.fn(() => json({ token: 'canli-oturum' }))
+    const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch, 'production')
+    await service.login({ username: 'a', password: 'p' })
+    expect(service.isAuthenticated).toBe(true)
+
+    await expect(service.loginWithTestUser()).rejects.toThrow(EArsivAuthError)
+
+    expect(service.isAuthenticated).toBe(true)
+    expect(service.token).toBe('canli-oturum')
+  })
+
   it('uzak çıkış başarısız olsa da yerel token temizlenir', async () => {
     const fetchMock = vi.fn((url: string) =>
       url.endsWith('/esign') ? json({ userid: 'u' }) : json({ token: 'tok' }),
