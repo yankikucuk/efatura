@@ -170,4 +170,45 @@ describe('HttpClient.getBinary', () => {
       clientWith(fetchMock as unknown as typeof globalThis.fetch).getBinary(Endpoint.DOWNLOAD, {}),
     ).rejects.toMatchObject({ attempts: 2 })
   })
+
+  it('token ASLA EArsivNetworkError.url içinde veya logger bağlamında ham görünmez (I1)', async () => {
+    // getBinary token'ı sorgu dizesinde taşır (`…/download?token=<128 hane>&…`).
+    // Bu URL hem yeniden deneme günlüğüne hem de EArsivNetworkError.url'e
+    // gidiyordu — logger.types.ts "hassas veri (token, şifre) buraya
+    // konmaz" diye söz veriyor. İlk denemede 5xx (debug log tetikler),
+    // ikincide boş gövde (nihai hata) — böylece HEM log HEM hata yolu
+    // tek testte doğrulanır.
+    const SECRET_TOKEN = 'S'.repeat(128)
+    let call = 0
+    const fetchMock = vi.fn(() => {
+      call += 1
+      return call === 1
+        ? new Response('bozuk', { status: 503 })
+        : new Response(new Uint8Array(), { status: 200 })
+    })
+    const debug = vi.fn()
+    const client = new HttpClient(
+      resolveClientOptions({
+        environment: 'test',
+        fetch: fetchMock as unknown as typeof globalThis.fetch,
+        retry: { backoffMs: 0 },
+        logger: { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      }),
+    )
+
+    let networkError: EArsivNetworkError | undefined
+    try {
+      await client.getBinary(Endpoint.DOWNLOAD, { token: SECRET_TOKEN })
+    } catch (error) {
+      networkError = error as EArsivNetworkError
+    }
+
+    expect(networkError).toBeInstanceOf(EArsivNetworkError)
+    expect(networkError?.url).not.toContain(SECRET_TOKEN)
+    expect(networkError?.url).toContain('token=***')
+
+    expect(debug).toHaveBeenCalledTimes(1)
+    const loggedContext = JSON.stringify(debug.mock.calls[0])
+    expect(loggedContext).not.toContain(SECRET_TOKEN)
+  })
 })

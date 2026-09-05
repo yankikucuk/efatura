@@ -34,7 +34,17 @@ export class DocumentService {
     return this.http.getBinary(Endpoint.DOWNLOAD, this.downloadQuery(ettn, options))
   }
 
-  /** İndirme adresini üretir; tarayıcıya veya harici indiriciye verilebilir. */
+  /**
+   * İndirme adresini üretir; tarayıcıya veya harici indiriciye verilebilir.
+   *
+   * UYARI: dönen URL, geçerli oturumun CANLI token'ını sorgu dizesinde
+   * (`token=...`) taşır — bu değer `HttpClient`'ın yaptığı gibi ASLA
+   * gizlenmez (bkz. I1: gizleme yalnızca `EArsivNetworkError` ve günlükler
+   * içindir). URL'yi bir tarayıcıya yapıştırırsanız token tarayıcı
+   * geçmişinde ve — URL'ye giden herhangi bir isteğin `Referer` başlığında
+   * — açığa çıkar. URL'yi yalnızca güvendiğiniz bir bağlamda kullanın ve
+   * paylaşmayın.
+   */
   getDownloadUrl(ettn: string, options: DocumentOptions = {}): string {
     const query = new URLSearchParams(this.downloadQuery(ettn, options)).toString()
     return `${this.options.baseUrl}${Endpoint.DOWNLOAD}?${query}`
