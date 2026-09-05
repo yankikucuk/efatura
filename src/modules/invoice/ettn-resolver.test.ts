@@ -75,6 +75,15 @@ describe('resolveCreatedEttn', () => {
     )
   })
 
+  it('yalnızca tarihle ayrışan adaylarda ipucu tarihini kullanır (coverage: row.date === hint.date)', () => {
+    // Aynı VKN, aynı ad — yalnızca TARİH farklı. `row.date === hint.date`
+    // kontrolü silinirse her iki aday da narrowed'a girer ve belirsizlik
+    // hatası fırlatılır; bu test o durumda kırılır.
+    const mine = summary({ ettn: 'benim', date: '03/09/2026' })
+    const other = summary({ ettn: 'baska', date: '02/09/2026' })
+    expect(resolveCreatedEttn({ before: new Set(), after: [other, mine], hint })).toBe(mine)
+  })
+
   it('alıcı adı boş dönen kayıtlarda VKN ve tarihle eşleşir', () => {
     // Portal TCKN'li alıcılarda aliciUnvanAdSoyad alanını boş bırakabiliyor.
     const mine = summary({ ettn: 'benim', buyerName: '' })

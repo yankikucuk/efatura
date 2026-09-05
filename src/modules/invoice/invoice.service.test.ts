@@ -67,6 +67,22 @@ describe('InvoiceService.createDraft', () => {
     expect(call).not.toHaveBeenCalled()
   })
 
+  it('tutarsız totals override ağa çıkmadan reddedilir (coverage: mergeAndVerifyTotals ön kontrolü)', async () => {
+    // createDraft, toPortalInvoice'u çağırmadan ÖNCE de mergeAndVerifyTotals'ı
+    // çalıştırır — bozuk bir override'ın ağa gitmesini engelleyen bu ön
+    // kontrol silinse bile toPortalInvoice kendi içinde aynı hesabı tekrar
+    // yaptığı için suit yine yeşil kalabilir. Bu test doğrudan `call`'ın hiç
+    // tetiklenmediğini pinleyerek o ön kontrolü gerçekten kilitliyor.
+    const call = vi.fn()
+    await expect(
+      new InvoiceService(gatewayMock(call)).createDraft({
+        ...input,
+        totals: { taxBase: 999_999 },
+      }),
+    ).rejects.toThrow(/tutarsız/)
+    expect(call).not.toHaveBeenCalled()
+  })
+
   it('belirsizlikte hata fırlatır', async () => {
     const call = vi
       .fn()
