@@ -79,6 +79,53 @@ describe('EArsivClient', () => {
     })
   })
 
+  it.each([
+    ['listDrafts', ['03/09/2026', '03/09/2026'], 'EARSIV_PORTAL_TASLAKLARI_GETIR'],
+    ['listIncoming', ['03/09/2026', '03/09/2026'], 'EARSIV_PORTAL_ADIMA_KESILEN_BELGELERI_GETIR'],
+    ['getInvoice', ['abc'], 'EARSIV_PORTAL_FATURA_GETIR'],
+    ['getInvoiceHtml', ['abc'], 'EARSIV_PORTAL_FATURA_GOSTER'],
+    ['getUserInfo', [], 'EARSIV_PORTAL_KULLANICI_BILGILERI_GETIR'],
+    ['getCompanyInfo', ['1234567890'], 'SICIL_VEYA_MERNISTEN_BILGILERI_GETIR'],
+    ['getPhoneNumber', [], 'EARSIV_PORTAL_TELEFONNO_SORGULA'],
+    [
+      'listDisputeRequests',
+      ['03/09/2026', '03/09/2026'],
+      'EARSIV_PORTAL_GELEN_IPTAL_ITIRAZ_TALEPLERINI_GETIR',
+    ],
+    [
+      'createCancellationRequest',
+      [{ ettn: 'a', reason: 'r' }],
+      'EARSIV_PORTAL_IPTAL_TALEBI_OLUSTUR',
+    ],
+    [
+      'respondToDisputeRequest',
+      [{ disputeId: '1', answer: '1' }],
+      'EARSIV_PORTAL_IPTAL_ITIRAZ_TALEP_DURUM_GUNCELLE',
+    ],
+  ] as [string, unknown[], string][])(
+    'facade %s metodunu %s komutuna yönlendirir',
+    async (method, args, expectedCommand) => {
+      // Facade metodları tek satırlık delegasyon; yanlış bağlanmış bir tanesi
+      // (ör. listIncoming'in listDrafts'a gitmesi) yüzey testine takılmazdı.
+      // Gönderilen portal komutunu sabitlemek her yönlendirmeyi pinler.
+      const fetchMock = vi.fn(() => json({ data: [] }))
+      const client = new EArsivClient({
+        environment: 'test',
+        fetch: fetchMock as unknown as typeof globalThis.fetch,
+      })
+      client.setToken('tok')
+
+      await (client as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>)[method]!(
+        ...args,
+      )
+
+      const body = new URLSearchParams(
+        (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+      )
+      expect(body.get('cmd')).toBe(expectedCommand)
+    },
+  )
+
   it('public API yüzeyi eksiksiz', () => {
     // Not: bu test yalnızca yüzeyi koruyor — bir metodun kazara silinmesini
     // yakalar, davranışını değil. Davranış testleri yukarıdaki beş testte.
