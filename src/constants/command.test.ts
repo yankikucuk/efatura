@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { Command, PageName, SUCCESS_PATTERNS } from './index.js'
+import { Command, FAILURE_MARKERS, PageName, SUCCESS_PATTERNS } from './index.js'
 
 describe('komut kataloğu', () => {
   it('doğrulanmış komut adlarını içerir', () => {
@@ -48,5 +48,52 @@ describe('komut kataloğu', () => {
   it('fatura silme başarı metni adet önekini tolere eder', () => {
     const patterns = SUCCESS_PATTERNS[Command.DELETE_INVOICE]
     expect('1 fatura başarıyla silindi.').toContain(patterns?.[0] ?? '@@yok@@')
+  })
+
+  it('başarı metni bilinmeyen komutlar için genel kalıp TANIMLI DEĞİLDİR', () => {
+    // Genel "başarıyla" kalıbı bilinçli olarak kaldırıldı; bu komutlarda
+    // hata tespiti FAILURE_MARKERS üzerinden yapılır.
+    for (const command of [
+      Command.SAVE_USER_INFO,
+      Command.CREATE_CANCELLATION_REQUEST,
+      Command.CREATE_OBJECTION_REQUEST,
+      Command.RESPOND_TO_DISPUTE,
+    ]) {
+      expect(SUCCESS_PATTERNS[command]).toBeUndefined()
+    }
+  })
+})
+
+describe('FAILURE_MARKERS', () => {
+  const isFailure = (text: string): boolean => FAILURE_MARKERS.some((marker) => marker.test(text))
+
+  it('canlı portaldan yakalanan gerçek hata metinlerini yakalar', () => {
+    expect(isFailure('Bu belge iptal talebi oluşturmak için gerekli koşulları sağlamıyor!')).toBe(
+      true,
+    )
+    expect(isFailure('Talep cevabı kaydedilirken beklenmeyen bir hata ile karşılaşıldı.')).toBe(
+      true,
+    )
+    expect(isFailure('Ettn ya eksik ya boş ya da 36 uzunluk sınırına uymuyor.')).toBe(true)
+    expect(isFailure('Form parametrelerinde sorun var')).toBe(true)
+    expect(isFailure('Bu işlem için yetkiniz yok')).toBe(true)
+    expect(isFailure('Düzenlenmek üzere fatura getirilemedi. Hata kodu: 2-1109')).toBe(true)
+  })
+
+  it('"başarıyla" kelimesi geçen olumsuz cümleyi hata sayar', () => {
+    // Genel "başarıyla" kalıbının tam olarak kaçırdığı vaka.
+    expect(isFailure('İşleminiz başarıyla tamamlanamamıştır.')).toBe(true)
+    expect(isFailure('Talebiniz başarıyla kaydedilemedi.')).toBe(true)
+  })
+
+  it('gerçek başarı metinlerini hata saymaz', () => {
+    expect(
+      isFailure(
+        'Faturanız başarıyla oluşturulmuştur. Düzenlenen Belgeler menüsünden faturanıza ulaşabilirsiniz.',
+      ),
+    ).toBe(false)
+    expect(isFailure('1 fatura başarıyla silindi.')).toBe(false)
+    expect(isFailure('Bilgileriniz başarıyla kaydedilmiştir.')).toBe(false)
+    expect(isFailure('Talebiniz başarıyla oluşturuldu.')).toBe(false)
   })
 })

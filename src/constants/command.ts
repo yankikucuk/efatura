@@ -42,8 +42,28 @@ export type CommandName = (typeof Command)[keyof typeof Command]
 export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> = {
   [Command.CREATE_INVOICE]: ['Faturanız başarıyla oluşturulmuştur'],
   [Command.DELETE_INVOICE]: ['fatura başarıyla silindi'],
-  [Command.SAVE_USER_INFO]: ['başarıyla'],
-  [Command.CREATE_CANCELLATION_REQUEST]: ['başarıyla'],
-  [Command.CREATE_OBJECTION_REQUEST]: ['başarıyla'],
-  [Command.RESPOND_TO_DISPUTE]: ['başarıyla'],
 }
+
+/**
+ * Başarı metni bilinmeyen komutlar için hata tespiti.
+ *
+ * Yalnızca "başarıyla" kelimesini aramak güvenli değildi: Türkçede
+ * "işleminiz başarıyla tamamlanamamıştır" gibi bir HATA mesajı da o kelimeyi
+ * içerir ve alt metin araması bunu başarı sayardı. Bu yüzden başarı metnini
+ * bilmediğimiz komutlarda tersine çeviriyoruz — metin aşağıdaki işaretlerden
+ * birini taşıyorsa hatadır.
+ *
+ * İlk yedi desen canlı portaldan yakalanan gerçek hata metinlerinden geldi.
+ * Sonuncusu Türkçe yeterlilik olumsuzluğunu yakalar: tamamlanamadı,
+ * kaydedilemedi, oluşturulamaz, düzenlenememiştir.
+ */
+export const FAILURE_MARKERS: readonly RegExp[] = [
+  /hata/i,
+  /sorun var/i,
+  /yetkiniz yok/i,
+  /sağlamıyor/i,
+  /uymuyor/i,
+  /bulunamad/i,
+  /geçersiz/i,
+  /(ama|eme)(dı|di|z|mış|miş)/i,
+]
