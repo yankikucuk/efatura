@@ -60,6 +60,33 @@ describe('DocumentService.getHtml', () => {
     })
   })
 
+  it('aynı metnin GEÇERSİZ ETTN sebebiyle de geldiğini söyler', async () => {
+    // Portal bu Java istisnasını YALNIZCA serbest meslek makbuzlarında
+    // döndürmüyor: var olmayan ya da hatalı biçimli bir ETTN de aynı metni
+    // üretiyor (canlı doğrulandı 2026-09-05 — sıfır UUID, 'not-a-uuid' ve
+    // boş string, üçü de "String index out of range: 4").
+    //
+    // Bu yüzden mesaj bunun bir kullanım hatası OLMADIĞINI kesin dille
+    // söyleyemez: ETTN'ini yanlış yazan kullanıcıyı, aslında kendi
+    // hatasıyken portalda kusur aramaya gönderirdi. Mesaj her iki olasılığı
+    // da vermek zorunda.
+    const apiError = new EArsivApiError('String index out of range: 4', {
+      command: 'EARSIV_PORTAL_FATURA_GOSTER',
+      callId: 'x',
+      raw: { error: '1', messages: ['String index out of range: 4'] },
+    })
+    const { service } = build(vi.fn().mockRejectedValue(apiError))
+
+    const rejection = service.getHtml('yanlis-ettn')
+    await rejection.catch((error: unknown) => {
+      const defect = error as EArsivPortalDefectError
+      // ETTN'in yanlış/bilinmeyen olabileceği açıkça geçmeli.
+      expect(defect.message).toMatch(/bilinmeyen|hatalı|yanlış|mevcut değil/i)
+      // Ve kullanıcıya önce kendi girdisini doğrulatmalı.
+      expect(defect.message).toMatch(/ETTN'i(nizi)? (doğrulayın|kontrol edin)|doğrulayın/i)
+    })
+  })
+
   it('ALAKASIZ bir portal hatasını olduğu gibi bırakır', async () => {
     // Çeviri yalnızca bilinen kusur metnine uygulanmalı; her hatayı
     // "portal kusuru" diye etiketlemek gerçek iş hatalarını gizlerdi.

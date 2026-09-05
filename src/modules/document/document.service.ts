@@ -13,9 +13,19 @@ import type { DocumentOptions } from './document.types.js'
 /**
  * Portalın belge gösteriminde sızdırdığı Java istisnası.
  *
- * Serbest meslek makbuzuna ait bir ETTN ile `EARSIV_PORTAL_FATURA_GOSTER`
- * çağrıldığında dönüyor (canlı doğrulandı 2026-09-05). Aynı komut fatura ve
- * müstahsil makbuzunda sorunsuz çalışıyor.
+ * DİKKAT — bu metnin İKİ ayrı sebebi var ve portal ikisini AYIRT ETMİYOR
+ * (her ikisi de canlı doğrulandı 2026-09-05):
+ *
+ * 1. ETTN portalda bulunamıyor ya da biçimi hatalı. Sıfır UUID
+ *    (`00000000-...`), UUID olmayan bir metin (`not-a-uuid`) ve boş string —
+ *    üçü de AYNI "String index out of range: 4" metnini üretti.
+ * 2. ETTN geçerli bir Serbest Meslek Makbuzuna ait. Portalın SMM
+ *    gösterimi bozuk; aynı komut fatura ve müstahsil makbuzunda çalışıyor.
+ *
+ * Metin tek başına hangisi olduğunu SÖYLEMEZ; bu yüzden çeviri de bir teşhis
+ * koyamaz, yalnızca iki olasılığı sunar. "Bu bir kullanım hatası değildir"
+ * demek, ETTN'ini yanlış yazan kullanıcıyı olmayan bir portal kusurunun
+ * peşine gönderirdi.
  */
 const PORTAL_DEFECT_MESSAGE = /String index out of range/i
 
@@ -33,11 +43,15 @@ const PORTAL_DEFECT_MESSAGE = /String index out of range/i
 function showDocumentPortalDefect(ettn: string, cause: EArsivApiError): EArsivPortalDefectError {
   return new EArsivPortalDefectError(
     `Portal, ${ettn} belgesinin HTML gösteriminde bir iç hata (Java istisnası) döndürdü: ` +
-      `"${cause.message}". Bu bir kullanım hatası DEĞİLDİR ve istemci tarafında ` +
-      'düzeltilemez. Canlı olarak yalnızca Serbest Meslek Makbuzlarında gözlendi ' +
-      '(2026-09-05); fatura ve müstahsil makbuzunda aynı komut sorunsuz çalışıyor. ' +
-      'ETTN bir Serbest Meslek Makbuzuna aitse belgenin tüm verilerine ' +
-      'getSelfEmployedReceipt(ettn) ile erişebilirsiniz.',
+      `"${cause.message}". Portal bu metni İKİ farklı durumda da üretiyor ve ` +
+      'hangisi olduğunu söylemiyor: (1) ETTN portalda bulunamadı ya da biçimi ' +
+      'hatalı — bilinmeyen bir UUID, hatalı yazılmış ya da boş bir değer aynı ' +
+      'metni verir; (2) ETTN bir Serbest Meslek Makbuzuna ait — portalın SMM ' +
+      'gösterimi bozuk, fatura ve müstahsil makbuzunda aynı komut çalışıyor ' +
+      "(canlı doğrulandı 2026-09-05). ÖNCE ETTN'inizi doğrulayın; listeleme " +
+      'metotlarından dönen değerle birebir aynı olmalı. ETTN doğruysa belge bir ' +
+      'Serbest Meslek Makbuzudur ve tüm verilerine getSelfEmployedReceipt(ettn) ' +
+      'ile erişebilirsiniz; bu durum istemci tarafında düzeltilemez.',
     { command: Command.SHOW_INVOICE, portalMessage: cause.message, cause },
   )
 }
