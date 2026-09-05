@@ -26,10 +26,21 @@ export class UserService {
    */
   async updateUserInfo(patch: Partial<UserInfo>): Promise<string> {
     const current = await this.getUserInfo()
+
+    // Açık `undefined` taşıyan anahtarları atıyoruz: spread bunları mevcut
+    // değerin üzerine yazar, alan portala boş gider ve silinir — oku-birleştir
+    // adımının tam olarak engellemek için var olduğu hata.
+    // exactOptionalPropertyTypes TS tarafında böyle bir yama nesnesi
+    // kurulmasını engelliyor ama düz JS tüketicisini ya da dış veriden
+    // dinamik kurulan yamayı engellemiyor.
+    const defined = Object.fromEntries(
+      Object.entries(patch as Record<string, unknown>).filter(([, value]) => value !== undefined),
+    ) as Partial<UserInfo>
+
     // vknTckn salt okunur; yamadan gelse bile mevcut değer korunur.
     const merged: UserInfo = {
       ...current,
-      ...patch,
+      ...defined,
       taxOrIdentityNumber: current.taxOrIdentityNumber,
     }
     return this.gateway.call<string>(

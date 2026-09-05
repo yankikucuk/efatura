@@ -40,7 +40,15 @@ describe('toUserInfo', () => {
 })
 
 describe('toPortalUserInfo', () => {
-  it('gidiş-dönüş tüm alanları korur', () => {
+  it('gidiş-dönüş TÜM alanları korur', () => {
+    // Alanları tek tek listelemek 21 alandan 16'sını kapsıyordu ve testin
+    // adı "tüm alanlar" diyordu. Tam gidiş-dönüş eşitliği, eşlemelerden
+    // birinde bir alan düşerse ya da yer değiştirirse kesin olarak kırılır.
+    const info = toUserInfo(raw)
+    expect(toUserInfo(toPortalUserInfo(info))).toEqual(info)
+  })
+
+  it('portal alan adlarını doğru yazar', () => {
     expect(toPortalUserInfo(toUserInfo(raw))).toMatchObject({
       vknTckn: '3333333301',
       unvan: 'DENEME LISANS TICARET ANONIM SIRKETI',

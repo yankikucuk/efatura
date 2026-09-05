@@ -4,6 +4,7 @@ import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
 import type { DispatchGateway } from '../../transport/index.js'
 
 import { UserService } from './user.service.js'
+import type { UserInfo } from './user.types.js'
 
 const gatewayMock = (call: ReturnType<typeof vi.fn>): DispatchGateway =>
   ({ call }) as unknown as DispatchGateway
@@ -33,6 +34,43 @@ describe('UserService', () => {
     // Değiştirilmeyen alanlar korunmalı, aksi halde portal onları siler.
     expect(payload.unvan).toBe('DENEME LISANS TICARET ANONIM SIRKETI')
     expect(payload.vknTckn).toBe('3333333301')
+  })
+
+  it('çakışan vknTckn yamasında sunucudaki değeri korur', async () => {
+    // Bu test olmadan user.service.ts'teki taxOrIdentityNumber override
+    // satırı silinse bile suite yeşil kalırdı: diğer test yamada hiç
+    // vknTckn göndermiyor, dolayısıyla düz spread de aynı sonucu verirdi.
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce({ vknTckn: '1234567890', unvan: 'ACME A.Ş.' })
+      .mockResolvedValueOnce('kaydedildi')
+
+    await new UserService(gatewayMock(call)).updateUserInfo({
+      taxOrIdentityNumber: '9999999999',
+      title: 'Yeni Ünvan',
+    })
+
+    const payload = call.mock.calls[1]?.[2] as Record<string, unknown>
+    expect(payload.vknTckn).toBe('1234567890')
+    expect(payload.unvan).toBe('Yeni Ünvan')
+  })
+
+  it('yamadaki açık undefined mevcut alanı silmez', async () => {
+    // Düz JS tüketicisi veya dinamik kurulan yama bu şekli üretebilir.
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce({ vknTckn: '1234567890', unvan: 'ACME A.Ş.', il: 'İstanbul' })
+      .mockResolvedValueOnce('kaydedildi')
+
+    await new UserService(gatewayMock(call)).updateUserInfo({
+      title: undefined,
+      website: 'https://ornek.test',
+    } as unknown as Partial<UserInfo>)
+
+    const payload = call.mock.calls[1]?.[2] as Record<string, unknown>
+    expect(payload.unvan).toBe('ACME A.Ş.')
+    expect(payload.il).toBe('İstanbul')
+    expect(payload.webSitesiAdresi).toBe('https://ornek.test')
   })
 
   it('VKN ile firma sorgular', async () => {
