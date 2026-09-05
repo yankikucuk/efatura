@@ -79,6 +79,10 @@ describe('toPortalInvoice', () => {
 
   it('opsiyonel alanları boş string olarak doldurur', () => {
     const payload = toPortalInvoice(input())
+    // Yalnızca anahtarın varlığını kontrol etmek yetmez: portal eksik anahtarı
+    // da yanlış tipteki değeri de "Form parametrelerinde sorun var" ile
+    // reddediyor. Değeri de sabitliyoruz, aksi halde bu test implementasyon
+    // null veya 'N/A' doldursa bile geçerdi.
     for (const field of [
       'belgeNumarasi',
       'binaAdi',
@@ -101,7 +105,11 @@ describe('toPortalInvoice', () => {
       'zRaporNo',
       'okcSeriNo',
     ]) {
-      expect(payload).toHaveProperty(field)
+      expect(payload[field], `${field} boş string olmalı`).toBe('')
+    }
+    // Portal bu üç alanda boş string değil tek boşluk bekliyor.
+    for (const field of ['vergiCesidi', 'fisSaati', 'fisTipi']) {
+      expect(payload[field], `${field} tek boşluk olmalı`).toBe(' ')
     }
     expect(payload.iadeTable).toEqual([])
   })
