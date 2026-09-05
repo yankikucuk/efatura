@@ -66,13 +66,13 @@ export function validateInvoiceInput(input: InvoiceInput): void {
   }
 
   if (issues.length > 0) {
-    // Tek sorun varsa üst düzey mesaj doğrudan o sorunu anlatır (çağıran
-    // yakalanan hatayı loglarken tek bakışta neyin yanlış olduğunu görür);
-    // birden fazla sorun varsa özet sayıya düşülür, ayrıntı issues dizisindedir.
-    const message =
-      issues.length === 1 && issues[0] !== undefined
-        ? issues[0].message
-        : `Fatura ${String(issues.length)} doğrulama hatası içeriyor.`
-    throw new EArsivValidationError(message, issues)
+    // Üst seviye mesaj sorunların kendisini taşır. Yalnızca sayı bildirmek
+    // (`"3 doğrulama hatası içeriyor"`) `error.message` loglayan çağırana
+    // hiçbir şey söylemez ve neyin yanlış olduğunu görmek için issues
+    // dizisini açmayı zorunlu kılardı. Biçim parsePortalResponse ile aynı.
+    throw new EArsivValidationError(
+      `Fatura doğrulama başarısız: ${issues.map((issue) => issue.message).join(' | ')}`,
+      issues,
+    )
   }
 }
