@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
 import { Country, Currency, InvoiceType, Unit } from '../../constants/index.js'
 
 import {
   fromPortalPayload,
   num,
   toIncomingExternalSummary,
-  toInvoiceSummary,
   toPortalInvoice,
 } from './invoice.mapper.js'
-import type { InvoiceInput } from './invoice.types.js'
+import type { InvoiceInput, InvoiceSummary } from './invoice.types.js'
+
+import { toInvoiceSummary } from './index.js'
 
 const input = (overrides: Partial<InvoiceInput> = {}): InvoiceInput => ({
   date: '03/09/2026',
@@ -153,38 +153,6 @@ describe('num (I4 — binlik ayırıcı sağlamlaştırma)', () => {
   })
 })
 
-describe('toInvoiceSummary', () => {
-  it('taslak satırını normalize eder ve tarih ayırıcısını düzeltir', () => {
-    const rows = portalResponses.draftList.data as unknown as Record<string, unknown>[]
-    const summary = toInvoiceSummary(rows[0]!)
-    expect(summary).toEqual({
-      ettn: '3729b07c-f9a4-46f1-ac46-eb88f5ccea84',
-      documentNumber: 'GIB2026000000917',
-      buyerTaxOrIdentityNumber: '11111111111',
-      buyerName: 'NODE PROBE A1B2C3',
-      date: '03/09/2026',
-      documentType: 'FATURA',
-      approvalStatus: 'Onaylanmadı',
-    })
-  })
-
-  it('ayrıştırılamayan tarihte hata fırlatmaz, ham stringi geri verir (I5)', () => {
-    // formatPortalDate('') fırlatır; toInvoiceSummary'nin TEK satırı
-    // reddetmesi, listenin TAMAMINI bir istisnayla düşürüyordu (bkz. I5).
-    const row: Record<string, unknown> = {
-      ettn: 'bozuk-satir',
-      belgeNumarasi: 'GIB1',
-      aliciVknTckn: '11111111111',
-      aliciUnvanAdSoyad: 'Bozuk Satır A.Ş.',
-      belgeTarihi: '',
-      belgeTuru: 'FATURA',
-      onayDurumu: 'Onaylanmadı',
-    }
-    expect(() => toInvoiceSummary(row)).not.toThrow()
-    expect(toInvoiceSummary(row).date).toBe('')
-  })
-})
-
 describe('toIncomingExternalSummary', () => {
   it('entegratör satırını satıcı kimliğiyle eşler (portal alıcı kimliğinden FARKLI alanlar)', () => {
     // Bu test yalnızca alan SAYISINI değil, satıcı-özel alanların (seller*,
@@ -276,5 +244,29 @@ describe('fromPortalPayload', () => {
     expect(back.lineItems[0]?.name).toBe('Yazılım Geliştirme')
     expect(back.lineItems[0]?.unitPrice).toBe(100)
     expect(back.lineItems[0]?.vatRate).toBe(20)
+  })
+})
+
+describe('toInvoiceSummary (geriye dönük uyumluluk takma adı)', () => {
+  it("src/documents/document.mapper.js'teki toDocumentSummary'nin aynısıdır", () => {
+    const row: Record<string, unknown> = {
+      ettn: 'ettn-uyumluluk',
+      belgeNumarasi: 'GIB2026000000042',
+      aliciVknTckn: '11111111111',
+      aliciUnvanAdSoyad: 'Ali Yılmaz',
+      belgeTarihi: '03-09-2026',
+      belgeTuru: 'FATURA',
+      onayDurumu: 'Onaylanmadı',
+    }
+    const summary: InvoiceSummary = toInvoiceSummary(row)
+    expect(summary).toEqual({
+      ettn: 'ettn-uyumluluk',
+      documentNumber: 'GIB2026000000042',
+      buyerTaxOrIdentityNumber: '11111111111',
+      buyerName: 'Ali Yılmaz',
+      date: '03/09/2026',
+      documentType: 'FATURA',
+      approvalStatus: 'Onaylanmadı',
+    })
   })
 })

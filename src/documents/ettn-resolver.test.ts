@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { EArsivAmbiguousResultError } from '../../core/index.js'
+import { EArsivAmbiguousResultError } from '../core/index.js'
 
+import type { DocumentSummary } from './document.types.js'
 import { resolveCreatedEttn } from './ettn-resolver.js'
-import type { InvoiceSummary } from './invoice.types.js'
 
-const summary = (overrides: Partial<InvoiceSummary> = {}): InvoiceSummary => ({
+const summary = (overrides: Partial<DocumentSummary> = {}): DocumentSummary => ({
   ettn: 'aaaaaaaa-0000-0000-0000-000000000001',
   documentNumber: 'GIB2026000000001',
   buyerTaxOrIdentityNumber: '11111111111',
@@ -56,7 +56,7 @@ describe('resolveCreatedEttn', () => {
       resolveCreatedEttn({ before: new Set(), after: [a, b], hint })
       expect.unreachable('hata bekleniyordu')
     } catch (error) {
-      const ambiguous = error as EArsivAmbiguousResultError<InvoiceSummary>
+      const ambiguous = error as EArsivAmbiguousResultError<DocumentSummary>
       expect(ambiguous.candidates).toHaveLength(2)
       expect(ambiguous.message).toContain('oluşturuldu')
     }

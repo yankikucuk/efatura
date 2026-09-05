@@ -74,6 +74,17 @@ export default tseslint.config(
       'transport katmanı modules/client/pdf katmanlarına bağımlı olamaz.',
     ),
   },
+  // Katman: documents — core ve constants dışında hiçbir şeye bağımlı
+  // olamaz. `modules/*` bunu SERBESTÇE import edebilir (kardeş modül
+  // DEĞİL, `constants`/`config` gibi bir yaprak katman) — bu yüzden
+  // aşağıdaki kardeş izolasyonu bloğunun `MODULES` listesine eklenmedi.
+  {
+    files: ['src/documents/**/*.ts'],
+    rules: forbid(
+      ['**/transport/**', '**/modules/**', '**/client/**', '**/pdf/**'],
+      'documents katmanı yalnızca core ve constants/config yapraklarına bağımlı olabilir.',
+    ),
+  },
   // Katman: modules — client ve pdf yasak.
   //
   // DİKKAT (I2): flat config'te aynı dosya seti için aynı kuralın SONRAKİ

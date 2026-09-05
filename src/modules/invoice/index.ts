@@ -2,8 +2,9 @@ export {
   type EttnResolveContext,
   type EttnResolveHint,
   resolveCreatedEttn,
-} from './ettn-resolver.js'
-export { fromPortalPayload, toInvoiceSummary, toPortalInvoice } from './invoice.mapper.js'
+  toDocumentSummary as toInvoiceSummary,
+} from '../../documents/index.js'
+export { fromPortalPayload, toPortalInvoice } from './invoice.mapper.js'
 export { InvoiceService } from './invoice.service.js'
 export { computeLineItem, computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
 export type * from './invoice.types.js'

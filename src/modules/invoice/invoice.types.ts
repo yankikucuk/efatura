@@ -8,6 +8,7 @@ import type {
   UnitCode,
 } from '../../constants/index.js'
 import type { DateInput } from '../../core/index.js'
+import type { DocumentSummary } from '../../documents/index.js'
 
 export interface AddressInput {
   country?: CountryName
@@ -132,17 +133,14 @@ export interface InvoiceInput {
   specialBase?: SpecialBaseInput
 }
 
-/** Taslak listesinin bir satırı. */
-export interface InvoiceSummary {
-  ettn: string
-  documentNumber: string
-  buyerTaxOrIdentityNumber: string
-  buyerName: string
-  /** `dd/MM/yyyy` biçimine normalize edilmiş belge tarihi. */
-  date: string
-  documentType: DocumentTypeCode
-  approvalStatus: ApprovalStatusValue
-}
+/**
+ * Taslak listesinin bir satırı.
+ *
+ * `DocumentSummary` olarak `src/documents/`'a taşındı (portal-belge-geneli:
+ * yalnızca faturaya özgü değil). Bu takma ad geriye dönük uyumluluk için
+ * korunuyor — `InvoiceSummary` public API'nin bir parçası (bkz. `src/index.ts`).
+ */
+export type InvoiceSummary = DocumentSummary
 
 /** `EARSIV_PORTAL_FATURA_GETIR` sonucu. */
 export interface InvoiceDetail {

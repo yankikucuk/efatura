@@ -6,15 +6,17 @@ import {
   PageName,
 } from '../../constants/index.js'
 import { type DateInput, EArsivValidationError, formatPortalDate } from '../../core/index.js'
+import {
+  normalizeSummaryDate,
+  resolveCreatedEttn,
+  toDocumentSummary,
+} from '../../documents/index.js'
 import type { DispatchGateway } from '../../transport/index.js'
 
-import { resolveCreatedEttn } from './ettn-resolver.js'
 import {
   fromPortalPayload,
-  normalizePortalDate,
   portalTotals,
   toIncomingExternalSummary,
-  toInvoiceSummary,
   toPortalInvoice,
 } from './invoice.mapper.js'
 import {
@@ -136,7 +138,7 @@ export class InvoiceService {
       kind === InvoiceListKind.STANDARD ? PageName.DRAFTS : PageName.INTERACTIVE_DRAFTS,
       { baslangic: formatPortalDate(from), bitis: formatPortalDate(to), hangiTip: kind },
     )
-    return asRows(data).map(toInvoiceSummary)
+    return asRows(data).map(toDocumentSummary)
   }
 
   /** Adına düzenlenen belgeleri listeler. */
@@ -145,7 +147,7 @@ export class InvoiceService {
       baslangic: formatPortalDate(from),
       bitis: formatPortalDate(to),
     })
-    return asRows(data).map(toInvoiceSummary)
+    return asRows(data).map(toDocumentSummary)
   }
 
   /**
@@ -204,7 +206,7 @@ export class InvoiceService {
       // okuma yolundaki aynı kör noktası — round 2 madde 3). Bu yöntemin
       // kendi belgesi çağıranın en azından `raw`'a erişebileceğini
       // vaat ediyor; fırlatmak bunu bozardı.
-      date: normalizePortalDate(input.date),
+      date: normalizeSummaryDate(input.date),
       time: typeof input.time === 'string' ? input.time : '',
       currency: input.currency ?? 'TRY',
       currencyRate: input.currencyRate ?? 0,

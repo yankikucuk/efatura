@@ -1,6 +1,6 @@
-import { EArsivAmbiguousResultError } from '../../core/index.js'
+import { EArsivAmbiguousResultError } from '../core/index.js'
 
-import type { InvoiceSummary } from './invoice.types.js'
+import type { DocumentSummary } from './document.types.js'
 
 export interface EttnResolveHint {
   buyerTaxOrIdentityNumber: string
@@ -13,7 +13,7 @@ export interface EttnResolveContext {
   /** Oluşturmadan önceki taslakların ETTN kümesi. */
   before: ReadonlySet<string>
   /** Oluşturmadan sonraki tam taslak listesi. */
-  after: readonly InvoiceSummary[]
+  after: readonly DocumentSummary[]
   hint: EttnResolveHint
 }
 
@@ -28,7 +28,7 @@ const AMBIGUOUS_ADVICE =
  * Portal `EARSIV_PORTAL_FATURA_OLUSTUR` yanıtında ETTN döndürmüyor
  * (spec §2.3, §6). Fark tekile inmezse tahmin yerine hata fırlatılır.
  */
-export function resolveCreatedEttn(context: EttnResolveContext): InvoiceSummary {
+export function resolveCreatedEttn(context: EttnResolveContext): DocumentSummary {
   const created = context.after.filter((row) => !context.before.has(row.ettn))
 
   if (created.length === 1) {
@@ -37,7 +37,7 @@ export function resolveCreatedEttn(context: EttnResolveContext): InvoiceSummary 
   }
 
   if (created.length === 0) {
-    throw new EArsivAmbiguousResultError<InvoiceSummary>(
+    throw new EArsivAmbiguousResultError<DocumentSummary>(
       `${AMBIGUOUS_ADVICE} Listede yeni kayıt bulunamadı; portal listeyi gecikmeli güncelliyor olabilir.`,
       context.after,
     )
@@ -58,7 +58,7 @@ export function resolveCreatedEttn(context: EttnResolveContext): InvoiceSummary 
     if (only !== undefined) return only
   }
 
-  throw new EArsivAmbiguousResultError<InvoiceSummary>(
+  throw new EArsivAmbiguousResultError<DocumentSummary>(
     `${AMBIGUOUS_ADVICE} ${String(created.length)} yeni kayıt bulundu.`,
     created,
   )

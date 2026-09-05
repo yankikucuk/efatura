@@ -11,12 +11,12 @@ import {
   type InvoiceTypeCode,
 } from '../../constants/index.js'
 import { formatMinor, formatPortalDate, formatPortalTime, toMinor } from '../../core/index.js'
+import { normalizeSummaryDate } from '../../documents/index.js'
 
 import { computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
 import type {
   IncomingExternalSummary,
   InvoiceInput,
-  InvoiceSummary,
   InvoiceTotals,
   LineItemInput,
 } from './invoice.types.js'
@@ -140,58 +140,14 @@ export function toPortalInvoice(input: InvoiceInput): Record<string, unknown> {
 }
 
 /**
- * Bir tarih alanını normalize eder; ayrıştırılamazsa ham stringi geri verir.
- * `str()` yalnızca alan STRING DEĞİLSE varsayılana düşer — boş string ('')
- * geçerli bir string olduğu için varsayılanı tetiklemez ve doğrudan
- * `formatPortalDate('')`'a gider, ki bu fırlatır (bkz. I5). Tek bir bozuk
- * alanın çağıranı düşürmemesi için bu fırlatma burada yutulur.
- *
- * Hem `toInvoiceSummary` (liste satırları) hem `InvoiceService.getInvoice`
- * (tekil detay — round 2 madde 3: aynı `str()` kör noktası okuma yolunda da
- * vardı, `input.date` boş geldiğinde `formatPortalDate(input.date)`
- * fırlatıyor ve çağıran `detail.raw`'a bile erişemiyordu) tarafından
- * paylaşılır.
- */
-export function normalizePortalDate(raw: unknown): string {
-  const rawDate = str(raw, formatPortalDate())
-  try {
-    return formatPortalDate(rawDate)
-  } catch {
-    return rawDate
-  }
-}
-
-/**
- * Taslak listesi satırını normalize eder. Portal bu listede tarihi tire ile
- * döndürüyor (`03-09-2026`) ancak fatura yükünde eğik çizgi bekliyor.
- *
- * Tek bir satırın alanı bozuksa (ör. ayrıştırılamayan tarih) bu fonksiyon
- * FIRLATMAZ — bkz. `normalizePortalDate`. Aksi halde `listDrafts` gibi bir
- * toplu listeleme, paylaşılan test kullanıcı havuzundaki YABANCI tek bir
- * kayıt yüzünden tamamen başarısız olurdu (bkz. I5; `createDraft` içindeki
- * ikinci `listDrafts` çağrısı özellikle risklidir: ETTN çözümü bu listeye
- * bağlıdır).
- */
-export function toInvoiceSummary(raw: Record<string, unknown>): InvoiceSummary {
-  return {
-    ettn: str(raw.ettn),
-    documentNumber: str(raw.belgeNumarasi),
-    buyerTaxOrIdentityNumber: str(raw.aliciVknTckn),
-    buyerName: str(raw.aliciUnvanAdSoyad),
-    date: normalizePortalDate(raw.belgeTarihi),
-    documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
-    approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,
-  }
-}
-
-/**
  * Entegratör (portal harici) adıma düzenlenen belge satırını eşler.
  *
- * `toInvoiceSummary`'den BİLİNÇLİ olarak ayrı: bu listede siz her zaman
- * alıcısınız, bu yüzden portalın filtre alanıyla (`saticiVknTckn`) tutarlı
- * olarak satıcı kimliği taşınır — `aliciVknTckn`/`aliciUnvanAdSoyad` değil.
- * Entegratörün kendi fatura numarası (`faturaNo`) da portalın belge
- * numarasından (`belgeNumarasi`) ayrı bir alan olarak taşınır.
+ * `toDocumentSummary` (bkz. `src/documents/`)'dan BİLİNÇLİ olarak ayrı: bu
+ * listede siz her zaman alıcısınız, bu yüzden portalın filtre alanıyla
+ * (`saticiVknTckn`) tutarlı olarak satıcı kimliği taşınır —
+ * `aliciVknTckn`/`aliciUnvanAdSoyad` değil. Entegratörün kendi fatura
+ * numarası (`faturaNo`) da portalın belge numarasından (`belgeNumarasi`)
+ * ayrı bir alan olarak taşınır.
  */
 export function toIncomingExternalSummary(raw: Record<string, unknown>): IncomingExternalSummary {
   return {
@@ -200,7 +156,7 @@ export function toIncomingExternalSummary(raw: Record<string, unknown>): Incomin
     invoiceNumber: str(raw.faturaNo),
     sellerTaxOrIdentityNumber: str(raw.saticiVknTckn),
     sellerName: str(raw.saticiUnvanAdSoyad),
-    date: normalizePortalDate(raw.belgeTarihi),
+    date: normalizeSummaryDate(raw.belgeTarihi),
     documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
     approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,
   }
