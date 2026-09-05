@@ -52,7 +52,36 @@ describe('EArsivClient', () => {
     expect(body.get('token')).toBe('kayitli')
   })
 
-  it('tüm public yöntemleri açığa çıkarır', () => {
+  it('toPdf önce HTML çeker, sonra render eder', async () => {
+    // Bu, toPdf'in davranışını sabitleyen tek test. Aşağıdaki yüzey testi
+    // yalnızca metodun var olduğunu kontrol ediyor; toPdf boş bir gövdeye
+    // indirgense bile yeşil kalırdı.
+    const fetchMock = vi.fn(() => json({ data: '<html><body>fatura</body></html>' }))
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    // puppeteer opsiyonel peerDependency ve bu repoda kurulu değil, yani
+    // render adımı kurulum talimatıyla düşer — beklenen ve deterministik.
+    await expect(client.toPdf('abc', { signed: true })).rejects.toThrow(/npm i puppeteer/)
+
+    // Asıl iddia: düşmeden ÖNCE HTML çekilmiş olmalı. Sıra yanlış olsaydı
+    // ya da toPdf sabit bir metin render etseydi bu assertion kırılırdı.
+    const body = new URLSearchParams(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+    )
+    expect(body.get('cmd')).toBe('EARSIV_PORTAL_FATURA_GOSTER')
+    expect(JSON.parse(body.get('jp') ?? '{}')).toEqual({
+      ettn: 'abc',
+      onayDurumu: 'Onaylandı',
+    })
+  })
+
+  it('public API yüzeyi eksiksiz', () => {
+    // Not: bu test yalnızca yüzeyi koruyor — bir metodun kazara silinmesini
+    // yakalar, davranışını değil. Davranış testleri yukarıdaki beş testte.
     const client = new EArsivClient()
     for (const method of [
       'login',
