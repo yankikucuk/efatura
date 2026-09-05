@@ -1,0 +1,64 @@
+name: Haftalık portal uyum kontrolü
+
+# Bu projenin en kırılgan bağımlılığı GİB e-Arşiv Portalı'nın kendisi: API
+# habersiz değişebilir ve 270+ birim testinin hiçbiri bunu yakalayamaz, çünkü
+# hepsi mock'lara karşı çalışır. Bu iş akışı gerçek test portalına karşı
+# uçtan uca senaryoyu haftada bir çalıştırır ve kırıldığında issue açar.
+#
+# Portal kesintileri de bu işi kırar; issue gövdesinde bunu ayırt etmek için
+# ham çıktı yer alır.
+
+on:
+  schedule:
+    # Her pazartesi 07:00 UTC (Türkiye saatiyle 10:00, mesai başlangıcı)
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+
+      - name: Canlı test portalına karşı E2E
+        id: e2e
+        env:
+          EFATURA_E2E: '1'
+        run: |
+          set -o pipefail
+          npx vitest run tests/e2e 2>&1 | tee /tmp/e2e.log
+
+      - name: Kırıldıysa issue aç
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Aynı konuda açık issue varsa yenisini açmak yerine yorum ekle.
+          existing=$(gh issue list --label "alan: portal-uyumu" --state open \
+            --search "Haftalık portal uyum kontrolü in:title" --json number --jq '.[0].number // empty')
+          body=$(printf '%s\n' \
+            "Haftalık E2E koşusu başarısız oldu." \
+            "" \
+            "Bu, iki şeyden biri anlamına gelir:" \
+            "1. GİB portalının API'si değişti ve kütüphane uyum sağlamalı." \
+            "2. Portal geçici olarak erişilemez durumda." \
+            "" \
+            "Aşağıdaki çıktı hangisi olduğunu ayırt etmeye yarar: assertion" \
+            "hatası birinciye, ağ/zaman aşımı ikinciye işaret eder." \
+            "" \
+            "Koşu: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            "" \
+            '```' "$(tail -60 /tmp/e2e.log)" '```')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Haftalık portal uyum kontrolü başarısız" \
+              --label "alan: portal-uyumu" --label "öncelik: yüksek" --body "$body"
+          fi

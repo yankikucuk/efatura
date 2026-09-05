@@ -11,7 +11,7 @@ import {
   UserService,
 } from './index.js'
 
-describe("genel API yüzeyi — servisler tek başına new'lenebilir (I9)", () => {
+describe('genel API yüzeyi — servisler tek başına örneklenebilir (I9)', () => {
   it('spec §8: her servis kendi transport bağımlılıklarıyla standalone kurulabilir', () => {
     const options = resolveClientOptions({ environment: 'test' })
     const http = new HttpClient(options)

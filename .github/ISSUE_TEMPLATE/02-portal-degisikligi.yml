@@ -1,0 +1,40 @@
+name: Portal davranışı değişti
+description: GİB portalı beklenenden farklı yanıt veriyor
+labels: ['alan: portal-uyumu', 'öncelik: yüksek']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu şablon, kütüphanenin kodundan çok **portalın kendisinin
+        değiştiği** durumlar için. Bu proje portal API'sini canlı trafikten
+        çıkardı; portal habersiz değişirse kütüphane onunla birlikte
+        güncellenmelidir.
+
+        Dün çalışıp bugün çalışmayan bir şey büyük olasılıkla buraya aittir.
+  - type: input
+    id: komut
+    attributes:
+      label: Hangi portal komutu
+      description: 'Hata nesnesindeki `command` alanı.'
+      placeholder: EARSIV_PORTAL_FATURA_OLUSTUR
+    validations: { required: true }
+  - type: textarea
+    id: yanit
+    attributes:
+      label: Portalın ham yanıtı
+      description: |
+        `EArsivApiError.raw` alanının tamamı. Kişisel veri içeriyorsa
+        yalnızca yapıyı bırakıp değerleri değiştirin — alan ADLARI kritik.
+      render: json
+    validations: { required: true }
+  - type: textarea
+    id: beklenen
+    attributes:
+      label: Daha önce ne dönüyordu
+      description: Biliyorsanız eski yanıt; bilmiyorsanız boş bırakın.
+      render: json
+  - type: input
+    id: tarih
+    attributes:
+      label: İlk ne zaman fark ettiniz
+      placeholder: '2026-09-05'

@@ -1,0 +1,47 @@
+name: Yayın
+
+# Sürüm etiketi push edildiğinde npm'e yayımlar. Yayın öncesi tam doğrulama
+# zinciri koşar; kırmızıysa yayın yapılmaz.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run knip
+      - run: npm run test:coverage
+      - run: npm run build
+      - run: npm run check:publish
+
+      - name: Etiket ile package.json sürümü aynı mı
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./package.json').version")
+          echo "etiket=$tag package.json=$pkg"
+          [ "$tag" = "$pkg" ] || { echo "HATA: sürümler uyuşmuyor"; exit 1; }
+
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: GitHub sürümü oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes

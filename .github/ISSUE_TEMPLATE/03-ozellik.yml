@@ -1,0 +1,28 @@
+name: Özellik önerisi
+description: Yeni bir yetenek veya mevcut birinin genişletilmesi
+labels: ['tür: özellik']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Hangi problemi çözüyor
+      description: |
+        Çözümü değil, karşılaştığınız durumu anlatın. Öneriniz kabul
+        edilmese bile problem doğru anlaşılırsa başka bir çözüm çıkabilir.
+    validations: { required: true }
+  - type: textarea
+    id: oneri
+    attributes:
+      label: Önerilen API
+      description: Aklınızdaki kullanım nasıl görünüyor?
+      render: typescript
+  - type: dropdown
+    id: kapsam
+    attributes:
+      label: Bilinen kapsam dışı konulardan biri mi
+      description: |
+        Şunlar bilinçli olarak kapsam dışıdır: e-Fatura (ticari/entegratör)
+        entegrasyonu, Müstahsil Makbuzu, Serbest Meslek Makbuzu, CLI aracı,
+        HTTP servis sarmalayıcı.
+      options: ['Hayır', 'Evet ama gerekçem var', 'Emin değilim']
+    validations: { required: true }

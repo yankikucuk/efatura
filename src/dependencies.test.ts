@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
  * kanıtı bu alandır (round 2 madde 4). Bu test onu sabitler; bir sonraki
  * `npm install -D` bunu tekrar silerse bu test kırılır.
  */
-describe("package.json'daki dependencies alanı (round 2 madde 4)", () => {
+describe('package.json içindeki dependencies alanı (round 2 madde 4)', () => {
   it('boş nesne olarak MEVCUTTUR — sıfır çalışma zamanı bağımlılığı garantisi', () => {
     const packageJsonPath = fileURLToPath(new URL('../package.json', import.meta.url))
     const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as Record<string, unknown>

@@ -1,8 +1,36 @@
+# Bağımlılıklar
 node_modules/
+
+# Derleme çıktısı
 dist/
+*.tsbuildinfo
+
+# Test ve kapsam
 coverage/
+.vitest/
+
+# npm pack çıktısı
+*.tgz
+
+# Günlükler
 *.log
-.DS_Store
+npm-debug.log*
+yarn-error.log*
+
+# Ortam değişkenleri — canlı portal kimlik bilgileri buraya girer,
+# asla commit edilmemeli
 .env
 .env.*
+!.env.example
+
+# Editör ve işletim sistemi
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Yerel araç durumu
 .superpowers/
+.gstack/

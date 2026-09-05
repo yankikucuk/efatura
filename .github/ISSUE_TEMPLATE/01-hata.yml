@@ -1,0 +1,55 @@
+name: Hata bildirimi
+description: Kütüphane beklenmedik şekilde davranıyor
+labels: ['tür: hata', 'durum: inceleniyor']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Teşekkürler. Hatanın yeniden üretilebilir olması, çözülme hızını
+        her şeyden çok belirliyor.
+
+        **Lütfen VKN/TCKN, oturum token'ı, şifre veya gerçek fatura
+        içeriği paylaşmayın.** Token 128 karakterlik canlı bir oturum
+        anahtarıdır; issue'ya yapıştırılan bir token derhal geçersiz
+        kılınmalıdır.
+  - type: textarea
+    id: ne-oldu
+    attributes:
+      label: Ne oldu
+      description: Gözlemlenen davranış ve beklediğiniz davranış.
+      placeholder: |
+        createDraft çağırdım, ... bekliyordum, ... aldım.
+    validations: { required: true }
+  - type: textarea
+    id: yeniden-uretim
+    attributes:
+      label: Yeniden üretim adımları
+      description: Mümkünse en küçük kod parçası.
+      render: typescript
+    validations: { required: true }
+  - type: textarea
+    id: hata
+    attributes:
+      label: Hata çıktısı
+      description: |
+        Hata nesnesinin tamamı. `EArsivApiError` ise `raw`, `command` ve
+        `callId` alanları özellikle değerli — portalın ham yanıtını taşırlar.
+      render: text
+  - type: input
+    id: surum
+    attributes:
+      label: efatura sürümü
+      placeholder: '0.1.0'
+    validations: { required: true }
+  - type: input
+    id: node
+    attributes:
+      label: Node sürümü
+      placeholder: '22.11.0'
+    validations: { required: true }
+  - type: dropdown
+    id: ortam
+    attributes:
+      label: Ortam
+      options: ['test (earsivportaltest)', 'canlı (earsivportal)']
+    validations: { required: true }

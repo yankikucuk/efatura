@@ -89,7 +89,7 @@ export function validateIncomingObjectionRequest(input: IncomingObjectionRequest
   if (isBlank(input.sellerTaxOrIdentityNumber)) {
     issues.push({
       path: 'sellerTaxOrIdentityNumber',
-      message: "Belgeyi düzenleyen satıcının VKN/TCKN'i boş olamaz.",
+      message: 'Belgeyi düzenleyen satıcının VKN veya TCKN bilgisi boş olamaz.',
     })
   }
   if (isBlank(input.documentNumber)) {

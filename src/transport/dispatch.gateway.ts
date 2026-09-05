@@ -102,7 +102,7 @@ export class DispatchGateway {
           }
           this.tokens.clearToken()
           throw new EArsivAuthError(
-            "Oturum token'ının süresi dolmuş veya geçersiz; portal yetki hatası döndürdü. " +
+            'Oturum süresi dolmuş veya token geçersiz; portal yetki hatası döndürdü. ' +
               'Yeniden login() çağırın.',
             { cause: error },
           )

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Kullanım sorusu
+    url: https://github.com/yankikucuk/efatura/discussions
+    about: Nasıl yapılır sorularını tartışmalarda sorun.
+  - name: GİB e-Arşiv Portalı
+    url: https://earsivportal.efatura.gov.tr/intragiris.html
+    about: Portalın kendisiyle ilgili sorunlar (kesinti, hesap, yetki) GİB'e aittir.

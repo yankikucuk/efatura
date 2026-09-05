@@ -1,17 +1,39 @@
 {
   "name": "efatura",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi",
   "keywords": [
     "efatura",
-    "e-arsiv",
+    "e-fatura",
     "earsiv",
-    "gib",
+    "e-arsiv",
+    "e-arşiv",
+    "earsivportal",
     "fatura",
+    "gib",
+    "e-belge",
+    "ebelge",
+    "ubl-tr",
+    "e-invoice",
+    "einvoice",
     "invoice",
-    "turkey"
+    "invoicing",
+    "turkey",
+    "turkish",
+    "vergi",
+    "mukellef",
+    "nodejs"
   ],
   "license": "MIT",
+  "author": "Yankı Küçük",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yankikucuk/efatura.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yankikucuk/efatura/issues"
+  },
+  "homepage": "https://github.com/yankikucuk/efatura#readme",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -35,7 +57,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -81,6 +104,10 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.44.0",
     "vitest": "3.2.4"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"

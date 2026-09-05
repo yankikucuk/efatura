@@ -156,7 +156,7 @@ describe('AuthService token yaşam döngüsü', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("başarısız giriş, önceki oturumun token'ını bayat bırakmaz", async () => {
+  it('başarısız giriş, önceki oturumu bayat bırakmaz', async () => {
     // Çok hesaplı kullanımda en tehlikeli senaryo: kullanıcı hesap
     // değiştirdiğini sanırken eski oturum altında fatura kesmeye devam eder.
     const fetchMock = vi.fn(() => json({ token: 'eski-oturum' }))
@@ -174,7 +174,7 @@ describe('AuthService token yaşam döngüsü', () => {
     expect(() => service.getToken()).toThrow(EArsivAuthError)
   })
 
-  it("portal hatası da önceki token'ı bayat bırakmaz", async () => {
+  it('portal hatası da önceki oturumu bayat bırakmaz', async () => {
     const fetchMock = vi.fn(() => json({ token: 'eski-oturum' }))
     const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch)
     await service.login({ username: 'a', password: 'p' })

@@ -1,0 +1,33 @@
+# Bu dosya, hangi dosyalar için kimin inceleme yapacağını belirler.
+# Bir pull request açıldığında GitHub, değişen yollara göre buradaki
+# sahipleri otomatik olarak reviewer atar.
+# Sözdizimi: <yol deseni> <sahipler>
+
+# Varsayılan: her şey depo sahibine
+*                                   @yankikucuk
+
+# Mimari sınırları ve araç zinciri — değişimi tüm katmanları etkiler
+/eslint.config.js                   @yankikucuk
+/tsconfig.json                      @yankikucuk
+/tsup.config.ts                     @yankikucuk
+/vitest.config.ts                   @yankikucuk
+/knip.json                          @yankikucuk
+/.github/                           @yankikucuk
+
+# Portalın wire değerleri — bir harflik hata çalışma zamanı hatasıdır,
+# hiçbir tip kontrolü yakalayamaz
+/src/constants/                     @yankikucuk
+
+# Para aritmetiği ve toplam hesaplama — yanlışı fatura tutarını bozar
+/src/core/money/                    @yankikucuk
+/src/modules/invoice/invoice.totals.ts  @yankikucuk
+
+# Oturum ve token yaşam döngüsü — güvenlik açısından hassas
+/src/modules/auth/                  @yankikucuk
+/src/transport/                     @yankikucuk
+
+# Canlı devlet portalına istek atan testler
+/tests/e2e/                         @yankikucuk
+
+# Tasarım dokümanı ve plan — kararların kaydı
+/docs/                              @yankikucuk
