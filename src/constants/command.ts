@@ -35,6 +35,30 @@ export const Command = {
 export type CommandName = (typeof Command)[keyof typeof Command]
 
 /**
+ * Yeniden denemesi GÜVENLİ komutlar — yalnızca salt okunur olanlar.
+ *
+ * Bir mutasyonun yeniden gönderilmesi, gerçek dünyada tekrarlanan bir hukuki
+ * belge (mükerrer fatura) veya tekrarlanan bir durum değişikliği anlamına
+ * gelir: sunucu isteği zaten işlemiş ama yanıt zaman aşımına uğramış olabilir
+ * (bkz. C1). Bu yüzden varsayılan GÜVENLİ TARAF budur — burada YOKSA bir
+ * komut yeniden denenmez. Yeni eklenen bir komut, tersi kanıtlanana kadar bu
+ * kümenin DIŞINDA kalmalıdır.
+ */
+export const RETRYABLE_COMMANDS: ReadonlySet<CommandName> = new Set([
+  Command.GET_USER_MENU,
+  Command.LIST_INVOICES,
+  Command.LIST_INCOMING,
+  Command.GET_INVOICE,
+  Command.SHOW_INVOICE,
+  Command.GET_USER_INFO,
+  Command.GET_COMPANY_INFO,
+  Command.QUERY_PHONE,
+  Command.LIST_DISPUTE_REQUESTS,
+  Command.LOGIN,
+  Command.SUGGEST_TEST_USER,
+])
+
+/**
  * Bazı komutlar hatayı HTTP 200 ve düz string `data` ile bildirir. Bu tabloda
  * kayıtlı bir komut string döndürdüğünde, metin bu kalıplardan en az birini
  * ALT METİN olarak içermiyorsa hata sayılır.

@@ -3,11 +3,27 @@ import { EArsivNetworkError } from '../core/index.js'
 
 import type { EndpointPath } from './endpoints.js'
 import { buildPortalHeaders } from './headers.js'
+import { redactUrl } from './redact-url.js'
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** 5xx geçicidir ve yeniden denenir; 4xx kalıcıdır ve denenmez. */
 const isRetryableStatus = (status: number): boolean => status >= 500
+
+export interface PostFormOptions {
+  /**
+   * İstek yeniden denenebilir mi? VARSAYILAN: `false`.
+   *
+   * Güvenli taraf budur: bu bayrak açıkça `true` verilmediği sürece istek
+   * TEK denenir. Bir zaman aşımı, sunucu isteği zaten işleyip yanıtı
+   * gönderemeden fırlayabilir (bkz. C1); mutasyon niteliğindeki bir komutu
+   * yeniden denemek, tekrarlanmış bir hukuki belge (mükerrer fatura) veya
+   * tekrarlanmış bir durum değişikliği ile sonuçlanır. Yalnızca salt okunur
+   * komutlar (`DispatchGateway` içinde `RETRYABLE_COMMANDS` ile belirlenir)
+   * `true` göndermelidir.
+   */
+  retryable?: boolean
+}
 
 /** Portalın iki endpoint ailesi için ince fetch sarmalayıcısı. */
 export class HttpClient {
@@ -18,20 +34,24 @@ export class HttpClient {
   }
 
   /** Form-urlencoded POST; yanıtı JSON olarak çözer. */
-  async postForm(path: EndpointPath, fields: Record<string, string>): Promise<unknown> {
+  async postForm(
+    path: EndpointPath,
+    fields: Record<string, string>,
+    options: PostFormOptions = {},
+  ): Promise<unknown> {
     const url = `${this.options.baseUrl}${path}`
     const body = new URLSearchParams(fields).toString()
-    const { response, attempts } = await this.send(url, {
-      method: 'POST',
-      headers: this.headers,
-      body,
-    })
+    const { response, attempts } = await this.send(
+      url,
+      { method: 'POST', headers: this.headers, body },
+      options.retryable ?? false,
+    )
     const text = await response.text()
     try {
       return JSON.parse(text) as unknown
     } catch (cause) {
       throw new EArsivNetworkError('Portal JSON olarak ayrıştırılamayan bir yanıt döndürdü.', {
-        url,
+        url: redactUrl(url),
         status: response.status,
         // Yapılandırılmış tavan değil, gerçekten yapılan deneme sayısı:
         // EArsivNetworkError.attempts alanı "toplam deneme sayısı" diye belgeli.
@@ -41,15 +61,19 @@ export class HttpClient {
     }
   }
 
-  /** İkili GET; belge paketi indirmek için. */
+  /** İkili GET; belge paketi indirmek için. Her zaman yeniden denenebilir: idempotent bir okumadır. */
   async getBinary(path: EndpointPath, query: Record<string, string>): Promise<Uint8Array> {
     const url = `${this.options.baseUrl}${path}?${new URLSearchParams(query).toString()}`
-    const { response, attempts } = await this.send(url, { method: 'GET', headers: this.headers })
+    const { response, attempts } = await this.send(
+      url,
+      { method: 'GET', headers: this.headers },
+      true,
+    )
     const bytes = new Uint8Array(await response.arrayBuffer())
     if (bytes.byteLength === 0) {
       throw new EArsivNetworkError(
         'Portal boş bir belge paketi döndürdü. ETTN veya onay durumu hatalı olabilir.',
-        { url, status: response.status, attempts },
+        { url: redactUrl(url), status: response.status, attempts },
       )
     }
     return bytes
@@ -58,13 +82,17 @@ export class HttpClient {
   /**
    * Zaman aşımı ve üstel geri çekilmeli yeniden deneme.
    * Yanıtla birlikte GERÇEKTEN yapılan deneme sayısını döndürür; çağıranlar
-   * hata bağlamında bu sayıyı kullanır.
+   * hata bağlamında bu sayıyı kullanır. `retryable` false ise TAM OLARAK bir
+   * deneme yapılır (bkz. C1) — 5xx dahil, hiçbir koşulda ikinci istek atılmaz.
    */
   private async send(
     url: string,
     init: RequestInit,
+    retryable: boolean,
   ): Promise<{ response: Response; attempts: number }> {
-    const { attempts, backoffMs } = this.options.retry
+    const configured = this.options.retry
+    const attempts = retryable ? configured.attempts : 1
+    const backoffMs = configured.backoffMs
     let lastCause: unknown
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -78,7 +106,7 @@ export class HttpClient {
 
         if (!isRetryableStatus(response.status) || attempt === attempts) {
           throw new EArsivNetworkError(`Portal HTTP ${String(response.status)} döndürdü.`, {
-            url,
+            url: redactUrl(url),
             status: response.status,
             attempts: attempt,
           })
@@ -89,7 +117,7 @@ export class HttpClient {
         if (cause instanceof EArsivNetworkError) throw cause
         if (attempt === attempts) {
           throw new EArsivNetworkError('Portala ulaşılamadı.', {
-            url,
+            url: redactUrl(url),
             attempts: attempt,
             cause,
           })
@@ -98,7 +126,7 @@ export class HttpClient {
       }
 
       this.options.logger.debug('Portal isteği yeniden deneniyor', {
-        url,
+        url: redactUrl(url),
         attempt,
         cause: String(lastCause),
       })
@@ -106,6 +134,10 @@ export class HttpClient {
     }
 
     // Döngü her koşulda ya döner ya fırlatır; bu satır yalnızca tip güvenliği için.
-    throw new EArsivNetworkError('Portala ulaşılamadı.', { url, attempts, cause: lastCause })
+    throw new EArsivNetworkError('Portala ulaşılamadı.', {
+      url: redactUrl(url),
+      attempts,
+      cause: lastCause,
+    })
   }
 }

@@ -1,4 +1,10 @@
-export { Command, type CommandName, FAILURE_MARKERS, SUCCESS_PATTERNS } from './command.js'
+export {
+  Command,
+  type CommandName,
+  FAILURE_MARKERS,
+  RETRYABLE_COMMANDS,
+  SUCCESS_PATTERNS,
+} from './command.js'
 export { PageName, type PageNameValue } from './page-name.js'
 export { Country, type CountryName } from './country.js'
 export { Currency, type CurrencyCode } from './currency.js'

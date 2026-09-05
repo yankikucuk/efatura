@@ -1,6 +1,6 @@
 import type { ResolvedClientOptions } from '../../config/index.js'
 import { Command } from '../../constants/index.js'
-import { EArsivAuthError } from '../../core/index.js'
+import { EArsivAuthError, EArsivValidationError } from '../../core/index.js'
 import {
   Endpoint,
   type HttpClient,
@@ -32,6 +32,15 @@ export class AuthService implements TokenProvider {
 
   /** Önceden alınmış bir token ile oturuma devam et. */
   setToken(token: string): void {
+    // Boş veya yalnızca boşluktan oluşan bir token, `isAuthenticated`'ı
+    // `true` yapar ama hiçbir isteğe yetki vermez (bkz. I7) — bu durum
+    // aslında kimlik doğrulanmamış olduğu halde öyleymiş gibi görünmeye
+    // neden olurdu.
+    if (token.trim().length === 0) {
+      throw new EArsivValidationError('Token boş veya yalnızca boşluk olamaz.', [
+        { path: 'token', message: 'Geçersiz token.' },
+      ])
+    }
     this.currentToken = token
   }
 
@@ -40,6 +49,11 @@ export class AuthService implements TokenProvider {
       throw new EArsivAuthError('Oturum açılmamış. Önce login() veya setToken() çağırın.')
     }
     return this.currentToken
+  }
+
+  /** Token'ı temizler; `TokenProvider` sözleşmesinin bir parçası (bkz. I7). */
+  clearToken(): void {
+    this.currentToken = undefined
   }
 
   /** Kullanıcı adı ve şifre ile giriş yapar, token'ı saklar ve döndürür. */
@@ -54,14 +68,21 @@ export class AuthService implements TokenProvider {
     // yanlış firma adına kesilebilirdi.
     this.currentToken = undefined
 
-    const raw = await this.http.postForm(Endpoint.LOGIN, {
-      assoscmd: command,
-      rtype: 'json',
-      userid: credentials.username,
-      sifre: credentials.password,
-      sifre2: credentials.password,
-      parola: '1',
-    })
+    // login yeniden denenebilir: başarısız bir giriş denemesi hiçbir kalıcı
+    // durum değiştirmez (bkz. C1) — mükerrer POST, mükerrer bir belge değil,
+    // yalnızca fazladan bir kimlik doğrulama denemesi anlamına gelir.
+    const raw = await this.http.postForm(
+      Endpoint.LOGIN,
+      {
+        assoscmd: command,
+        rtype: 'json',
+        userid: credentials.username,
+        sifre: credentials.password,
+        sifre2: credentials.password,
+        parola: '1',
+      },
+      { retryable: true },
+    )
 
     // Giriş yanıtı `data` zarfı kullanmıyor; token kökte geliyor. Yine de
     // hata biçimleri aynı olduğu için ayrıştırıcıdan geçiriyoruz.
@@ -96,10 +117,12 @@ export class AuthService implements TokenProvider {
     // yukarıda. Üretim koruması geçildikten sonra burada da temizliyoruz.
     this.currentToken = undefined
 
-    const raw = await this.http.postForm(Endpoint.ESIGN, {
-      assoscmd: 'kullaniciOner',
-      rtype: 'json',
-    })
+    // esign da salt okunur bir öneri adımıdır; yeniden denenebilir (bkz. C1).
+    const raw = await this.http.postForm(
+      Endpoint.ESIGN,
+      { assoscmd: 'kullaniciOner', rtype: 'json' },
+      { retryable: true },
+    )
     parsePortalResponse(raw, { command: Command.SUGGEST_TEST_USER, callId: 'kullaniciOner' })
 
     const username = isRecord(raw) ? raw.userid : undefined
@@ -125,6 +148,9 @@ export class AuthService implements TokenProvider {
     if (token === undefined) return
 
     try {
+      // logout bir durum DEĞİŞİKLİĞİdir; varsayılan retryable:false burada
+      // bilinçli olarak KORUNUR (bkz. C1) — yeniden denenirse sunucu
+      // tarafında ikinci bir oturum kapatma isteği daha atılabilir.
       await this.http.postForm(Endpoint.LOGIN, {
         assoscmd: 'logout',
         rtype: 'json',

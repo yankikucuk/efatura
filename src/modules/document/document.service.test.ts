@@ -6,7 +6,7 @@ import type { DispatchGateway, HttpClient } from '../../transport/index.js'
 import { DocumentService } from './document.service.js'
 
 const options = resolveClientOptions({ environment: 'test' })
-const tokens = { getToken: (): string => 'tok123' }
+const tokens = { getToken: (): string => 'tok123', clearToken: (): void => undefined }
 
 const build = (
   call = vi.fn(),

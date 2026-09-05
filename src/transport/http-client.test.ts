@@ -48,7 +48,7 @@ describe('HttpClient.postForm', () => {
     ).toContain('T%C3%BCrkiye')
   })
 
-  it('5xx yanıtını yeniden dener ve HTTP durumunu koruyarak fırlatır', async () => {
+  it('5xx yanıtını yeniden dener ve HTTP durumunu koruyarak fırlatır (retryable: true)', async () => {
     const fetchMock = vi.fn(() => new Response('bozuk', { status: 503 }))
     const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
 
@@ -57,11 +57,29 @@ describe('HttpClient.postForm', () => {
     // silinseydi hata genel "Portala ulaşılamadı." mesajıyla ve status
     // olmadan yeniden sarılırdı, ama sınıf ve çağrı sayısı aynı kalırdı.
     // status ve attempts alanlarını sabitlemek korumayı gerçekten pinler.
+    await expect(client.postForm(Endpoint.DISPATCH, {}, { retryable: true })).rejects.toMatchObject(
+      {
+        status: 503,
+        attempts: 3,
+      },
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('retryable belirtilmezse 5xx yanıtını TEK denemede fırlatır (C1)', async () => {
+    // Varsayılan güvenli taraf: bayrak verilmeyen bir komut yeniden
+    // denenmez. Bu test bilerek {retryable: true} vermiyor — bayrağın
+    // gerçekten varsayılan false olduğunu pinler. Bayrak geçici olarak
+    // true'ya çevrilirse (ör. "|| true" eklenirse) bu test 3 çağrı görür ve
+    // kırılır.
+    const fetchMock = vi.fn(() => new Response('bozuk', { status: 503 }))
+    const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
+
     await expect(client.postForm(Endpoint.DISPATCH, {})).rejects.toMatchObject({
       status: 503,
-      attempts: 3,
+      attempts: 1,
     })
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('ayrıştırılamayan gövdede GERÇEK deneme sayısını bildirir', async () => {
@@ -76,7 +94,9 @@ describe('HttpClient.postForm', () => {
     })
     const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
 
-    await expect(client.postForm(Endpoint.DISPATCH, {})).rejects.toMatchObject({ attempts: 2 })
+    await expect(client.postForm(Endpoint.DISPATCH, {}, { retryable: true })).rejects.toMatchObject(
+      { attempts: 2 },
+    )
   })
 
   it('geçici hatadan sonra başarılı denemeyi kabul eder', async () => {
@@ -88,7 +108,7 @@ describe('HttpClient.postForm', () => {
     })
     const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
 
-    await expect(client.postForm(Endpoint.DISPATCH, {})).resolves.toEqual({
+    await expect(client.postForm(Endpoint.DISPATCH, {}, { retryable: true })).resolves.toEqual({
       data: 'ikinci denemede',
     })
     expect(fetchMock).toHaveBeenCalledTimes(2)
@@ -98,7 +118,9 @@ describe('HttpClient.postForm', () => {
     const fetchMock = vi.fn(() => new Response('yok', { status: 404 }))
     const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
 
-    await expect(client.postForm(Endpoint.DISPATCH, {})).rejects.toThrow(EArsivNetworkError)
+    await expect(client.postForm(Endpoint.DISPATCH, {}, { retryable: true })).rejects.toThrow(
+      EArsivNetworkError,
+    )
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
