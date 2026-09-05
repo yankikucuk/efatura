@@ -43,10 +43,70 @@ export function computeLineItem(item: LineItemInput, index = 0): ComputedLineIte
   }
 }
 
+const clampPercent = (value: number): number =>
+  Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : 0
+
 /**
- * Kalemleri hesaplar ve fatura düzeyi toplamları türetir.
- * Toplamlar yuvarlanmış kalem değerlerinden gelir; böylece kalem toplamı ile
- * fatura toplamı hiçbir zaman bir kuruş sapmaz.
+ * `computeLineItem` ile AYNI aritmetiği, girdi doğrulaması YAPMADAN uygular.
+ *
+ * Yalnızca okuma yolunda (`InvoiceService.getInvoice`) kullanılır. Portaldan
+ * gelen bir satır zaten var olan bir kaydın parçasıdır — reddedilecek bir
+ * "girdi" değildir (bkz. I4). Miktar/birim fiyat negatif veya sonlu değilse
+ * sessizce 0 kabul edilir; yüzde alanları [0, 100] aralığına kelepçelenir.
+ * Böylece `toMinor`/`applyPercent` hiçbir koşulda fırlatamaz — okuma asla bir
+ * `EArsivValidationError` üretmez.
+ */
+export function computeLineItemForRead(item: LineItemInput): ComputedLineItem {
+  const quantity = Number.isFinite(item.quantity) ? item.quantity : 0
+  const unitPrice = Number.isFinite(item.unitPrice) && item.unitPrice >= 0 ? item.unitPrice : 0
+
+  const grossMinor = toMinor(quantity * unitPrice)
+  const discountMinor = applyPercent(grossMinor, clampPercent(item.discountRate ?? 0))
+  const netMinor = grossMinor - discountMinor
+  const vatMinor = applyPercent(netMinor, clampPercent(item.vatRate))
+  const additionalTaxMinor = applyPercent(netMinor, clampPercent(item.additionalTaxRate ?? 0))
+
+  return {
+    ...item,
+    grossAmount: fromMinor(grossMinor),
+    discountAmount: fromMinor(discountMinor),
+    netAmount: fromMinor(netMinor),
+    vatAmount: fromMinor(vatMinor),
+    additionalTaxAmount: fromMinor(additionalTaxMinor),
+  }
+}
+
+/**
+ * Hesaplanmış kalemlerden fatura düzeyi toplamları türetir. Toplamlar
+ * yuvarlanmış kalem değerlerinden gelir; böylece kalem toplamı ile fatura
+ * toplamı hiçbir zaman bir kuruş sapmaz. `computeTotals` (yazma yolu) ve
+ * `InvoiceService.getInvoice`'in okuma yolu (bkz. I4) tarafından paylaşılır.
+ */
+export function sumTotals(lines: readonly ComputedLineItem[]): InvoiceTotals {
+  const lineTotalMinor = sumMinor(lines.map((line) => toMinor(line.grossAmount)))
+  const discountMinor = sumMinor(lines.map((line) => toMinor(line.discountAmount)))
+  const taxBaseMinor = sumMinor(lines.map((line) => toMinor(line.netAmount)))
+  const vatMinor = sumMinor(lines.map((line) => toMinor(line.vatAmount)))
+  const additionalMinor = sumMinor(lines.map((line) => toMinor(line.additionalTaxAmount)))
+  const totalTaxesMinor = vatMinor + additionalMinor
+  const grandTotalMinor = taxBaseMinor + totalTaxesMinor
+
+  return {
+    lineTotal: fromMinor(lineTotalMinor),
+    totalDiscount: fromMinor(discountMinor),
+    taxBase: fromMinor(taxBaseMinor),
+    calculatedVat: fromMinor(vatMinor),
+    additionalTaxes: fromMinor(additionalMinor),
+    totalTaxes: fromMinor(totalTaxesMinor),
+    grandTotal: fromMinor(grandTotalMinor),
+    payableAmount: fromMinor(grandTotalMinor),
+  }
+}
+
+/**
+ * Kalemleri DOĞRULAYARAK hesaplar ve fatura düzeyi toplamları türetir.
+ * Yazma yolunda (`createDraft`) kullanılır — bkz. `computeLineItemForRead`
+ * okuma yolu için doğrulamasız eşdeğeri.
  */
 export function computeTotals(items: readonly LineItemInput[]): {
   lines: ComputedLineItem[]
@@ -57,28 +117,7 @@ export function computeTotals(items: readonly LineItemInput[]): {
   }
 
   const lines = items.map((item, index) => computeLineItem(item, index))
-
-  const lineTotalMinor = sumMinor(lines.map((line) => toMinor(line.grossAmount)))
-  const discountMinor = sumMinor(lines.map((line) => toMinor(line.discountAmount)))
-  const taxBaseMinor = sumMinor(lines.map((line) => toMinor(line.netAmount)))
-  const vatMinor = sumMinor(lines.map((line) => toMinor(line.vatAmount)))
-  const additionalMinor = sumMinor(lines.map((line) => toMinor(line.additionalTaxAmount)))
-  const totalTaxesMinor = vatMinor + additionalMinor
-  const grandTotalMinor = taxBaseMinor + totalTaxesMinor
-
-  return {
-    lines,
-    totals: {
-      lineTotal: fromMinor(lineTotalMinor),
-      totalDiscount: fromMinor(discountMinor),
-      taxBase: fromMinor(taxBaseMinor),
-      calculatedVat: fromMinor(vatMinor),
-      additionalTaxes: fromMinor(additionalMinor),
-      totalTaxes: fromMinor(totalTaxesMinor),
-      grandTotal: fromMinor(grandTotalMinor),
-      payableAmount: fromMinor(grandTotalMinor),
-    },
-  }
+  return { lines, totals: sumTotals(lines) }
 }
 
 /**

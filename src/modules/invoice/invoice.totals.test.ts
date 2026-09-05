@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { Unit } from '../../constants/index.js'
 import { EArsivValidationError } from '../../core/index.js'
 
-import { computeLineItem, computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
+import {
+  computeLineItem,
+  computeLineItemForRead,
+  computeTotals,
+  mergeAndVerifyTotals,
+} from './invoice.totals.js'
 import type { LineItemInput } from './invoice.types.js'
 
 const item = (overrides: Partial<LineItemInput> = {}): LineItemInput => ({
@@ -72,6 +77,30 @@ describe('computeLineItem', () => {
 
   it('boş kalem adında hata fırlatır', () => {
     expect(() => computeLineItem(item({ name: '   ' }))).toThrow(EArsivValidationError)
+  })
+})
+
+describe('computeLineItemForRead (I4)', () => {
+  it('doğrulama yapmadan boş ada sahip bir kalemi hesaplar', () => {
+    // Okuma yolu (getInvoice) portaldan gelen bir satırı REDDETMEMELİ:
+    // kullanıcı zaten var olan bir kaydı okuyor, yeni bir kayıt oluşturmuyor.
+    expect(() => computeLineItemForRead(item({ name: '' }))).not.toThrow()
+    expect(computeLineItemForRead(item({ name: '' }))).toMatchObject({ name: '' })
+  })
+
+  it('negatif miktar veya birim fiyatta da hata fırlatmaz', () => {
+    expect(() => computeLineItemForRead(item({ quantity: -1 }))).not.toThrow()
+    expect(() => computeLineItemForRead(item({ unitPrice: -5 }))).not.toThrow()
+  })
+
+  it('geçerli bir kalemde computeLineItem ile aynı tutarları üretir', () => {
+    expect(computeLineItemForRead(item())).toMatchObject({
+      grossAmount: 100,
+      discountAmount: 0,
+      netAmount: 100,
+      vatAmount: 20,
+      additionalTaxAmount: 0,
+    })
   })
 })
 

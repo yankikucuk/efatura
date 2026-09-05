@@ -8,6 +8,20 @@ import { parsePortalResponse } from './response.parser.js'
 
 const ctx = { command: Command.CREATE_INVOICE, callId: 'test-call-id' }
 
+describe('parsePortalResponse — payload.error yanlış-pozitifleri (I6)', () => {
+  // `payload.error !== undefined && payload.error !== null` "", "0", 0 ve
+  // false değerlerini de hata sayıyordu — `data.hata === ''` kusurunun (13
+  // satır altında düzeltilen) aynısı, üst seviyede. Portal başarıda bu tür
+  // "boş/sıfır" bayraklar gönderiyor.
+  it.each([['', '0', 0, false] as const].flat())(
+    'error alanı %j iken başarıyla ayrıştırır',
+    (errorValue) => {
+      const result = parsePortalResponse({ error: errorValue, data: { ok: true } }, ctx)
+      expect(result).toEqual({ ok: true })
+    },
+  )
+})
+
 describe('parsePortalResponse', () => {
   it('üst seviye error biçimini hataya çevirir', () => {
     expect(() => parsePortalResponse(portalResponses.unauthorized, ctx)).toThrow(EArsivApiError)

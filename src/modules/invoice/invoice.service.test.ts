@@ -162,6 +162,58 @@ describe('InvoiceService.getInvoice', () => {
     expect(detail.buyer.taxOrIdentityNumber).toBe('11111111111')
     expect(detail.raw).toBeDefined()
   })
+
+  it('boş malHizmet alanlı satırda hata FIRLATMAZ, detayı döndürür (I4)', () => {
+    const call = vi.fn().mockResolvedValue({
+      belgeNumarasi: 'GIB1',
+      faturaTarihi: '03/09/2026',
+      vknTckn: '11111111111',
+      malHizmetTable: [
+        { malHizmet: '', miktar: 1, birim: 'C62', birimFiyat: '100,00', kdvOrani: 20 },
+      ],
+    })
+
+    return expect(new InvoiceService(gatewayMock(call)).getInvoice('abc')).resolves.toMatchObject({
+      lineItems: [expect.objectContaining({ name: '' })],
+    })
+  })
+
+  it('portalın kendi toplamlarını raporlar, kalemlerden yeniden hesaplamaz (I4)', async () => {
+    // Portal matrah/kdv/toplam alanlarını gönderiyor; bu kütüphanenin kendi
+    // aritmetiği (kalemlerden hesaplanan) bunlarla KASITLI olarak
+    // uyuşmuyor — böylece hangi kaynağın raporlandığı ayırt edilebiliyor.
+    const call = vi.fn().mockResolvedValue({
+      belgeNumarasi: 'GIB1',
+      faturaTarihi: '03/09/2026',
+      vknTckn: '11111111111',
+      malHizmetTable: [
+        { malHizmet: 'Danışmanlık', miktar: 1, birim: 'C62', birimFiyat: '1.234,56', kdvOrani: 20 },
+      ],
+      // Portalın kendi (gerçek dünyada kalem toplamıyla eşleşmesi gereken,
+      // ama testte bilerek FARKLI verilen) resmi rakamları:
+      matrah: '1.234,56',
+      malhizmetToplamTutari: '1.234,56',
+      toplamIskonto: '0,00',
+      hesaplanankdv: '999,99',
+      vergilerToplami: '999,99',
+      vergilerDahilToplamTutar: '2.234,55',
+      odenecekTutar: '2.234,55',
+    })
+
+    const detail = await new InvoiceService(gatewayMock(call)).getInvoice('abc')
+
+    expect(detail.lineItems[0]?.unitPrice).toBe(1234.56)
+    expect(detail.totals).toEqual({
+      lineTotal: 1234.56,
+      totalDiscount: 0,
+      taxBase: 1234.56,
+      calculatedVat: 999.99,
+      additionalTaxes: 0,
+      totalTaxes: 999.99,
+      grandTotal: 2234.55,
+      payableAmount: 2234.55,
+    })
+  })
 })
 
 describe('InvoiceService.cancelDraft', () => {

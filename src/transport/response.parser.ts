@@ -24,6 +24,26 @@ function collectMessages(raw: unknown): string[] {
     .filter((entry): entry is string => entry !== undefined)
 }
 
+/**
+ * Bir bayrak alanının GERÇEKTEN "dolu/olumlu" olup olmadığını belirler.
+ *
+ * `data.hata === ''` kusurunun (aşağıda) üst seviyedeki AYNASI: eski kontrol
+ * `payload.error !== undefined && payload.error !== null` idi ve bu yüzden
+ * `""`, `"0"`, `0`, `false` gibi portalın BAŞARIDA gönderdiği "boş/sıfır"
+ * değerleri de hata sayıyordu (bkz. I6). `Boolean(value)` de yetmez:
+ * JavaScript'te `"0"` doğrulanabilir (truthy) bir string'tir ama portal
+ * bunu boş bayrakla eşdeğer bir kural olarak kullanıyor.
+ */
+function isTruthyPortalFlag(value: unknown): boolean {
+  if (value === undefined || value === null || value === false) return false
+  if (typeof value === 'number') return value !== 0
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed !== '' && trimmed !== '0'
+  }
+  return true
+}
+
 function throwApi(message: string, raw: unknown, ctx: ParseContext, code?: string): never {
   throw new EArsivApiError(message, {
     command: ctx.command,
@@ -47,7 +67,7 @@ export function parsePortalResponse(payload: unknown, ctx: ParseContext): unknow
     throwApi('Portal beklenmeyen bir yanıt döndürdü (JSON nesnesi değil).', payload, ctx)
   }
 
-  if (payload.error !== undefined && payload.error !== null) {
+  if (isTruthyPortalFlag(payload.error)) {
     const messages = collectMessages(payload.messages)
     const detail = messages.length > 0 ? messages.join(' | ') : 'Ayrıntı verilmedi.'
     throwApi(`Portal isteği reddetti: ${detail}`, payload, ctx)
@@ -59,7 +79,9 @@ export function parsePortalResponse(payload: unknown, ctx: ParseContext): unknow
   // alanı gönderiyor ama boş string olarak (canlı doğrulandı:
   // EARSIV_PORTAL_FATURA_GETIR başarılı yanıtında `data.hata === ''`).
   // Yalnızca `typeof === 'string'` kontrol etmek her başarılı getInvoice
-  // çağrısını boş mesajlı bir hataya çevirirdi.
+  // çağrısını boş mesajlı bir hataya çevirirdi. Yukarıdaki `payload.error`
+  // kontrolü (bkz. I6, `isTruthyPortalFlag`) bunun TAM AYNASI: portal orada
+  // da "boş/sıfır" değerleri başarıda gönderiyor.
   if (isRecord(data) && typeof data.hata === 'string' && data.hata.trim() !== '') {
     const text = data.hata
     throwApi(text, payload, ctx, ERROR_CODE.exec(text)?.[1])

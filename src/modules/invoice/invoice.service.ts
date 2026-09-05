@@ -9,8 +9,18 @@ import { type DateInput, EArsivValidationError, formatPortalDate } from '../../c
 import type { DispatchGateway } from '../../transport/index.js'
 
 import { resolveCreatedEttn } from './ettn-resolver.js'
-import { fromPortalPayload, toInvoiceSummary, toPortalInvoice } from './invoice.mapper.js'
-import { computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
+import {
+  fromPortalPayload,
+  portalTotals,
+  toInvoiceSummary,
+  toPortalInvoice,
+} from './invoice.mapper.js'
+import {
+  computeLineItemForRead,
+  computeTotals,
+  mergeAndVerifyTotals,
+  sumTotals,
+} from './invoice.totals.js'
 import type {
   CreatedInvoice,
   InvoiceDetail,
@@ -103,22 +113,16 @@ export class InvoiceService {
       { ettn },
     )
     const input = fromPortalPayload(raw)
-    const { lines, totals } =
-      input.lineItems.length > 0
-        ? computeTotals(input.lineItems)
-        : {
-            lines: [],
-            totals: {
-              lineTotal: 0,
-              totalDiscount: 0,
-              taxBase: 0,
-              calculatedVat: 0,
-              additionalTaxes: 0,
-              totalTaxes: 0,
-              grandTotal: 0,
-              payableAmount: 0,
-            },
-          }
+    // Okuma yolu `computeLineItem`'in girdi doğrulamasını ASLA çalıştırmaz:
+    // kullanıcı zaten var olan bir kaydı okuyor, yeni bir kayıt oluşturmuyor.
+    // Boş `malHizmet` gibi bir portal tuhaflığı bu isteği reddetmemeli
+    // (bkz. I4) — reddederse çağıran `detail.raw`'a bile erişemez.
+    const lines = input.lineItems.map((item) => computeLineItemForRead(item))
+    // Toplamlar ÖNCELİKLE portalın kendi yanıtından okunur; yalnızca ilgili
+    // alan yanıtta hiç yoksa kalemlerden hesaplanana düşülür. Bu kütüphanenin
+    // kendi aritmetiği, GİB'in tuttuğu resmi rakamların YERİNE geçmemeli
+    // (bkz. I4).
+    const totals = portalTotals(raw, sumTotals(lines))
 
     return {
       ettn,

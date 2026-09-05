@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { portalResponses } from '../../../tests/fixtures/portal-responses.js'
 import { Country, Currency, InvoiceType, Unit } from '../../constants/index.js'
 
-import { fromPortalPayload, toInvoiceSummary, toPortalInvoice } from './invoice.mapper.js'
+import { fromPortalPayload, num, toInvoiceSummary, toPortalInvoice } from './invoice.mapper.js'
 import type { InvoiceInput } from './invoice.types.js'
 
 const input = (overrides: Partial<InvoiceInput> = {}): InvoiceInput => ({
@@ -125,6 +125,28 @@ describe('toPortalInvoice', () => {
   })
 })
 
+describe('num (I4 — binlik ayırıcı sağlamlaştırma)', () => {
+  it('binlik nokta + ondalık virgülü ayrıştırır', () => {
+    expect(num('1.234,56')).toBe(1234.56)
+  })
+
+  it('yalnızca ondalık virgülü ayrıştırır', () => {
+    expect(num('1234,56')).toBe(1234.56)
+  })
+
+  it('yalnızca ondalık noktayı ayrıştırır', () => {
+    expect(num('1234.56')).toBe(1234.56)
+  })
+
+  it('tam sayı stringi ayrıştırır', () => {
+    expect(num('1234')).toBe(1234)
+  })
+
+  it('ayrıştırılamayan girdide fallback döner', () => {
+    expect(num('abc', 7)).toBe(7)
+  })
+})
+
 describe('toInvoiceSummary', () => {
   it('taslak satırını normalize eder ve tarih ayırıcısını düzeltir', () => {
     const rows = portalResponses.draftList.data as unknown as Record<string, unknown>[]
@@ -138,6 +160,22 @@ describe('toInvoiceSummary', () => {
       documentType: 'FATURA',
       approvalStatus: 'Onaylanmadı',
     })
+  })
+
+  it('ayrıştırılamayan tarihte hata fırlatmaz, ham stringi geri verir (I5)', () => {
+    // formatPortalDate('') fırlatır; toInvoiceSummary'nin TEK satırı
+    // reddetmesi, listenin TAMAMINI bir istisnayla düşürüyordu (bkz. I5).
+    const row: Record<string, unknown> = {
+      ettn: 'bozuk-satir',
+      belgeNumarasi: 'GIB1',
+      aliciVknTckn: '11111111111',
+      aliciUnvanAdSoyad: 'Bozuk Satır A.Ş.',
+      belgeTarihi: '',
+      belgeTuru: 'FATURA',
+      onayDurumu: 'Onaylanmadı',
+    }
+    expect(() => toInvoiceSummary(row)).not.toThrow()
+    expect(toInvoiceSummary(row).date).toBe('')
   })
 })
 

@@ -13,16 +13,31 @@ import {
 import { formatMinor, formatPortalDate, formatPortalTime, toMinor } from '../../core/index.js'
 
 import { computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
-import type { InvoiceInput, InvoiceSummary, LineItemInput } from './invoice.types.js'
+import type { InvoiceInput, InvoiceSummary, InvoiceTotals, LineItemInput } from './invoice.types.js'
 
 const str = (value: unknown, fallback = ''): string =>
   typeof value === 'string' ? value : typeof value === 'number' ? String(value) : fallback
 
-const num = (value: unknown, fallback = 0): number => {
+/**
+ * Portalın sayısal alanlarını ayrıştırır.
+ *
+ * Türkçe biçim binlik ayırıcı olarak nokta, ondalık ayırıcı olarak virgül
+ * kullanır (`"1.234,56"`). Eski sürüm yalnızca virgülü noktaya çeviriyordu
+ * (`value.replace(',', '.')`) — binlik noktayı ayıklamadığı için
+ * `"1.234,56"` `"1.234.56"` olarak `NaN`'a düşüyor ve ₺999 üzeri her tutar
+ * sessizce 0 olarak raporlanıyordu (bkz. I4). Virgül varsa Türkçe biçim
+ * kabul edilir (noktalar ayıklanır, virgül ondalık noktaya çevrilir);
+ * virgül yoksa nokta zaten ondalık ayırıcıdır (`"1234.56"`, `"1234"`).
+ */
+export const num = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
-    const parsed = Number(value.replace(',', '.'))
-    if (Number.isFinite(parsed)) return parsed
+    const trimmed = value.trim()
+    const normalized = trimmed.includes(',')
+      ? trimmed.replace(/\./g, '').replace(',', '.')
+      : trimmed
+    const parsed = Number(normalized)
+    if (normalized.length > 0 && Number.isFinite(parsed)) return parsed
   }
   return fallback
 }
@@ -119,8 +134,31 @@ export function toPortalInvoice(input: InvoiceInput): Record<string, unknown> {
 }
 
 /**
+ * Bir satırın tarihini normalize eder; ayrıştırılamazsa ham stringi geri
+ * verir. `str()` yalnızca alan STRING DEĞİLSE varsayılana düşer — boş string
+ * ('') geçerli bir string olduğu için varsayılanı tetiklemez ve doğrudan
+ * `formatPortalDate('')`'a gider, ki bu fırlatır (bkz. I5). Tek bir bozuk
+ * satırın tüm listeyi düşürmemesi için bu fırlatma burada yutulur.
+ */
+function normalizeSummaryDate(raw: unknown): string {
+  const rawDate = str(raw, formatPortalDate())
+  try {
+    return formatPortalDate(rawDate)
+  } catch {
+    return rawDate
+  }
+}
+
+/**
  * Taslak listesi satırını normalize eder. Portal bu listede tarihi tire ile
  * döndürüyor (`03-09-2026`) ancak fatura yükünde eğik çizgi bekliyor.
+ *
+ * Tek bir satırın alanı bozuksa (ör. ayrıştırılamayan tarih) bu fonksiyon
+ * FIRLATMAZ — bkz. `normalizeSummaryDate`. Aksi halde `listDrafts` gibi bir
+ * toplu listeleme, paylaşılan test kullanıcı havuzundaki YABANCI tek bir
+ * kayıt yüzünden tamamen başarısız olurdu (bkz. I5; `createDraft` içindeki
+ * ikinci `listDrafts` çağrısı özellikle risklidir: ETTN çözümü bu listeye
+ * bağlıdır).
  */
 export function toInvoiceSummary(raw: Record<string, unknown>): InvoiceSummary {
   return {
@@ -128,7 +166,7 @@ export function toInvoiceSummary(raw: Record<string, unknown>): InvoiceSummary {
     documentNumber: str(raw.belgeNumarasi),
     buyerTaxOrIdentityNumber: str(raw.aliciVknTckn),
     buyerName: str(raw.aliciUnvanAdSoyad),
-    date: formatPortalDate(str(raw.belgeTarihi, formatPortalDate())),
+    date: normalizeSummaryDate(raw.belgeTarihi),
     documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
     approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,
   }
@@ -190,5 +228,32 @@ export function fromPortalPayload(raw: Record<string, unknown>): InvoiceInput {
     note: str(raw.not),
     orderNumber: str(raw.siparisNumarasi),
     waybillNumber: str(raw.irsaliyeNumarasi),
+  }
+}
+
+/**
+ * `getInvoice` için fatura toplamlarını PORTALIN KENDİ yanıtından okur.
+ *
+ * Eski davranış toplamları her zaman kalemlerden yeniden hesaplıyordu — bu,
+ * bu kütüphanenin aritmetiğini GİB'in tuttuğu resmi rakamların yerine
+ * koyuyordu (bkz. I4). Bir alan portal yanıtında YOKSA (ör. eski bir
+ * fikstürde) `computed` düşüşü kullanılır; alan varsa değeri ne olursa
+ * olsun (Türkçe ondalık biçimiyle) `num()` ile ayrıştırılıp aynen aktarılır.
+ * `additionalTaxes` portalda ayrı bir alan olarak gelmiyor (bkz.
+ * `InvoiceTotals.additionalTaxes` belgesi), bu yüzden her zaman hesaplanır.
+ */
+export function portalTotals(raw: Record<string, unknown>, computed: InvoiceTotals): InvoiceTotals {
+  const pick = (key: string, fallback: number): number =>
+    raw[key] === undefined ? fallback : num(raw[key], fallback)
+
+  return {
+    lineTotal: pick('malhizmetToplamTutari', computed.lineTotal),
+    totalDiscount: pick('toplamIskonto', computed.totalDiscount),
+    taxBase: pick('matrah', computed.taxBase),
+    calculatedVat: pick('hesaplanankdv', computed.calculatedVat),
+    additionalTaxes: computed.additionalTaxes,
+    totalTaxes: pick('vergilerToplami', computed.totalTaxes),
+    grandTotal: pick('vergilerDahilToplamTutar', computed.grandTotal),
+    payableAmount: pick('odenecekTutar', computed.payableAmount),
   }
 }
