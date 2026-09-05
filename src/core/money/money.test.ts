@@ -57,6 +57,13 @@ describe('applyPercent', () => {
     expect(applyPercent(350, 1)).toBe(4)
   })
 
+  it('ondalıklı oranlarda kayan nokta artığını temizler', () => {
+    // 2470 kuruşun %12,5'i = 308.75 -> 309
+    expect(applyPercent(2_470, 12.5)).toBe(309)
+    // 1150 kuruşun %8,1'i = 93.15 -> 93
+    expect(applyPercent(1_150, 8.1)).toBe(93)
+  })
+
   it('yüzde aralık dışındaysa hata fırlatır', () => {
     expect(() => applyPercent(100, -1)).toThrow(EArsivValidationError)
     expect(() => applyPercent(100, 101)).toThrow(EArsivValidationError)

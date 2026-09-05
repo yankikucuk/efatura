@@ -6,7 +6,9 @@ import { parsePortalDate } from './parse.js'
 export type DateInput = Date | string
 
 const PORTAL_DATE = /^\d{2}\/\d{2}\/\d{4}$/
-const PORTAL_TIME = /^\d{2}:\d{2}:\d{2}$/
+// Saat deseni aralık da doğrular: yalnızca şekle bakmak "99:99:99" gibi
+// geçersiz saatlerin sessizce portala gitmesine izin verirdi.
+const PORTAL_TIME = /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/
 
 const pad = (value: number): string => String(value).padStart(2, '0')
 
@@ -25,7 +27,12 @@ function toDate(input: DateInput | undefined, label: string): Date {
 
 /** Portalın fatura yükünde beklediği `dd/MM/yyyy` biçimi. */
 export function formatPortalDate(input?: DateInput): string {
-  if (typeof input === 'string' && PORTAL_DATE.test(input)) return input
+  if (typeof input === 'string' && PORTAL_DATE.test(input)) {
+    // Şekil doğru olsa bile takvimde var olmayan bir gün olabilir
+    // (31/02/2026). Doğrulamayı atlamamak için parse edip aynen geri veriyoruz.
+    parsePortalDate(input)
+    return input
+  }
   const date = toDate(input, 'date')
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${String(date.getFullYear())}`
 }

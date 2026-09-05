@@ -54,7 +54,9 @@ export function applyPercent(minor: number, percent: number): number {
       { path: 'oran', message: `Aralık dışı yüzde değeri: ${String(percent)}` },
     ])
   }
-  return roundHalfAwayFromZero((minor * percent) / 100)
+  // toMinor ile aynı sapma temizliği: oran tam sayı olmayabilir
+  // (ör. %12,5 iskonto) ve o durumda aynı kayan nokta artığı ortaya çıkar.
+  return roundHalfAwayFromZero(Number(((minor * percent) / 100).toPrecision(15)))
 }
 
 /** Kuruş değerlerini toplar. */

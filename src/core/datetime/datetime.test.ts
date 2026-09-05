@@ -29,6 +29,11 @@ describe('formatPortalDate', () => {
   it('anlamsız girdide hata fırlatır', () => {
     expect(() => formatPortalDate('yarın')).toThrow(EArsivValidationError)
   })
+
+  it('portal biçiminde olsa bile takvimde olmayan günü reddeder', () => {
+    expect(() => formatPortalDate('31/02/2026')).toThrow(EArsivValidationError)
+    expect(() => formatPortalDate('99/99/2026')).toThrow(EArsivValidationError)
+  })
 })
 
 describe('formatPortalTime', () => {
@@ -42,6 +47,11 @@ describe('formatPortalTime', () => {
 
   it('tanımsız girdide şu anı kullanır', () => {
     expect(formatPortalTime()).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+  })
+
+  it('şekli doğru ama aralık dışı saati reddeder', () => {
+    expect(() => formatPortalTime('99:99:99')).toThrow(EArsivValidationError)
+    expect(() => formatPortalTime('24:00:00')).toThrow(EArsivValidationError)
   })
 })
 
