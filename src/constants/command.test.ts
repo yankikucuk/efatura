@@ -86,10 +86,24 @@ describe('FAILURE_MARKERS', () => {
     expect(isFailure('Talebiniz başarıyla kaydedilemedi.')).toBe(true)
   })
 
+  it('olumsuzluk eki taşımayan hata bildirimlerini de yakalar', () => {
+    expect(isFailure('İşleminiz başarısız oldu.')).toBe(true)
+    expect(isFailure('İtirazınız reddedildi.')).toBe(true)
+    expect(isFailure('Talebiniz reddedilmiştir.')).toBe(true)
+    expect(isFailure('Talebiniz olumsuz sonuçlandı.')).toBe(true)
+  })
+
   it('masum kelimeleri hata saymaz', () => {
     // "muhatap" faturacılıkta standart bir terim ve "hata" alt metnini içerir.
     expect(isFailure('Muhatap firma bilgileri güncellendi.')).toBe(false)
     expect(isFailure('Ödemeniz başarıyla alınmıştır.')).toBe(false)
+    // "Ramazan" içinde "amaz" geçer; olumsuzluk deseni sabitlenmemiş olsaydı
+    // bu masum cümle hata sayılırdı.
+    expect(
+      isFailure(
+        'Ramazan ayı nedeniyle çalışma saatleri değişmiştir; talebiniz başarıyla oluşturuldu.',
+      ),
+    ).toBe(false)
   })
 
   it('gerçek başarı metinlerini hata saymaz', () => {

@@ -69,5 +69,12 @@ export const FAILURE_MARKERS: readonly RegExp[] = [
   /uymuyor/i,
   /bulunamad/i,
   /geçersiz/i,
-  /(ama|eme)(dı|di|z|mış|miş)/i,
+  /başarısız/i,
+  /reddedil/i,
+  /olumsuz/i,
+  // Türkçe yeterlilik olumsuzluğu, kelime sonuna sabitlenmiş. Sabitleme şart:
+  // serbest alt metin araması "Ramazan" içindeki "amaz" ile eşleşir ve masum
+  // bir başarı mesajını hata sayardı. İzin verilen ekler gerçek portal
+  // cümlelerinden: -tır/-dır, -sınız/-siniz, -nız/-niz, -lar/-ler.
+  /(ama|eme)(dı|di|z|mış|miş)(?=[^\p{L}]|$|(?:tır|tir|dır|dir|sınız|siniz|nız|niz|lar|ler)(?:[^\p{L}]|$))/iu,
 ]
