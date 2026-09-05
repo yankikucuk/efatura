@@ -30,7 +30,3 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.swp
-
-# Yerel araç durumu
-.superpowers/
-.gstack/
