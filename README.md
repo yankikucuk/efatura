@@ -1,0 +1,159 @@
+# efatura
+
+GİB e-Arşiv Portalı için sıfır bağımlılıklı TypeScript istemcisi.
+
+`earsivportal.efatura.gov.tr` üzerindeki e-Arşiv (perakende) fatura akışını
+kapsar: oturum açma, fatura oluşturma/okuma/listeleme/silme, belge indirme,
+SMS ile imzalama ve iptal/itiraz talepleri. Çalışma zamanı bağımlılığı yoktur;
+tüm istekler `fetch` ile yapılır.
+
+## Kurulum
+
+```bash
+npm i efatura
+```
+
+Node.js 20 veya üzeri gerekir (`fetch` global olarak kullanılabilir olmalı).
+
+## Hızlı başlangıç
+
+```ts
+import { EArsivClient, Currency, Unit } from 'efatura'
+
+const client = new EArsivClient({ environment: 'test' })
+await client.loginWithTestUser()
+
+const created = await client.createDraft({
+  currency: Currency.TURKISH_LIRA,
+  buyer: {
+    taxOrIdentityNumber: '11111111111',
+    firstName: 'Ali',
+    lastName: 'Yılmaz',
+    address: { city: 'İstanbul', district: 'Maltepe', street: 'Deneme Sk. No:1' },
+  },
+  lineItems: [
+    { name: 'Yazılım Geliştirme', quantity: 28, unit: Unit.DAY, unitPrice: 3, vatRate: 20 },
+  ],
+})
+
+console.log(created.ettn, created.documentNumber)
+await client.logout()
+```
+
+Daha kapsamlı örnekler için `examples/` dizinine bakın:
+
+- `examples/01-test-login.ts` — test kullanıcısıyla giriş
+- `examples/02-create-invoice.ts` — çok kalemli fatura oluşturma
+- `examples/03-download-document.ts` — HTML ve ZIP indirme
+- `examples/04-dispute-request.ts` — iptal/itiraz talepleri
+
+## Özellikler
+
+- Oturum yönetimi: `login`, `loginWithTestUser`, `logout`, `setToken`
+- Fatura: oluşturma (`createDraft`), listeleme (`listDrafts`, `listIncoming`),
+  okuma (`getInvoice`), silme (`cancelDraft`)
+- Toplamların kalemlerden otomatik hesaplanması (tam sayı kuruş aritmetiği)
+- Belge: HTML gösterimi (`getInvoiceHtml`), resmi paket indirme
+  (`downloadPackage`, ZIP), doğrudan indirme adresi (`getDownloadUrl`)
+- SMS ile fatura imzalama (`getPhoneNumber`, `sendSmsCode`, `verifySmsCode`)
+- İptal ve itiraz talepleri: oluşturma, listeleme, cevaplama
+- Firma bilgisi okuma/güncelleme, VKN ile firma sorgulama
+- Opsiyonel PDF üretimi (`toPdf`) — `puppeteer` peer bağımlılığı gerektirir
+
+## PHP kütüphanesinden farklar
+
+Bu kütüphane, aynı portalı hedefleyen mevcut PHP kütüphanesinden bilinçli
+olarak üç noktada ayrılır:
+
+- **`faturaUuid` artık gönderilmiyor.** Eski yaklaşım istemci tarafında bir
+  UUID üretip portala gönderiyordu; bu kütüphane ETTN'i portalın kendisinin
+  atamasına bırakır. Portal `EARSIV_PORTAL_FATURA_OLUSTUR` yanıtında ETTN
+  döndürmediği için `createDraft`, oluşturma öncesi ve sonrası taslak
+  listesinin anlık görüntüsünü karşılaştırarak yeni kaydı bulur. Fark tekil
+  bir kayda inmezse — örneğin portal listeyi henüz güncellememişse veya aynı
+  anda birden fazla taslak oluşturulmuşsa — yanlış bir ETTN döndürmek yerine
+  `EArsivAmbiguousResultError` fırlatılır; adaylar hatanın `candidates`
+  alanında bulunur.
+- **Toplamlar kalemlerden otomatik hesaplanır.** İskonto, KDV matrahı ve genel
+  toplam gibi alanları elle hesaplayıp göndermeniz gerekmez; `lineItems`
+  girdisinden tam sayı kuruş aritmetiğiyle türetilir. İsterseniz `totals` ile
+  bir değeri override edebilirsiniz — bu durumda hesaplanan değerle
+  tutarlılığı doğrulanır, uyuşmazsa istek ağa çıkmadan reddedilir.
+- **Hiçbir hata yutulmaz.** PHP kütüphanesindeki `die()` çağrıları yerine
+  altı tipli hata sınıfından biri fırlatılır (aşağıya bakın); çağıran taraf
+  `instanceof` ile ayırt edip programatik olarak ele alabilir.
+
+## Hata yönetimi
+
+Tüm hatalar `EArsivError` soyut sınıfından türer ve ayırt edici bir `kind`
+alanı taşır:
+
+| Sınıf                        | `kind`               | Ne zaman fırlatılır                                                      |
+| ---------------------------- | -------------------- | ------------------------------------------------------------------------ |
+| `EArsivValidationError`      | `'validation'`       | İstek portala gönderilmeden önce yakalanan yerel doğrulama hatası        |
+| `EArsivAuthError`            | `'auth'`             | Token yok, süresi dolmuş veya giriş reddedildi                           |
+| `EArsivApiError`             | `'api'`              | Portal iş mantığı veya yetki hatası döndürdü                             |
+| `EArsivAmbiguousResultError` | `'ambiguous-result'` | Sonuç (ör. yeni oluşturulan faturanın ETTN'i) tekil olarak belirlenemedi |
+| `EArsivNetworkError`         | `'network'`          | Zaman aşımı, DNS hatası, bağlantı kesintisi veya HTTP 5xx                |
+
+```ts
+import { EArsivApiError, EArsivClient } from 'efatura'
+
+try {
+  await client.createCancellationRequest({ ettn, reason: 'Yanlış tutar.' })
+} catch (error) {
+  if (error instanceof EArsivApiError) {
+    console.error('Portal reddetti:', error.message, error.code)
+  } else {
+    throw error
+  }
+}
+```
+
+## Test ortamı
+
+Portalın ayrı bir test ortamı vardır: `earsivportaltest.efatura.gov.tr`.
+`environment: 'test'` ile bu ortama bağlanılır ve `loginWithTestUser()` ile
+portalın kendi ürettiği bir kullanıcıyla (kullanıcı adı otomatik, şifre her
+zaman `"1"`) oturum açılır — gerçek bir GİB hesabı gerekmez ve hiçbir gerçek
+belge düzenlenmez.
+
+Bu test kullanıcıları portalı kullanan herkes arasında paylaşılır; aynı
+kullanıcıya başka geliştiricilerin de kayıtları düşebilir. Alıcı ünvanına
+rastgele bir damga eklemek (bkz. `tests/e2e`), kendi oluşturduğunuz kayıtları
+listede güvenilir biçimde ayırt etmenizi sağlar.
+
+## Belge paketi içeriği
+
+`downloadPackage(ettn)` resmi belge paketini bir ZIP olarak indirir. Paket
+`<ettn>_f.html` (HTML gösterim) ve imzalı `<ettn>_f.xml` (UBL-TR) dosyalarını
+içerir; **PDF içermez**. PDF isterseniz `npm i puppeteer` ile peer
+bağımlılığı kurup `client.toPdf(ettn)` çağırabilirsiniz — bu, portalın HTML
+gösterimini yerel olarak PDF'e render eder ve resmi imzalı belge yerine
+geçmez.
+
+## İptal/itiraz ön koşulu
+
+`createCancellationRequest` ve `createObjectionRequest` yalnızca
+**onaylanmış (imzalanmış)** bir belge için çalışır ve her belge için en
+fazla bir kez açılabilir; taslak veya daha önce talebi açılmış bir belgede
+portal iş kuralı hatası döndürür (`EArsivApiError`).
+
+## Kapsam dışı
+
+- e-Fatura (ticari, mükellefler arası) entegrasyonu — bu kütüphane yalnızca
+  e-Arşiv (perakende) portalını hedefler.
+- Müstahsil ve Serbest Meslek Makbuzu belge türleri.
+- Bir komut satırı arayüzü (CLI) — kütüphane yalnızca programatik kullanım
+  içindir.
+
+## Sorumluluk reddi
+
+Bu kütüphane GİB'in (Gelir İdaresi Başkanlığı) resmi bir ürünü değildir ve
+GİB tarafından desteklenmemektedir. Portalın kendisi belgelenmiş bir genel
+API değildir; davranışı habersiz değişebilir. Üretimde kullanmadan önce
+kendi ortamınızda doğrulayın.
+
+## Lisans
+
+MIT
