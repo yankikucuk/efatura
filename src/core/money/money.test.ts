@@ -58,10 +58,14 @@ describe('applyPercent', () => {
   })
 
   it('ondalıklı oranlarda kayan nokta artığını temizler', () => {
-    // 2470 kuruşun %12,5'i = 308.75 -> 309
-    expect(applyPercent(2_470, 12.5)).toBe(309)
-    // 1150 kuruşun %8,1'i = 93.15 -> 93
-    expect(applyPercent(1_150, 8.1)).toBe(93)
+    // Bu değerler sapma temizliği OLMADAN farklı sonuç verir; testin
+    // korumayı gerçekten sabitlemesi için ayırt edici olmaları şart.
+    // 250 x 64.6 / 100 = 161.49999999999997 -> temizlik yoksa 161, varsa 162
+    expect(applyPercent(250, 64.6)).toBe(162)
+    // 375 x 9.2 / 100 = 34.499999999999996 -> temizlik yoksa 34, varsa 35
+    expect(applyPercent(375, 9.2)).toBe(35)
+    // 1875 x 16.4 / 100 = 307.49999999999994 -> temizlik yoksa 307, varsa 308
+    expect(applyPercent(1_875, 16.4)).toBe(308)
   })
 
   it('yüzde aralık dışındaysa hata fırlatır', () => {
