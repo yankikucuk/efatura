@@ -40,19 +40,57 @@ export class InvoiceService {
   constructor(private readonly gateway: DispatchGateway) {}
 
   /**
+   * `createDraft` çağrılarını bu örnek üzerinde SERİLEŞTİRMEK için dahili
+   * zincir (round 3 madde 3, mlevent#101).
+   *
+   * Anlık görüntü-farkı tasarımı (bkz. `createDraft` belgesi) aynı
+   * `EArsivClient`/`InvoiceService` örneği üzerinden EŞZAMANLI iki çağrı
+   * geldiğinde bozuluyordu: ikisi de aynı "önce" anlık görüntüsünü görüyor,
+   * ikisi de fatura oluşturuyor, ikisi de "sonra" listesinde İKİ yeni kayıt
+   * buluyor ve ikisi de (aynı alıcı/tarihte, ör. nihai tüketici TCKN'i
+   * 11111111111 olduğunda kaçınılmaz) `EArsivAmbiguousResultError` ile
+   * REDDEDİLİYORDU — oysa portalda iki fatura da GERÇEKTEN oluşmuştu. İki
+   * dosyalanmış fatura + iki hata, sıraya koymaktan daha kötü.
+   *
+   * Süreçler-arası eşzamanlılık (ör. iki ayrı sunucu süreci) bu zincirle
+   * ÇÖZÜLMEZ — bu hâlâ belgelenmiş bir sınır. Çözülen yalnızca AYNI örnek
+   * üzerinden gelen kendinden-kaynaklı eşzamanlılıktır.
+   *
+   * Zincir KENDİSİ asla reddetmez (`.then(ok, ok)` ile her iki dalda da
+   * `undefined`'a düşer) — aksi halde bir çağrının başarısızlığı sıradaki
+   * TÜM çağrıları sonsuza kadar reddederdi.
+   */
+  private pending: Promise<unknown> = Promise.resolve()
+
+  /**
    * Taslak fatura oluşturur ve atanan ETTN'i çözer.
    *
    * Portal ETTN'i yanıtta döndürmediği için (spec §2.3) oluşturmadan önce ve
    * sonra taslak listesi alınır ve fark hesaplanır. Fark tekile inmezse
    * `EArsivAmbiguousResultError` fırlatılır — yanlış ETTN dönmek yerine.
+   *
+   * Bu döngü (anlık görüntü → oluştur → yeniden listele) bu örnek üzerinde
+   * `this.pending` zinciriyle serileştirilir: bir çağrı bitmeden bir sonraki
+   * başlamaz (bkz. `pending` belgesi).
    */
   async createDraft(input: InvoiceInput): Promise<CreatedInvoice> {
     validateInvoiceInput(input)
     // Tutarsız `totals` override'ı ağa çıkmadan yakalansın: toplamlar
     // hesaplanır ve override eşitliklere karşı doğrulanır. toPortalInvoice
-    // aynı hesabı tekrar yapar; bu ucuz ve saf bir işlem.
+    // aynı hesabı tekrar yapar; bu ucuz ve saf bir işlem. Kuyruğa girmeden
+    // ÖNCE çalışır — geçersiz girdi başka bir çağrıyı beklemeden hemen
+    // reddedilir.
     mergeAndVerifyTotals(computeTotals(input.lineItems).totals, input.totals)
 
+    const run = this.pending.then(() => this.createDraftLocked(input))
+    this.pending = run.then(
+      () => undefined,
+      () => undefined,
+    )
+    return run
+  }
+
+  private async createDraftLocked(input: InvoiceInput): Promise<CreatedInvoice> {
     const date = formatPortalDate(input.date)
     const before = new Set((await this.listDrafts(date, date)).map((row) => row.ettn))
 

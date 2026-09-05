@@ -42,6 +42,16 @@ export interface TokenProvider {
  */
 const AUTH_EXPIRED_PATTERN = /yetkiniz yok/i
 
+/**
+ * Portalın oturumun AÇIKÇA süresi dolduğunu bildirdiği metin (round 3
+ * madde 2, furkankadioglu#6). `AUTH_EXPIRED_PATTERN`'ın aksine bu metin İKİ
+ * ANLAMA GELMEZ — yalnızca süre dolumunu ifade eder, kalıcı bir yetki
+ * kısıtlaması olma ihtimali yok. Bu yüzden `probeTokenIsExpired()` ile
+ * doğrulamaya gerek yoktur: token doğrudan temizlenir, hiçbir prob isteği
+ * atılmaz.
+ */
+const SESSION_TIMEOUT_PATTERN = /zaman aşımına uğradı/i
+
 /** `/dispatch` endpoint'ine komut gönderen ince katman. */
 export class DispatchGateway {
   constructor(
@@ -53,11 +63,16 @@ export class DispatchGateway {
    * Komutu çalıştırır ve portal zarfının `data` alanını döndürür.
    * Dönüş tipi çağıran tarafından bildirilir; ayrıştırıcı yapıyı doğrulamaz.
    *
-   * Yetki-şekilli bir hata alındığında token hemen temizlenmez: önce
-   * `probeTokenIsExpired()` ile doğrulanır (bkz. `AUTH_EXPIRED_PATTERN`
-   * belgesi). Prob, bu metodu DEĞİL — kendi içindeki çıplak `dispatch()`'i
-   * çağırır; bu yüzden prob'un kendi başarısızlığı ikinci bir prob
-   * TETİKLEYEMEZ (özyineleme yapısal olarak imkânsız, bir bayrakla değil).
+   * Açık bir oturum zaman aşımı metni (`SESSION_TIMEOUT_PATTERN`) görülürse
+   * token DOĞRUDAN temizlenir — bu metin belirsiz değildir, prob'a gerek
+   * yoktur (round 3 madde 2).
+   *
+   * Belirsiz yetki-şekilli bir hata alındığında (`AUTH_EXPIRED_PATTERN`) ise
+   * token hemen temizlenmez: önce `probeTokenIsExpired()` ile doğrulanır
+   * (bkz. o sabitin belgesi). Prob, bu metodu DEĞİL — kendi içindeki çıplak
+   * `dispatch()`'i çağırır; bu yüzden prob'un kendi başarısızlığı ikinci bir
+   * prob TETİKLEYEMEZ (özyineleme yapısal olarak imkânsız, bir bayrakla
+   * değil).
    */
   async call<T>(
     command: CommandName,
@@ -67,19 +82,31 @@ export class DispatchGateway {
     try {
       return (await this.dispatch<T>(command, pageName, payload)) as T
     } catch (error) {
-      if (error instanceof EArsivApiError && AUTH_EXPIRED_PATTERN.test(error.message)) {
-        const expired = await this.probeTokenIsExpired()
-        if (!expired) {
-          // Prob sağlıklı: token geçerli, bu gerçek bir yetki reddiydi.
-          // Token'a DOKUNULMAZ; orijinal hata aynen yükselir.
-          throw error
+      if (error instanceof EArsivApiError) {
+        if (SESSION_TIMEOUT_PATTERN.test(error.message)) {
+          // Metin süre dolumunu AÇIKÇA söylüyor — belirsizlik yok, prob
+          // gereksiz. Doğrudan temizle ve fırlat.
+          this.tokens.clearToken()
+          throw new EArsivAuthError(
+            'Oturum süresi doldu (portal: "zaman aşımına uğradı"); token temizlendi. ' +
+              'Yeniden login() çağırın.',
+            { cause: error },
+          )
         }
-        this.tokens.clearToken()
-        throw new EArsivAuthError(
-          "Oturum token'ının süresi dolmuş veya geçersiz; portal yetki hatası döndürdü. " +
-            'Yeniden login() çağırın.',
-          { cause: error },
-        )
+        if (AUTH_EXPIRED_PATTERN.test(error.message)) {
+          const expired = await this.probeTokenIsExpired()
+          if (!expired) {
+            // Prob sağlıklı: token geçerli, bu gerçek bir yetki reddiydi.
+            // Token'a DOKUNULMAZ; orijinal hata aynen yükselir.
+            throw error
+          }
+          this.tokens.clearToken()
+          throw new EArsivAuthError(
+            "Oturum token'ının süresi dolmuş veya geçersiz; portal yetki hatası döndürdü. " +
+              'Yeniden login() çağırın.',
+            { cause: error },
+          )
+        }
       }
       throw error
     }

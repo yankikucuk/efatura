@@ -101,4 +101,9 @@ export const FAILURE_MARKERS: readonly RegExp[] = [
   // bir başarı mesajını hata sayardı. İzin verilen ekler gerçek portal
   // cümlelerinden: -tır/-dır, -sınız/-siniz, -nız/-niz, -lar/-ler.
   /(ama|eme)(dı|di|z|mış|miş)(?=[^\p{L}]|$|(?:tır|tir|dır|dir|sınız|siniz|nız|niz|lar|ler)(?:[^\p{L}]|$))/iu,
+  // round 3 madde 1 — furkankadioglu#150 (açık): alıcı ticari e-Fatura
+  // kullanıcısı olduğunda e-Arşiv faturası kesilemez; gerçek bir ret.
+  /e-Fatura kullanıcısı/i,
+  // round 3 madde 1 — furkankadioglu#6 (9 yorum): oturum süresi dolumu.
+  /zaman aşımına uğradı/i,
 ]

@@ -112,6 +112,14 @@ describe('FAILURE_MARKERS', () => {
     ).toBe(false)
   })
 
+  it('round 3 madde 1: furkankadioglu#150 ve #6 alan raporlarındaki reddedilmeleri yakalar', () => {
+    // furkankadioglu#150 (açık): alıcı ticari e-Fatura kullanıcısı olduğu
+    // için e-Arşiv faturası kesilemiyor — gerçek bir ret.
+    expect(isFailure('Bu mükellef e-Fatura kullanıcısı.')).toBe(true)
+    // furkankadioglu#6 (9 yorum): oturum süresi dolumu.
+    expect(isFailure('e-Arşiv oturumu zaman aşımına uğradı.')).toBe(true)
+  })
+
   it('gerçek başarı metinlerini hata saymaz', () => {
     expect(
       isFailure(

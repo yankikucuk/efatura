@@ -94,6 +94,47 @@ describe('InvoiceService.createDraft', () => {
       EArsivAmbiguousResultError,
     )
   })
+
+  it('round 3 madde 3: aynı alıcı/tarih için EŞZAMANLI iki çağrı ikisi de doğru, ayrı ETTN ile döner (mlevent#101)', async () => {
+    // mlevent#101 (açık, Mayıs 2026): aynı alıcıya (nihai tüketici TCKN'i
+    // 11111111111 olduğunda kaçınılmaz) art arda iki fatura kesilince ETTN
+    // karışıyor. Bizim anlık görüntü-farkı tasarımımız TAHMİN etmiyor — ama
+    // serileştirme olmadan iki eşzamanlı createDraft çağrısı da
+    // EArsivAmbiguousResultError ile RET ediliyordu, oysa portalda İKİ
+    // fatura da GERÇEKTEN oluşmuştu. İki dosyalanmış fatura + iki hata, tek
+    // seferde serileştirmekten daha kötü bir sonuç.
+    //
+    // Sahte portal GERÇEK paylaşılan durumu (drafts dizisi) tutar ve her
+    // çağrıyı gerçek bir setTimeout makro-görevi ile geciktirir; bu, elle
+    // sıralanmış bir mock kuyruğunun aksine, iki çağrının GERÇEKTEN
+    // birbirine karışmasına izin verir — serileştirme yoksa bu test o
+    // karışmayı GERÇEKTEN üretir, serileştirme varsa üretmez. Böylece test
+    // yanlış nedenle YEŞİL kalamaz.
+    const drafts: Record<string, unknown>[] = []
+    let seq = 0
+    const networkTick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+    const call = vi.fn(async (command: string) => {
+      await networkTick()
+      if (command === 'EARSIV_PORTAL_TASLAKLARI_GETIR') {
+        return drafts.map((row) => ({ ...row }))
+      }
+      if (command === 'EARSIV_PORTAL_FATURA_OLUSTUR') {
+        seq += 1
+        drafts.push(draftRow(`ettn-${String(seq)}`))
+        return 'Faturanız başarıyla oluşturulmuştur.'
+      }
+      throw new Error(`beklenmeyen komut: ${command}`)
+    })
+
+    const service = new InvoiceService(gatewayMock(call))
+    const [first, second] = await Promise.all([
+      service.createDraft(input),
+      service.createDraft(input),
+    ])
+
+    expect(first.ettn).not.toBe(second.ettn)
+    expect(new Set([first.ettn, second.ettn])).toEqual(new Set(['ettn-1', 'ettn-2']))
+  })
 })
 
 describe('InvoiceService.listDrafts', () => {

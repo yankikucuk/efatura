@@ -165,6 +165,21 @@ bağımlılığı kurup `client.toPdf(ettn)` çağırabilirsiniz — bu, portal�
 gösterimini yerel olarak PDF'e render eder ve resmi imzalı belge yerine
 geçmez.
 
+### İndirme uç noktası istemci IP'sine bağlıdır
+
+Portal, belge indirme oturumunu oturumu AÇAN istemcinin IP adresine
+bağlıyor gibi görünüyor (`furkankadioglu#140`): bir kullanıcı fatura
+oluşturup HTML'i kendi sunucusundan çekebiliyor, ama ZIP indirme
+`"Oturum geçersiz (clientIP)"` hatasıyla başarısız oluyor — yerelde
+çalışıyor, sunucudan çalışmıyor. Yanıtta çağıranın IP'sini yansıtan bir
+`CIP:` başlığı gözlemlendi.
+
+Sonuç: bir host'ta alınan token, BAŞKA bir host'tan indirme için
+kullanılamaz; oturum sırasında değişen bir çıkış IP'si (bazı proxy'ler, NAT
+havuzları, serverless ortamlar) aynı `"Oturum geçersiz (clientIP)"` hatasını
+üretir. `getDownloadUrl`'ün döndürdüğü URL de AYNI kısıtlamaya tabidir —
+URL'yi başka bir host'a taşıyıp orada açmak da aynı şekilde başarısız olur.
+
 ## İptal/itiraz ön koşulu
 
 `createCancellationRequest` ve `createObjectionRequest` yalnızca

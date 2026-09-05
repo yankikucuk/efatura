@@ -95,6 +95,50 @@ describe('DispatchGateway.call', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  describe('round 3 madde 2 — açık oturum zaman aşımı prob YAPMAZ', () => {
+    // furkankadioglu#6: "e-Arşiv oturumu zaman aşımına uğradı." AUTH_EXPIRED_
+    // PATTERN'in aksine iki anlama gelmez — yalnızca süre dolumunu bildirir.
+    // Bu yüzden probeTokenIsExpired() ile doğrulamaya gerek yok; token
+    // doğrudan temizlenir ve tek bir istek atılır (orijinal + 0 prob).
+    const timeoutFailure = (): Response =>
+      json({ error: '1', messages: [{ type: '7', text: 'e-Arşiv oturumu zaman aşımına uğradı.' }] })
+
+    it('tokeni doğrudan temizler, EArsivAuthError fırlatır, HİÇ prob atmaz', async () => {
+      const fetchMock = vi.fn(() => timeoutFailure())
+      const clearToken = vi.fn()
+      const gateway = gatewayWith(
+        fetchMock as unknown as typeof globalThis.fetch,
+        'tok',
+        clearToken,
+      )
+
+      await expect(
+        gateway.call(Command.QUERY_PHONE, PageName.INTERACTIVE_DRAFTS, {}),
+      ).rejects.toBeInstanceOf(EArsivAuthError)
+      expect(clearToken).toHaveBeenCalledTimes(1)
+      // 1 orijinal istek, prob YOK — probe atılsaydı bu 2 olurdu.
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('"yetkiniz yok" yolu hâlâ prob atar (regresyon değil)', async () => {
+      const fetchMock = vi.fn(() =>
+        json({ error: '1', messages: [{ type: '7', text: 'Bu işlem için yetkiniz yok' }] }),
+      )
+      const clearToken = vi.fn()
+      const gateway = gatewayWith(
+        fetchMock as unknown as typeof globalThis.fetch,
+        'tok',
+        clearToken,
+      )
+
+      await expect(
+        gateway.call(Command.QUERY_PHONE, PageName.INTERACTIVE_DRAFTS, {}),
+      ).rejects.toBeInstanceOf(EArsivAuthError)
+      // 1 orijinal + 1 prob = 2 — bu yol hâlâ prob'a dayanıyor.
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
   describe('round 2 madde 1 — genuine yetki hatası ile bayat token ayrımı', () => {
     // Spec §2.5: EARSIV_PORTAL_TELEFONNO_SORGULA test ortamında bir YETKİ
     // KISITLAMASIDIR, bayat token değil. Portal ikisi için de AYNI "Bu işlem
