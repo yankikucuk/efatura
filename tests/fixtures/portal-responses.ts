@@ -61,6 +61,28 @@ export const portalResponses = {
     metadata: { optime: '20260903192857+0300' },
   },
   emptyDisputeList: { data: [], metadata: { optime: '20260903200049+0300' } },
+  /**
+   * EARSIV_PORTAL_FATURA_GETIR'in BAŞARILI yanıtı. Portal başarıda da `hata`
+   * alanını gönderiyor — boş string olarak. Canlı test portalından alındı.
+   */
+  invoiceDetailSuccess: {
+    data: {
+      hata: '',
+      faturaUuid: '3729b07c-f9a4-46f1-ac46-eb88f5ccea84',
+      belgeNumarasi: 'GIB2026000000917',
+      faturaTarihi: '03/09/2026',
+      saat: '19:30:02',
+      paraBirimi: 'TRY',
+      dovzTLkur: 0,
+      faturaTipi: 'SATIS',
+      vknTckn: '11111111111',
+      aliciAdi: 'TEST',
+      aliciSoyadi: 'MUSTERI',
+      malHizmetTable: [],
+      not: '',
+    },
+    metadata: { optime: '20260903193207+0300' },
+  },
   disputePrecondition: {
     data: 'Bu belge iptal talebi oluşturmak için gerekli koşulları sağlamıyor! Onaylı olduğundan ve daha önce ilgili belge için herhangi bir talepte bulunulmadığından emin olun.',
     metadata: { optime: '20260903200049+0300' },

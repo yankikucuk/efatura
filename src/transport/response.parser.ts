@@ -55,7 +55,12 @@ export function parsePortalResponse(payload: unknown, ctx: ParseContext): unknow
 
   const data = payload.data
 
-  if (isRecord(data) && typeof data.hata === 'string') {
+  // DİKKAT: yalnızca DOLU bir `hata` alanı hatadır. Portal başarıda da bu
+  // alanı gönderiyor ama boş string olarak (canlı doğrulandı:
+  // EARSIV_PORTAL_FATURA_GETIR başarılı yanıtında `data.hata === ''`).
+  // Yalnızca `typeof === 'string'` kontrol etmek her başarılı getInvoice
+  // çağrısını boş mesajlı bir hataya çevirirdi.
+  if (isRecord(data) && typeof data.hata === 'string' && data.hata.trim() !== '') {
     const text = data.hata
     throwApi(text, payload, ctx, ERROR_CODE.exec(text)?.[1])
   }

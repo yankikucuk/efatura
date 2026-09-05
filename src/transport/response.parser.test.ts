@@ -111,6 +111,26 @@ describe('parsePortalResponse', () => {
     ).toEqual([])
   })
 
+  it('BOŞ data.hata alanı hata DEĞİLDİR', () => {
+    // Canlı portalda yakalanan kusur: FATURA_GETIR başarıda da `hata` alanını
+    // gönderiyor ama boş string olarak. Yalnızca typeof kontrolü yapmak her
+    // başarılı getInvoice çağrısını boş mesajlı hataya çeviriyordu.
+    const result = parsePortalResponse(portalResponses.invoiceDetailSuccess, {
+      command: Command.GET_INVOICE,
+      callId: 'x',
+    })
+    expect(result).toMatchObject({ faturaUuid: '3729b07c-f9a4-46f1-ac46-eb88f5ccea84' })
+  })
+
+  it('yalnızca boşluk içeren data.hata da hata değildir', () => {
+    expect(
+      parsePortalResponse(
+        { data: { hata: '   ', belgeNumarasi: 'GIB1' } },
+        { command: Command.GET_INVOICE, callId: 'x' },
+      ),
+    ).toMatchObject({ belgeNumarasi: 'GIB1' })
+  })
+
   it('iptal talebi ön koşul metni hatadır', () => {
     expect(() =>
       parsePortalResponse(portalResponses.disputePrecondition, {
