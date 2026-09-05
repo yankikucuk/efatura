@@ -83,6 +83,7 @@ describe('computeTotals', () => {
       totalDiscount: 0,
       taxBase: 100,
       calculatedVat: 20,
+      additionalTaxes: 0,
       totalTaxes: 20,
       grandTotal: 120,
       payableAmount: 120,
@@ -112,6 +113,7 @@ describe('computeTotals', () => {
   it('ek vergiyi toplam vergiye ekler', () => {
     const { totals } = computeTotals([item({ additionalTaxRate: 5 })])
     expect(totals.calculatedVat).toBe(20)
+    expect(totals.additionalTaxes).toBe(5)
     expect(totals.totalTaxes).toBe(25)
     expect(totals.grandTotal).toBe(125)
   })
@@ -139,6 +141,22 @@ describe('mergeAndVerifyTotals', () => {
   it('tutarlı override kabul edilir', () => {
     const { totals } = computeTotals([item()])
     expect(mergeAndVerifyTotals(totals, { payableAmount: 120 })).toEqual(totals)
+  })
+
+  it('yalnızca KDV override edilirse reddedilir', () => {
+    // En sinsi vaka: tek bir alanı düzeltmeye çalışan çağıran. Bu kontrol
+    // olmadan uydurulan KDV doğrudan portala giderdi.
+    const { totals } = computeTotals([item()])
+    expect(() => mergeAndVerifyTotals(totals, { calculatedVat: 999 })).toThrow(
+      EArsivValidationError,
+    )
+  })
+
+  it('kuruşa hizalanmamış override reddedilir', () => {
+    const { totals } = computeTotals([item()])
+    expect(() => mergeAndVerifyTotals(totals, { payableAmount: 120.004 })).toThrow(
+      EArsivValidationError,
+    )
   })
 
   it('eşitliği bozan override hata fırlatır', () => {

@@ -84,6 +84,33 @@ describe('validateInvoiceInput', () => {
     }).toThrow(EArsivValidationError)
   })
 
+  it('aralık dışı ek vergi oranını reddeder', () => {
+    const input = base()
+    input.lineItems[0]!.additionalTaxRate = 150
+    expect(() => {
+      validateInvoiceInput(input)
+    }).toThrow(EArsivValidationError)
+    try {
+      validateInvoiceInput(input)
+    } catch (error) {
+      // Hata yolu alanı işaret etmeli; aşağı akıştaki applyPercent yalnızca
+      // "oran" diyebiliyordu.
+      expect((error as EArsivValidationError).issues[0]?.path).toBe('lineItems.0.additionalTaxRate')
+    }
+  })
+
+  it('özel matrah alanlarını doğrular', () => {
+    expect(() => {
+      validateInvoiceInput(base({ specialBase: { rate: 150 } }))
+    }).toThrow(/Özel matrah oranı/)
+    expect(() => {
+      validateInvoiceInput(base({ specialBase: { amount: -1 } }))
+    }).toThrow(/Özel matrah tutarı/)
+    expect(() => {
+      validateInvoiceInput(base({ specialBase: { rate: 8, amount: 100 } }))
+    }).not.toThrow()
+  })
+
   it('tüm sorunları tek seferde toplar', () => {
     const input = base({
       buyer: { taxOrIdentityNumber: 'abc' },

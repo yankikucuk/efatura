@@ -73,6 +73,7 @@ export function computeTotals(items: readonly LineItemInput[]): {
       totalDiscount: fromMinor(discountMinor),
       taxBase: fromMinor(taxBaseMinor),
       calculatedVat: fromMinor(vatMinor),
+      additionalTaxes: fromMinor(additionalMinor),
       totalTaxes: fromMinor(totalTaxesMinor),
       grandTotal: fromMinor(grandTotalMinor),
       payableAmount: fromMinor(grandTotalMinor),
@@ -96,8 +97,11 @@ export function mergeAndVerifyTotals(
 
   const check = (field: keyof InvoiceTotals, expected: number): void => {
     const actual = merged[field]
-    // Kuruş toleransı: kayan nokta karşılaştırmasında 0.005 altı sapma yok sayılır.
-    if (Math.abs(actual - expected) > 0.005) {
+    // Gerçek bir uyumsuzluk en az bir kuruş (0.01) fark eder; buradaki
+    // sapma yalnızca birkaç çıkarmadan gelen kayan nokta gürültüsüdür
+    // (~1e-13). Yarım kuruşluk tolerans, kuruşa hizalanmamış bir override'ı
+    // sessizce kabul ederdi.
+    if (Math.abs(actual - expected) > 1e-6) {
       issues.push({
         path: `totals.${field}`,
         message: `${field} tutarsız: verilen ${String(actual)}, hesaplanan ${String(expected)}.`,
@@ -106,6 +110,10 @@ export function mergeAndVerifyTotals(
   }
 
   check('taxBase', merged.lineTotal - merged.totalDiscount)
+  // KDV'yi de bağla: bu kontrol olmadan yalnızca `calculatedVat` override
+  // eden bir çağıran hiçbir eşitliğe takılmaz ve uydurduğu değer doğrudan
+  // portalın `hesaplanankdv` alanına giderdi.
+  check('totalTaxes', merged.calculatedVat + merged.additionalTaxes)
   check('grandTotal', merged.taxBase + merged.totalTaxes)
   check('payableAmount', merged.grandTotal)
 

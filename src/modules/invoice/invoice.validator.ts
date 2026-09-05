@@ -1,3 +1,4 @@
+import { Currency } from '../../constants/index.js'
 import { EArsivValidationError, type ValidationIssue } from '../../core/index.js'
 
 import type { InvoiceInput } from './invoice.types.js'
@@ -55,10 +56,31 @@ export function validateInvoiceInput(input: InvoiceInput): void {
     if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
       add(at('discountRate'), 'İskonto oranı 0 ile 100 arasında bir yüzde olmalı.')
     }
+    const additional = item.additionalTaxRate ?? 0
+    if (!Number.isFinite(additional) || additional < 0 || additional > 100) {
+      add(at('additionalTaxRate'), 'Ek vergi oranı 0 ile 100 arasında bir yüzde olmalı.')
+    }
   })
 
-  const currency = input.currency ?? 'TRY'
-  if (currency !== 'TRY') {
+  // Özel matrah alanlarının aşağı akışta hiçbir koruması yok: computeTotals
+  // bunlara dokunmuyor, dolayısıyla applyPercent'in aralık kontrolü de
+  // devreye girmiyor. Doğrulanmazsa çöp değer doğrudan portala giderdi.
+  const specialBase = input.specialBase
+  if (specialBase !== undefined) {
+    const rate = specialBase.rate ?? 0
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      add('specialBase.rate', 'Özel matrah oranı 0 ile 100 arasında bir yüzde olmalı.')
+    }
+    for (const field of ['amount', 'taxAmount'] as const) {
+      const value = specialBase[field] ?? 0
+      if (!Number.isFinite(value) || value < 0) {
+        add(`specialBase.${field}`, 'Özel matrah tutarı negatif olmayan bir sayı olmalı.')
+      }
+    }
+  }
+
+  const currency = input.currency ?? Currency.TURKISH_LIRA
+  if (currency !== Currency.TURKISH_LIRA) {
     const rate = input.currencyRate
     if (rate === undefined || !Number.isFinite(rate) || rate <= 0) {
       add('currencyRate', `${currency} para biriminde döviz kuru zorunlu ve pozitif olmalı.`)

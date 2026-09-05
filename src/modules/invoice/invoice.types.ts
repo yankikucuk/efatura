@@ -81,6 +81,14 @@ export interface InvoiceTotals {
   taxBase: number
   /** `hesaplanankdv` */
   calculatedVat: number
+  /**
+   * `vergilerToplami` içindeki KDV dışı vergiler.
+   *
+   * Portal bu alanı ayrı taşımıyor; modelde tutuluyor çünkü onsuz
+   * `totalTaxes` iki bilinmeyenli tek denklem olur ve `calculatedVat`
+   * override'ı hiçbir eşitlikle doğrulanamazdı.
+   */
+  additionalTaxes: number
   /** `vergilerToplami` — KDV ve varsa ek vergiler. */
   totalTaxes: number
   /** `vergilerDahilToplamTutar` */
