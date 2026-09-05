@@ -17,11 +17,20 @@
  *   kullanıcıları portalı kullanan herkesle paylaşıldığı için kendi
  *   kayıtlarımızı ancak böyle güvenilir biçimde ayırt edebiliriz.
  *
- * KANARYA testi ters yönde çalışan tek testtir: portalın SMM gösterim kusurunu,
- * kendi korumamızı ATLAYARAK, genel fatura gösterim yolundan doğrudan
- * yokluyor. GİB kusuru düzeltirse bu test KIRILIR — ve o an
- * `getSelfEmployedReceiptHtml`/`selfEmployedReceiptToPdf` kısıtının
- * kaldırılması gerektiği anlaşılır. Bugün hâlâ bozuk (canlı teyit 2026-09-05).
+ * İKİ KANARYA testi ters yönde çalışır — portalın bozuk davranışının HÂLÂ
+ * bozuk olduğunu doğrularlar ve GİB düzeltirse KIRILARAK haber verirler:
+ * - SMM gösterim kusuru: kendi korumamızı ATLAYARAK, genel fatura gösterim
+ *   yolundan doğrudan yoklanır. Düzelirse
+ *   `getSelfEmployedReceiptHtml`/`selfEmployedReceiptToPdf` kısıtı kalkmalıdır.
+ * - Yanlış `belgeTip`: makbuz ETTN'i + `belgeTip=FATURA` `HTTP 200` ve 0 bayt
+ *   döndürüyor, hata metni YOK. Sevk edilmiş indirme hatasının fark
+ *   edilmemesinin sebebi tam olarak bu sessizliktir.
+ *
+ * Her ikisi de bugün hâlâ geçerli (canlı teyit 2026-09-05).
+ *
+ * İNDİRME testleri formatı `content-type` başlığından ÇIKARMAZ — portal üç
+ * belge türünde de `application/json` yazıyor, YANILTICIDIR. Format yalnızca
+ * sihirli baytlarla doğrulanır: ZIP `PK`, PDF `%PDF`.
  *
  * KAPSAM DIŞI — taslak SİLME. `EARSIV_PORTAL_FATURA_SIL` test portalında
  * HİÇBİR belge türünde çalışmıyor ("Silinirken bir sorun oluştu."), fatura
@@ -33,7 +42,13 @@
 
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { EArsivClient, EArsivPortalDefectError, InvoiceListKind, Unit } from '../../src/index.js'
+import {
+  EArsivClient,
+  EArsivNetworkError,
+  EArsivPortalDefectError,
+  InvoiceListKind,
+  Unit,
+} from '../../src/index.js'
 import { isE2eEnabled, uniqueStamp } from '../helpers/e2e-guard.js'
 
 // Devlet sunucusuna gereksiz yük bindirmemek için varsayılan olarak kapalı.
@@ -239,6 +254,64 @@ describe.runIf(isE2eEnabled())('e-Arşiv test portalı uçtan uca', () => {
     const html = await client.getProducerReceiptHtml(producerReceiptEttn)
     expect(html.length).toBeGreaterThan(1_000)
     expect(html.toLowerCase()).toContain('<html')
+  })
+
+  // — Belge indirme —
+  //
+  // İndirme, `dispatch` üzerinden DEĞİL ayrı bir GET uç noktasından geçer ve
+  // sorgudaki `belgeTip` alanı belgenin TÜRÜNÜ taşımak zorundadır. Alan bir
+  // zamanlar sabit `FATURA` gönderiliyordu; makbuz indirme bu yüzden hiç
+  // çalışmıyordu. Arıza SESSİZDİ: portal yanlış türde `HTTP 200` ve 0 bayt
+  // döndürüyor, hata metni YOK.
+  //
+  // Format da türe göre değişiyor ve `content-type` başlığı bunu SÖYLEMİYOR
+  // (üç türde de `application/json` yazıyor). Bu yüzden aşağıdaki testlerin
+  // tamamı SİHİRLİ BAYTLARA bakar: ZIP `PK\x03\x04`, PDF `%PDF`.
+
+  it('müstahsil makbuzunun ZIP paketini indirir', async () => {
+    const zip = await client.downloadProducerReceiptPackage(producerReceiptEttn)
+    // ZIP dosya imzası: PK\x03\x04
+    expect(Array.from(zip.slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04])
+    expect(zip.byteLength).toBeGreaterThan(1_000)
+  }, 60_000)
+
+  it('serbest meslek makbuzunu doğrudan PDF olarak indirir', async () => {
+    // Diğer iki türden FARKLI: burada ZIP paketi yok, portal doğrudan
+    // basılabilir resmî PDF döndürüyor. Bu, SMM'nin HTML gösteriminin bozuk
+    // olması kısıtını önemli ölçüde yumuşatan bulgudur.
+    const pdf = await client.downloadSelfEmployedReceiptPdf(selfEmployedReceiptEttn)
+    // PDF dosya imzası: %PDF
+    expect(Array.from(pdf.slice(0, 4))).toEqual([0x25, 0x50, 0x44, 0x46])
+    // ZIP OLMADIĞI da doğrulanır; yanlışlıkla ZIP dönerse test kırılmalı.
+    expect(Array.from(pdf.slice(0, 2))).not.toEqual([0x50, 0x4b])
+    expect(pdf.byteLength).toBeGreaterThan(1_000)
+  }, 60_000)
+
+  it('KANARYA: YANLIŞ belgeTip sessizce BOŞ döner', async () => {
+    // Bu test hatanın neden fark edilmediğini pinler: makbuz ETTN'i +
+    // `belgeTip=FATURA` portalda `HTTP 200` ve 0 BAYT üretiyor, hiçbir hata
+    // metni yok (canlı doğrulandı 2026-09-05). Tek belirti, boş gövde
+    // yüzünden bizim fırlattığımız `EArsivNetworkError`'dır.
+    //
+    // Varsayılan türü (`FATURA`) bir makbuz ETTN'iyle KASITLI olarak
+    // kullanır. GİB bu davranışı değiştirir ve yanlış türde de belge
+    // döndürmeye başlarsa test KIRILIR — ve o an `belgeTip`in artık ayırt
+    // edici olmadığı anlaşılır.
+    await expect(client.downloadPackage(producerReceiptEttn)).rejects.toThrow(EArsivNetworkError)
+  }, 60_000)
+
+  it('indirme adresleri belge türüne göre AYRI belgeTip taşır', () => {
+    // Ağa çıkmayan URL üreticileri indirme metotlarıyla aynı sorguyu kurmalı;
+    // ayrışırlarsa biri çalışırken diğeri sessizce boş dönerdi.
+    const belgeTip = (url: string): string | null => new URL(url).searchParams.get('belgeTip')
+
+    expect(belgeTip(client.getDownloadUrl(ettn))).toBe('FATURA')
+    expect(belgeTip(client.getProducerReceiptDownloadUrl(producerReceiptEttn))).toBe(
+      'MÜSTAHSİL MAKBUZU',
+    )
+    expect(belgeTip(client.getSelfEmployedReceiptPdfUrl(selfEmployedReceiptEttn))).toBe(
+      'SERBEST MESLEK MAKBUZU',
+    )
   })
 
   it('SMM HTML gösterimi kendi tarafımızda net bir hatayla reddedilir', () => {

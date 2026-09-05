@@ -30,8 +30,17 @@ const PORTAL_DEFECT_MESSAGE = 'String index out of range: 4'
  * kullandım?" olur ve bu soruya harcanacak zamanı burada bitirmek gerekir.
  * Bu yüzden metin (a) kusurun portalda olduğunu, (b) portalın kendi hata
  * metnini, (c) bizim tarafımızda denenmiş ve başarısız olmuş varyantları,
- * (d) müstahsilin AYNI komutla çalıştığını ve (e) çalışan alternatifi
+ * (d) müstahsilin AYNI komutla çalıştığını ve (e) çalışan alternatifleri
  * söyler.
+ *
+ * (e) 2026-09-05'te GENİŞLEDİ ve kısıt önemli ölçüde YUMUŞADI: mesaj eskiden
+ * yalnızca `getSelfEmployedReceipt(ettn)` diyordu, yani kullanıcıya "veriye
+ * erişebilirsin ama basılabilir belgeye erişemezsin" diye okunuyordu. Oysa
+ * indirme uç noktası `belgeTip='SERBEST MESLEK MAKBUZU'` ile doğrudan resmî
+ * bir PDF döndürüyor (canlı doğrulandı). Bozuk olan yalnızca HTML
+ * GÖSTERİMİDİR; basılabilir belge yolu AÇIKTIR ve mesaj bunu göstermek
+ * zorundadır — aksi halde çıktıya ihtiyacı olan kullanıcı, var olan yolu
+ * bilmeden PDF'i kendi üretmeye kalkardı.
  *
  * Hatayı FIRLATMAZ, yalnızca ÜRETİR — çağıran `throw` eder. Bu, aynı mesajın
  * hem `getHtml` hem `toPdf` yolunda birebir aynı olmasını sağlar.
@@ -40,7 +49,9 @@ const PORTAL_DEFECT_MESSAGE = 'String index out of range: 4'
  *   istekte KULLANILMAZ ve doğrulanmaz.
  * @returns Fırlatılmaya hazır `EArsivPortalDefectError`; `command` alanı
  *   `EARSIV_PORTAL_FATURA_GOSTER`, `portalMessage` alanı portalın kendi Java
- *   istisna metnidir.
+ *   istisna metnidir. Mesaj İKİ çalışan yolu adıyla gösterir:
+ *   `getSelfEmployedReceipt` (veri) ve `downloadSelfEmployedReceiptPdf`
+ *   (basılabilir resmî PDF).
  *
  * @example
  * ```ts
@@ -49,6 +60,7 @@ const PORTAL_DEFECT_MESSAGE = 'String index out of range: 4'
  * const error = selfEmployedReceiptHtmlUnsupported('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
  * console.log(error.kind, error.portalMessage)
  * // 'portal-defect' 'String index out of range: 4'
+ * console.log(error.message.includes('downloadSelfEmployedReceiptPdf')) // true
  * ```
  */
 export function selfEmployedReceiptHtmlUnsupported(ettn: string): EArsivPortalDefectError {
@@ -61,7 +73,11 @@ export function selfEmployedReceiptHtmlUnsupported(ettn: string): EArsivPortalDe
       'alanı, liste ETTN’i, detay ETTN’i ve belge numarası; alternatif komut adları ' +
       '(EARSIV_PORTAL_SERBEST_MESLEK_GOSTER, EARSIV_PORTAL_MAKBUZ_GOSTER) portalda mevcut ' +
       'değil. Aynı komut Müstahsil Makbuzunda sorunsuz çalışıyor, yani kusur SMM’ye özgüdür. ' +
-      'Makbuzun tüm verilerine getSelfEmployedReceipt(ettn) ile erişebilirsiniz.',
+      'BOZUK OLAN YALNIZCA HTML GÖSTERİMİDİR; makbuza iki yoldan erişmeye devam ' +
+      'edebilirsiniz: (1) tüm verileri için getSelfEmployedReceipt(ettn); ' +
+      '(2) BASILABİLİR RESMİ BELGE için downloadSelfEmployedReceiptPdf(ettn) — portal ' +
+      'SMM indirmesinde ZIP paketi değil, doğrudan PDF döndürüyor (canlı doğrulandı ' +
+      '2026-09-05). Yani bu kısıt sizi resmî çıktıdan MAHRUM BIRAKMAZ.',
     { command: Command.SHOW_INVOICE, portalMessage: PORTAL_DEFECT_MESSAGE },
   )
 }
@@ -69,9 +85,14 @@ export function selfEmployedReceiptHtmlUnsupported(ettn: string): EArsivPortalDe
 /**
  * Serbest meslek makbuzu oluşturma, listeleme ve okuma işlemleri.
  *
- * HTML gösterimi ve PDF DESTEKLENMEZ: portal kusuru nedeniyle `getHtml` ve
- * `toPdf` her zaman `EArsivPortalDefectError` fırlatır ve ağa hiç çıkmaz.
- * Belge SİLME de yoktur.
+ * HTML gösterimi ve HTML'den PDF üretimi DESTEKLENMEZ: portal kusuru
+ * nedeniyle `getHtml` ve `toPdf` her zaman `EArsivPortalDefectError` fırlatır
+ * ve ağa hiç çıkmaz. Belge SİLME de yoktur.
+ *
+ * Bu, basılabilir belgeye hiç erişilemediği anlamına GELMEZ: indirme uç
+ * noktası SMM için doğrudan resmî PDF döndürüyor — bkz.
+ * `EArsivClient.downloadSelfEmployedReceiptPdf` (canlı doğrulandı
+ * 2026-09-05). Kısıt yalnızca portalın HTML GÖSTERİMİNİ kapsar.
  *
  * Tutar zincirinin tamamı bu kütüphanede hesaplanır — portal hiçbirini
  * hesaplamaz ve gönderilmeyen türetilmiş alanı 0 olarak saklar.
@@ -276,6 +297,10 @@ export class SelfEmployedReceiptService {
    * `EArsivPortalDefectError` fırlatır; ağa hiç çıkılmaz, çünkü çıkılsaydı
    * kullanıcı ham Java istisnasını görürdü.
    *
+   * Basılabilir resmî belge için `EArsivClient.downloadSelfEmployedReceiptPdf`
+   * kullanın; portal SMM indirmesinde doğrudan PDF döndürür. Hata mesajı bu
+   * yolu da adıyla söyler.
+   *
    * @param ettn Makbuzun ETTN'i; yalnızca hata mesajında yankılanır.
    * @returns Hiçbir zaman dönmez (`never`).
    * @throws {EArsivPortalDefectError} HER ZAMAN.
@@ -299,7 +324,9 @@ export class SelfEmployedReceiptService {
   }
 
   /**
-   * PDF, HTML gösterimi üzerine kurulu olduğu için o da desteklenmez.
+   * Bu metodun ürettiği PDF, HTML gösterimi üzerine kurulu olduğu için
+   * desteklenmez. Portalın KENDİ resmî PDF'i bundan farklıdır ve
+   * erişilebilir: `EArsivClient.downloadSelfEmployedReceiptPdf`.
    *
    * @param ettn Makbuzun ETTN'i; yalnızca hata mesajında yankılanır.
    * @returns Hiçbir zaman dönmez (`never`).

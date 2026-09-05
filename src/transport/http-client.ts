@@ -161,8 +161,20 @@ export class HttpClient {
     )
     const bytes = new Uint8Array(await response.arrayBuffer())
     if (bytes.byteLength === 0) {
+      // Boş gövde bu uç noktada portalın TEK hata sinyalidir: yanlış
+      // `belgeTip`, bilinmeyen ETTN ve yanlış `onayDurumu` üçü de `HTTP 200`
+      // + 0 bayt üretir, hiçbirinde hata metni gelmez (canlı doğrulandı
+      // 2026-09-05). Bu yüzden mesaj bir TEŞHİS koyamaz, yalnızca üç
+      // olasılığı sayabilir — ve belge TÜRÜNÜ saymak zorundadır: makbuz
+      // indirmeyi yıllarca bozuk bırakan sebep tam olarak oydu ve mesaj
+      // yalnızca "ETTN veya onay durumu" derken kullanıcıyı doğru yazdığı
+      // ETTN'i kontrol etmeye gönderiyordu.
       throw new EArsivNetworkError(
-        'Portal boş bir belge paketi döndürdü. ETTN veya onay durumu hatalı olabilir.',
+        'Portal boş bir belge paketi döndürdü ve hata mesajı vermedi. Üç sebepten ' +
+          'biri olabilir: (1) belge türü (`belgeTip`) belgenin gerçek türüyle ' +
+          'uyuşmuyor — makbuzlar için downloadProducerReceiptPackage / ' +
+          'downloadSelfEmployedReceiptPdf kullanın; (2) ETTN hatalı; (3) onay durumu ' +
+          '(`signed`) hatalı.',
         { url: redactUrl(url), status: response.status, attempts },
       )
     }

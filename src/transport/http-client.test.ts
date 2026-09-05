@@ -212,6 +212,19 @@ describe('HttpClient.getBinary', () => {
     ).rejects.toThrow(EArsivNetworkError)
   })
 
+  it('boş gövde hatası belge TÜRÜNÜ de olası sebep olarak sayar', async () => {
+    // Portal, makbuz ETTN'i + `belgeTip=FATURA` çiftine `HTTP 200` ve 0 bayt
+    // döndürüyor; hata metni YOK (canlı doğrulandı 2026-09-05). Yani boş gövde
+    // bu uç noktada "yanlış belge türü"nün TEK belirtisidir. Mesaj yalnızca
+    // "ETTN veya onay durumu" derse, kullanıcı doğru yazdığı ETTN'i saatlerce
+    // kontrol eder ve gerçek sebebi hiç düşünmez — sevk edilmiş hatanın uzun
+    // süre fark edilmemesinin sebebi tam olarak buydu.
+    const fetchMock = vi.fn(() => new Response(new Uint8Array(), { status: 200 }))
+    await expect(
+      clientWith(fetchMock as unknown as typeof globalThis.fetch).getBinary(Endpoint.DOWNLOAD, {}),
+    ).rejects.toThrow(/belge türü|belgeTip/i)
+  })
+
   it('boş gövde hatasında gerçek deneme sayısını bildirir', async () => {
     // İlk denemede 5xx, ikincide boş gövdeli 200: attempts 2 olmalı, 1 değil.
     let call = 0

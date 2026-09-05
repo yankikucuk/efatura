@@ -72,6 +72,8 @@ const html = await client.getProducerReceiptHtml(receipt.ettn)
 ### Serbest meslek makbuzu
 
 ```ts
+import { writeFile } from 'node:fs/promises'
+
 const smm = await client.createSelfEmployedReceipt({
   payer: { taxOrIdentityNumber: '1111111111', title: 'ÖRNEK A.Ş.', taxOffice: 'Kadıköy' },
   description: 'Eylül 2026 danışmanlık',
@@ -92,16 +94,21 @@ const smmDetail = await client.getSelfEmployedReceipt(smm.ettn)
 // → 1.000 tahsil edilen KDV → 9.000 net alınan.
 console.log(smmDetail.totals.netReceived)
 
-// DİKKAT: SMM'nin HTML/PDF gösterimi PORTALDA bozuktur ve bu çağrı ağa
-// çıkmadan EArsivPortalDefectError fırlatır. Aşağıya bakın.
+// DİKKAT: SMM'nin portal HTML gösterimi BOZUKTUR ve bu çağrı ağa çıkmadan
+// EArsivPortalDefectError fırlatır. Aşağıya bakın.
 // client.getSelfEmployedReceiptHtml(smm.ettn)
+
+// Basılabilir RESMİ belge yine de erişilebilir: portal SMM indirmesinde ZIP
+// değil, doğrudan PDF döndürür.
+const pdf = await client.downloadSelfEmployedReceiptPdf(smm.ettn)
+await writeFile(`${smm.ettn}_s.pdf`, pdf)
 ```
 
 Daha kapsamlı örnekler için `examples/` dizinine bakın:
 
 - `examples/01-test-login.ts` — test kullanıcısıyla giriş
 - `examples/02-create-invoice.ts` — çok kalemli fatura oluşturma
-- `examples/03-download-document.ts` — HTML ve ZIP indirme
+- `examples/03-download-document.ts` — HTML gösterimi ve belge indirme (her üç belge türü)
 - `examples/04-dispute-request.ts` — iptal/itiraz talepleri
 
 ## Özellikler
@@ -113,20 +120,25 @@ Daha kapsamlı örnekler için `examples/` dizinine bakın:
   hedeflenebilir; test portalında ÇALIŞMIYOR, bkz. "Bilinen kısıtlar")
 - **Müstahsil Makbuzu**: oluşturma (`createProducerReceipt`), listeleme
   (`listProducerReceipts`), okuma (`getProducerReceipt`), HTML gösterimi
-  (`getProducerReceiptHtml`), PDF (`producerReceiptToPdf`). Dört kesinti
-  desteklenir: gelir vergisi stopajı, mera fonu, borsa tescil ücreti ve SGK
-  primi
+  (`getProducerReceiptHtml`), PDF (`producerReceiptToPdf`), resmi paket
+  indirme (`downloadProducerReceiptPackage`, ZIP). Dört kesinti desteklenir:
+  gelir vergisi stopajı, mera fonu, borsa tescil ücreti ve SGK primi
 - **Serbest Meslek Makbuzu**: oluşturma (`createSelfEmployedReceipt`),
-  listeleme (`listSelfEmployedReceipts`), okuma (`getSelfEmployedReceipt`).
-  Brüt ücret → stopaj → net ücret → KDV → KDV tevkifatı → net alınan zinciri
-  hesaplanır. HTML/PDF gösterimi (`getSelfEmployedReceiptHtml`,
-  `selfEmployedReceiptToPdf`) PORTAL KUSURU nedeniyle DESTEKLENMEZ; bu iki
-  metot her zaman `EArsivPortalDefectError` fırlatır (bkz. "Bilinen kısıtlar")
+  listeleme (`listSelfEmployedReceipts`), okuma (`getSelfEmployedReceipt`),
+  **resmi belge indirme (`downloadSelfEmployedReceiptPdf` — ZIP değil,
+  doğrudan PDF)**. Brüt ücret → stopaj → net ücret → KDV → KDV tevkifatı →
+  net alınan zinciri hesaplanır. Portalın HTML gösterimi
+  (`getSelfEmployedReceiptHtml`, `selfEmployedReceiptToPdf`) PORTAL KUSURU
+  nedeniyle DESTEKLENMEZ ve bu iki metot her zaman `EArsivPortalDefectError`
+  fırlatır — ama basılabilir resmî belgeye indirme yoluyla erişilir (bkz.
+  "Bilinen kısıtlar")
 - Toplamların kalemlerden otomatik hesaplanması (tam sayı kuruş aritmetiği);
   `getInvoice` okurken kalemlerden yeniden HESAPLAMAZ, portalın kendi
   `matrah`/`hesaplanankdv`/`odenecekTutar` gibi resmi rakamlarını raporlar
-- Belge: HTML gösterimi (`getInvoiceHtml`), resmi paket indirme
-  (`downloadPackage`, ZIP), doğrudan indirme adresi (`getDownloadUrl`)
+- Belge: HTML gösterimi (`getInvoiceHtml`), resmi belge indirme
+  (`downloadPackage` — `documentType` ile belge türü verilir), doğrudan
+  indirme adresi (`getDownloadUrl`, `getProducerReceiptDownloadUrl`,
+  `getSelfEmployedReceiptPdfUrl`)
 - SMS ile fatura imzalama (`getPhoneNumber`, `sendSmsCode`, `verifySmsCode` —
   başarısızlıkta `EArsivApiError` fırlatır, `boolean` DÖNDÜRMEZ)
 - İptal ve itiraz talepleri: oluşturma (`createCancellationRequest`,
@@ -354,12 +366,42 @@ listede güvenilir biçimde ayırt etmenizi sağlar.
 
 ## Belge paketi içeriği
 
-`downloadPackage(ettn)` resmi belge paketini bir ZIP olarak indirir. Paket
-`<ettn>_f.html` (HTML gösterim) ve imzalı `<ettn>_f.xml` (UBL-TR) dosyalarını
-içerir; **PDF içermez**. PDF isterseniz `npm i puppeteer` ile peer
-bağımlılığı kurup `client.toPdf(ettn)` çağırabilirsiniz — bu, portalın HTML
-gösterimini yerel olarak PDF'e render eder ve resmi imzalı belge yerine
-geçmez.
+İndirme uç noktası **belge türüne göre farklı format döndürür** ve bunu
+kendisi söylemez. Sorgudaki `belgeTip` alanı belgenin türünü taşımak
+zorundadır (canlı doğrulandı 2026-09-05):
+
+| Belge türü             | Metot                            | `belgeTip`               | Format  | Dosya adı      |
+| ---------------------- | -------------------------------- | ------------------------ | ------- | -------------- |
+| Fatura                 | `downloadPackage`                | `FATURA`                 | ZIP     | `<ettn>_f.zip` |
+| Müstahsil Makbuzu      | `downloadProducerReceiptPackage` | `MÜSTAHSİL MAKBUZU`      | ZIP     | `<ettn>_m.zip` |
+| Serbest Meslek Makbuzu | `downloadSelfEmployedReceiptPdf` | `SERBEST MESLEK MAKBUZU` | **PDF** | `<ettn>_s.pdf` |
+
+ZIP paketleri HTML gösterim (`<ettn>_f.html` / `<ettn>_m.html`) ve imzalı
+UBL-TR XML (`<ettn>_f.xml` / `<ettn>_m.xml`) içerir; **PDF içermez**.
+Serbest meslek makbuzunda ZIP hiç yoktur: portal doğrudan basılabilir resmî
+PDF'i döndürür. Metot adları bu farkı söyler (`...Package` vs `...Pdf`);
+`downloadPackage(ettn, { documentType })` ile aynı işi genel yoldan da
+yapabilirsiniz, ama o zaman hangi formatın geleceğini çağrı yerinden okumak
+mümkün olmaz.
+
+`content-type` başlığı **üç türde de `application/json` yazar ve
+YANILTICIDIR**. Formatı doğrulamanız gerekiyorsa yalnızca sihirli baytlara
+güvenin: ZIP `PK\x03\x04`, PDF `%PDF`.
+
+**Yanlış `belgeTip` SESSİZCE boş döner.** Bir makbuz ETTN'i `belgeTip=FATURA`
+ile istendiğinde portal `HTTP 200` ve **0 bayt** döndürür; hata mesajı yoktur.
+Kütüphane boş gövdeyi `EArsivNetworkError`'a çevirir, yani arıza sessiz
+kalmaz. Hata TEŞHİS koyamaz — portal üç ayrı durumu (yanlış belge türü,
+bilinmeyen ETTN, yanlış onay durumu) aynı boş yanıtla karşılıyor — ama üç
+olasılığı da adıyla sayar ve ilk sırada belge türünü gösterir. Makbuzlarda
+türe özel metotları kullanmanızın sebebi budur.
+
+Fatura ve müstahsil için yerel PDF isterseniz `npm i puppeteer` ile peer
+bağımlılığı kurup `client.toPdf(ettn)` / `client.producerReceiptToPdf(ettn)`
+çağırabilirsiniz — bu, portalın HTML gösterimini yerel olarak PDF'e render
+eder ve resmi imzalı belge yerine geçmez. Serbest meslek makbuzunda buna
+gerek yoktur: `downloadSelfEmployedReceiptPdf` zaten portalın KENDİ resmî
+PDF'ini verir.
 
 ### İndirme uç noktası istemci IP'sine bağlıdır
 
@@ -408,7 +450,7 @@ ve `createObjectionRequestForIncoming` bu ikisini KARIŞTIRMAZ:
 Bunlar kütüphanenin eksikleri değil, portalın gözlenmiş davranışlarıdır ve
 kullanırken karşılaşacağınız için burada açıkça yazılmıştır.
 
-### Serbest Meslek Makbuzunun HTML/PDF gösterimi PORTALDA bozuk
+### Serbest Meslek Makbuzunun portal HTML gösterimi BOZUK — ama resmi PDF'i erişilebilir
 
 `EARSIV_PORTAL_FATURA_GOSTER` komutu geçerli bir SMM ETTN'i ile ham bir Java
 istisnası döndürüyor: `{"error":"1","messages":["String index out of range: 4"]}`.
@@ -421,8 +463,22 @@ alanı, liste ETTN'i, detay ETTN'i, `belgeNumarasi`; alternatif komut adları
 Bu yüzden `getSelfEmployedReceiptHtml` ve `selfEmployedReceiptToPdf` metotları
 **ağa hiç çıkmadan** `EArsivPortalDefectError` fırlatır. Metotlar bilinçli
 olarak silinmedi: silinseydi çağıran `getInvoiceHtml`'i bir SMM ETTN'iyle
-dener ve portalın ham istisnasını kendi hatası sanırdı. Makbuzun verilerine
-`getSelfEmployedReceipt` ile erişebilirsiniz.
+dener ve portalın ham istisnasını kendi hatası sanırdı.
+
+**Kısıt yalnızca HTML GÖSTERİMİNİ kapsar.** Basılabilir resmî belgeye
+erişebilirsiniz: indirme uç noktası SMM için doğrudan bir PDF döndürüyor
+(canlı doğrulandı 2026-09-05).
+
+```ts
+// Veri:
+const detail = await client.getSelfEmployedReceipt(ettn)
+// Basılabilir RESMİ belge (ZIP değil, doğrudan PDF):
+const pdf = await client.downloadSelfEmployedReceiptPdf(ettn)
+```
+
+Bu PDF, `selfEmployedReceiptToPdf`'in üreteceği yerel render DEĞİLDİR;
+portalın kendi resmî belgesidir. Yani kısıt sizi resmî çıktıdan mahrum
+bırakmaz — yalnızca HTML'i programatik olarak işlemenizi engeller.
 
 Aynı istisna metni `getInvoiceHtml`/`toPdf` yolunda da yakalanıp çevrilir.
 DİKKAT: portal bu metni SMM'ye özgü döndürmüyor — var olmayan ya da hatalı
@@ -463,9 +519,6 @@ Bkz. "Belge paketi içeriği" altındaki not.
   e-Bilet, e-Adisyon).
 - Makbuzların SMS ile imzalanması ve makbuzlar için iptal/itiraz talepleri —
   bu akışlar makbuz belgelerinde hiç denenmedi; fatura için desteklenir.
-- Makbuzlar için `downloadPackage` (resmi ZIP paketi) — indirme uç noktası
-  `belgeTip: 'FATURA'` sabitiyle çağrılıyor; makbuzda ne beklendiği test
-  edilmedi, bu yüzden "çalışıyor" diye sunulmuyor.
 - Taslak silme — API mevcut ama portal tarafında çalışmıyor (yukarıya bakın).
 - Bir komut satırı arayüzü (CLI) — kütüphane yalnızca programatik kullanım
   içindir.

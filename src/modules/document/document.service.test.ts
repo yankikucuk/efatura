@@ -23,6 +23,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../../config/index.js'
+import { DocumentType } from '../../constants/index.js'
 import { EArsivApiError, EArsivPortalDefectError } from '../../core/index.js'
 import type { DispatchGateway, HttpClient } from '../../transport/index.js'
 
@@ -111,6 +112,24 @@ describe('DocumentService.getHtml', () => {
     })
   })
 
+  it('SMM olasılığını verirken basılabilir PDF yolunu da gösterir', async () => {
+    // Mesaj iki olasılıktan birini "belge bir SMM olabilir" diye sunuyor.
+    // O olasılık doğruysa kullanıcının bir sonraki adımı bellidir ve
+    // 2026-09-05'ten beri ARTIK basılabilir resmî belgeyi de kapsıyor:
+    // indirme uç noktası SMM için doğrudan PDF döndürüyor. Yolu burada
+    // söylemezsek kullanıcı bunu bulamaz.
+    const apiError = new EArsivApiError('String index out of range: 4', {
+      command: 'EARSIV_PORTAL_FATURA_GOSTER',
+      callId: 'x',
+      raw: {},
+    })
+    const { service } = build(vi.fn().mockRejectedValue(apiError))
+
+    await service.getHtml('abc-smm').catch((error: unknown) => {
+      expect((error as EArsivPortalDefectError).message).toContain('downloadSelfEmployedReceiptPdf')
+    })
+  })
+
   it('ALAKASIZ bir portal hatasını olduğu gibi bırakır', async () => {
     // Çeviri yalnızca bilinen kusur metnine uygulanmalı; her hatayı
     // "portal kusuru" diye etiketlemek gerçek iş hatalarını gizlerdi.
@@ -169,5 +188,99 @@ describe('DocumentService.getDownloadUrl', () => {
     expect(url).toContain('belgeTip=FATURA')
     expect(url).toContain('onayDurumu=Onayland%C4%B1')
     expect(url).toContain('cmd=EARSIV_PORTAL_BELGE_INDIR')
+  })
+})
+
+describe('DocumentService — belgeTip belge TÜRÜNÜ taşır', () => {
+  // Kapsam: sevk edilmiş hatanın ta kendisi. `belgeTip` SABİT `FATURA`
+  // gönderildiği sürece makbuz indirme HİÇ çalışmıyordu ve bunu hiçbir şey
+  // haber vermiyordu: portal yanlış türde `HTTP 200` + **0 bayt** döndürüyor,
+  // hata metni YOK (canlı doğrulandı 2026-09-05). Tek belirti, `getBinary`in
+  // boş gövdede fırlattığı `EArsivNetworkError`dır; o hata bir TEŞHİS koyamaz,
+  // yalnızca üç olasılığı sayar. Yani sebebi `belgeTip` olan bir arıza,
+  // kullanıcıya "ETTN'im mi yanlış?" diye aratılır.
+  //
+  // Testler KASITLI olarak FATURA DIŞI türleri ölçer: sabit `FATURA` gönderen
+  // ESKİ kod da `belgeTip: 'FATURA'` bekleyen bir testi geçerdi, yani böyle
+  // bir test hatanın üstünden geçerdi. Ayırt edici olan, faturadan BAŞKA bir
+  // tür istendiğinde sorguya o türün girmesidir.
+
+  it('müstahsil makbuzunda belgeTip MÜSTAHSİL MAKBUZU olur', async () => {
+    const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+    const { service, getBinary } = build(vi.fn(), vi.fn().mockResolvedValue(zip))
+
+    await service.downloadPackage('abc', { documentType: DocumentType.PRODUCER_RECEIPT })
+
+    expect(getBinary.mock.calls[0]?.[1]).toEqual({
+      token: 'tok123',
+      ettn: 'abc',
+      belgeTip: 'MÜSTAHSİL MAKBUZU',
+      onayDurumu: 'Onaylanmadı',
+      cmd: 'EARSIV_PORTAL_BELGE_INDIR',
+    })
+  })
+
+  it('serbest meslek makbuzunda belgeTip SERBEST MESLEK MAKBUZU olur', async () => {
+    const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46])
+    const { service, getBinary } = build(vi.fn(), vi.fn().mockResolvedValue(pdf))
+
+    await service.downloadPackage('abc', { documentType: DocumentType.SELF_EMPLOYED_RECEIPT })
+
+    expect((getBinary.mock.calls[0]?.[1] as Record<string, string>).belgeTip).toBe(
+      'SERBEST MESLEK MAKBUZU',
+    )
+  })
+
+  it('SMM indirmesi baytları OLDUĞU GİBİ döndürür — portal ZIP değil PDF veriyor', async () => {
+    // Portal SMM'de ZIP paketi değil, doğrudan `%PDF-1.5` gövdesi döndürüyor
+    // (`content-disposition` dosya adı `_s.pdf`; canlı doğrulandı 2026-09-05).
+    // İstemci gövdeyi AÇMAYA ya da ZIP varsaymaya kalkmaz; baytlar dokunulmadan
+    // geçer. `content-type` üç türde de `application/json` yazıyor —
+    // YANILTICIDIR, format yalnızca sihirli baytlardan anlaşılır.
+    const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x35])
+    const { service } = build(vi.fn(), vi.fn().mockResolvedValue(pdf))
+
+    const result = await service.downloadPackage('abc', {
+      documentType: DocumentType.SELF_EMPLOYED_RECEIPT,
+    })
+
+    expect(result).toBe(pdf)
+    expect(Array.from(result.slice(0, 4))).toEqual([0x25, 0x50, 0x44, 0x46])
+  })
+
+  it('tür verilmezse FATURA gönderir — geriye dönük uyum', async () => {
+    const { service, getBinary } = build(
+      vi.fn(),
+      vi.fn().mockResolvedValue(new Uint8Array([0x50, 0x4b])),
+    )
+    await service.downloadPackage('abc')
+    expect((getBinary.mock.calls[0]?.[1] as Record<string, string>).belgeTip).toBe('FATURA')
+  })
+
+  it('getDownloadUrl de türü taşır ve indirmeyle AYNI sorguyu kurar', async () => {
+    // İkisi ayrışırsa biri çalışırken diğeri sessizce boş dönerdi; aynı
+    // `downloadQuery`den geldikleri burada pinlenir.
+    const { service, getBinary } = build(
+      vi.fn(),
+      vi.fn().mockResolvedValue(new Uint8Array([0x50, 0x4b])),
+    )
+    await service.downloadPackage('abc', { documentType: DocumentType.PRODUCER_RECEIPT })
+    const url = service.getDownloadUrl('abc', { documentType: DocumentType.PRODUCER_RECEIPT })
+
+    expect(url).toContain('belgeTip=M%C3%9CSTAHS%C4%B0L+MAKBUZU')
+    expect(url).not.toContain('belgeTip=FATURA')
+    expect(new URL(url).searchParams.get('belgeTip')).toBe(
+      (getBinary.mock.calls[0]?.[1] as Record<string, string>).belgeTip,
+    )
+  })
+
+  it('SMM indirme adresini de kurar', () => {
+    const { service } = build()
+    const url = service.getDownloadUrl('abc', {
+      documentType: DocumentType.SELF_EMPLOYED_RECEIPT,
+      signed: true,
+    })
+    expect(new URL(url).searchParams.get('belgeTip')).toBe('SERBEST MESLEK MAKBUZU')
+    expect(new URL(url).searchParams.get('onayDurumu')).toBe('Onaylandı')
   })
 })

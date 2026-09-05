@@ -8,7 +8,7 @@ import {
   type TokenProvider,
 } from '../../transport/index.js'
 
-import type { DocumentOptions } from './document.types.js'
+import type { DocumentOptions, DownloadOptions } from './document.types.js'
 
 /**
  * Portalın belge gösteriminde sızdırdığı Java istisnası.
@@ -50,8 +50,11 @@ function showDocumentPortalDefect(ettn: string, cause: EArsivApiError): EArsivPo
       'gösterimi bozuk, fatura ve müstahsil makbuzunda aynı komut çalışıyor ' +
       "(canlı doğrulandı 2026-09-05). ÖNCE ETTN'inizi doğrulayın; listeleme " +
       'metotlarından dönen değerle birebir aynı olmalı. ETTN doğruysa belge bir ' +
-      'Serbest Meslek Makbuzudur ve tüm verilerine getSelfEmployedReceipt(ettn) ' +
-      'ile erişebilirsiniz; bu durum istemci tarafında düzeltilemez.',
+      'Serbest Meslek Makbuzudur: HTML gösterimi istemci tarafında düzeltilemez, ' +
+      'ancak makbuza İKİ yoldan erişebilirsiniz — tüm verileri için ' +
+      'getSelfEmployedReceipt(ettn), basılabilir RESMİ belge için ' +
+      'downloadSelfEmployedReceiptPdf(ettn) (portal SMM indirmesinde ZIP değil ' +
+      'doğrudan PDF döndürür).',
     { command: Command.SHOW_INVOICE, portalMessage: cause.message, cause },
   )
 }
@@ -59,9 +62,12 @@ function showDocumentPortalDefect(ettn: string, cause: EArsivApiError): EArsivPo
 /**
  * Belge görüntüleme ve indirme. İndirme `/download` GET endpoint'ini kullanır.
  *
- * Belge TÜRÜNDEN bağımsızdır: aynı komut fatura ve müstahsil makbuzunda
- * çalışır. Serbest meslek makbuzunda portal bozuktur; istemci o türü ayrı bir
- * yolla (bkz. `SelfEmployedReceiptService.getHtml`) reddeder.
+ * GÖSTERİM belge türünden bağımsızdır: aynı komut fatura ve müstahsil
+ * makbuzunda çalışır. Serbest meslek makbuzunda portal bozuktur; istemci o
+ * türü ayrı bir yolla (bkz. `SelfEmployedReceiptService.getHtml`) reddeder.
+ *
+ * İNDİRME ise DEĞİLDİR: sorgudaki `belgeTip` alanı belgenin türünü taşımak
+ * zorundadır ve dönen format da türe göre değişir (bkz. `downloadPackage`).
  *
  * @example Tek başına kullanmak
  * ```ts
@@ -141,35 +147,60 @@ export class DocumentService {
   }
 
   /**
-   * Resmi belge paketini indirir. ZIP içinde `<ettn>_f.html` ve imzalı
-   * `<ettn>_f.xml` (UBL-TR) bulunur; PDF yoktur.
+   * Resmi belgeyi indirir. `options.documentType` ile belge TÜRÜ verilir;
+   * varsayılan `FATURA`.
    *
-   * DİKKAT: indirme sorgusunda `belgeTip` alanı SABİT olarak `FATURA`
-   * gönderilir. Makbuz belge paketinin indirilmesi hiç test EDİLMEDİ; makbuz
-   * ETTN'i ile çağırmanın davranışı bilinmiyor — "çalışıyor" varsayarak akış
-   * kurmayın.
+   * DÖNEN FORMAT TÜRE GÖRE DEĞİŞİR (canlı doğrulandı 2026-09-05):
    *
-   * @param ettn Faturanın ETTN'i.
-   * @param options `signed: true` imzalı sürümü ister; varsayılan `false`.
-   * @returns ZIP dosyasının ham baytları.
-   * @throws {EArsivNetworkError} Portal BOŞ paket döndürürse (ETTN veya onay
-   *   durumu hatalı olabilir) ya da portala ulaşılamazsa.
+   * | Belge türü | `belgeTip` | Format | Dosya adı |
+   * | --- | --- | --- | --- |
+   * | Fatura | `FATURA` | ZIP | `<ettn>_f.zip` |
+   * | Müstahsil Makbuzu | `MÜSTAHSİL MAKBUZU` | ZIP | `<ettn>_m.zip` |
+   * | Serbest Meslek Makbuzu | `SERBEST MESLEK MAKBUZU` | **PDF** | `<ettn>_s.pdf` |
+   *
+   * ZIP paketinin içeriği de türe göre adlandırılır: faturada `<ettn>_f.html`
+   * ve imzalı `<ettn>_f.xml` (UBL-TR), müstahsilde `_m` ekiyle aynı çift.
+   * ZIP'lerde PDF YOKTUR. Serbest meslek makbuzunda ise ZIP hiç yoktur;
+   * portal doğrudan basılabilir resmî PDF'i (`%PDF-1.5`) döndürür — metodun
+   * adı "paket" dese de o türde gelen şey bir PDF'tir. Bu yüzden facade'da
+   * formatı adında söyleyen `downloadSelfEmployedReceiptPdf` bulunur; çağrı
+   * yerinde hangi baytların geldiği belli olsun diye onu tercih edin.
+   *
+   * FORMATI `content-type` BAŞLIĞINDAN ÇIKARMAYIN: portal üç türde de
+   * `application/json` yazıyor, YANILTICIDIR. Gerçek format yalnızca sihirli
+   * baytlardan anlaşılır (`PK` / `%PDF`).
+   *
+   * DİKKAT: yanlış `belgeTip` SESSİZCE boş döner — makbuz ETTN'i +
+   * `belgeTip=FATURA` portalda `HTTP 200` ve 0 bayt üretir, hata metni yoktur.
+   * Bu, boş gövde nedeniyle `EArsivNetworkError`'a dönüşür; hata "ETTN hatalı"
+   * der ama gerçek sebep yanlış TÜR olabilir.
+   *
+   * @param ettn Belgenin ETTN'i; listeleme yöntemlerinden dönen değerle
+   *   birebir aynı olmalıdır.
+   * @param options `documentType` belge türü (varsayılan `FATURA`),
+   *   `signed: true` imzalı sürümü ister (varsayılan `false`).
+   * @returns Dosyanın ham baytları: fatura ve müstahsilde ZIP, serbest meslek
+   *   makbuzunda PDF.
+   * @throws {EArsivNetworkError} Portal BOŞ gövde döndürürse (ETTN, belge
+   *   TÜRÜ veya onay durumu hatalı olabilir) ya da portala ulaşılamazsa.
    * @throws {EArsivAuthError} Oturum açık değilse.
    *
-   * @example
+   * @example Müstahsil makbuzunun ZIP paketini indirmek
    * ```ts
    * import { writeFile } from 'node:fs/promises'
    *
-   * import { EArsivClient } from 'efatura'
+   * import { DocumentType, EArsivClient } from 'efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
    *
-   * const zip = await client.downloadPackage('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
-   * await writeFile('belge.zip', zip)
+   * const zip = await client.downloadPackage('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f', {
+   *   documentType: DocumentType.PRODUCER_RECEIPT,
+   * })
+   * await writeFile('makbuz.zip', zip)
    * ```
    */
-  async downloadPackage(ettn: string, options: DocumentOptions = {}): Promise<Uint8Array> {
+  async downloadPackage(ettn: string, options: DownloadOptions = {}): Promise<Uint8Array> {
     return this.http.getBinary(Endpoint.DOWNLOAD, this.downloadQuery(ettn, options))
   }
 
@@ -184,31 +215,35 @@ export class DocumentService {
    * — açığa çıkar. URL'yi yalnızca güvendiğiniz bir bağlamda kullanın ve
    * paylaşmayın.
    *
-   * DİKKAT: indirme sorgusunda `belgeTip` alanı SABİT olarak `FATURA`
-   * gönderilir. Makbuz belge paketinin indirilmesi hiç test EDİLMEDİ; makbuz
-   * ETTN'i ile çağırmanın davranışı bilinmiyor — "çalışıyor" varsayarak akış
-   * kurmayın.
+   * Adres `downloadPackage` ile AYNI sorguyu kurar; dolayısıyla aynı format
+   * tablosuna tabidir: `FATURA` ve `MÜSTAHSİL MAKBUZU` bir ZIP indirir,
+   * `SERBEST MESLEK MAKBUZU` doğrudan bir PDF. Belge türü
+   * `options.documentType` ile verilir (varsayılan `FATURA`); yanlış tür
+   * portalda SESSİZCE boş yanıt üretir.
    *
-   * @param ettn Faturanın ETTN'i.
-   * @param options `signed: true` imzalı sürümün adresini üretir; varsayılan
-   *   `false`.
+   * @param ettn Belgenin ETTN'i.
+   * @param options `documentType` belge türü (varsayılan `FATURA`),
+   *   `signed: true` imzalı sürümün adresini üretir (varsayılan `false`).
    * @returns Tam indirme adresi. AĞA ÇIKMAZ; yalnızca URL kurar.
    * @throws {EArsivAuthError} Oturum açık değilse — URL token olmadan
    *   kurulamaz.
    *
    * @example
    * ```ts
-   * import { EArsivClient } from 'efatura'
+   * import { DocumentType, EArsivClient } from 'efatura'
    *
    * const client = new EArsivClient({ environment: 'test' })
    * await client.loginWithTestUser()
    *
-   * const url = client.getDownloadUrl('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f', { signed: true })
+   * const url = client.getDownloadUrl('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f', {
+   *   documentType: DocumentType.PRODUCER_RECEIPT,
+   *   signed: true,
+   * })
    * // CANLI token taşır: günlüğe yazmayın, paylaşmayın.
    * console.log(url.includes('token='))
    * ```
    */
-  getDownloadUrl(ettn: string, options: DocumentOptions = {}): string {
+  getDownloadUrl(ettn: string, options: DownloadOptions = {}): string {
     const query = new URLSearchParams(this.downloadQuery(ettn, options)).toString()
     return `${this.options.baseUrl}${Endpoint.DOWNLOAD}?${query}`
   }
@@ -217,11 +252,17 @@ export class DocumentService {
     return options.signed === true ? ApprovalStatus.APPROVED : ApprovalStatus.NOT_APPROVED
   }
 
-  private downloadQuery(ettn: string, options: DocumentOptions): Record<string, string> {
+  /**
+   * `belgeTip` VARSAYILANI `FATURA`'dır, sabiti DEĞİL: alan bir zamanlar
+   * sabit gönderiliyordu ve makbuz indirme bu yüzden hiç çalışmıyordu
+   * (portal yanlış türde `HTTP 200` + 0 bayt döndürüyor, hata metni yok).
+   * Varsayılan, tür vermeyen mevcut çağrıların davranışını korumak içindir.
+   */
+  private downloadQuery(ettn: string, options: DownloadOptions): Record<string, string> {
     return {
       token: this.tokens.getToken(),
       ettn,
-      belgeTip: DocumentType.INVOICE,
+      belgeTip: options.documentType ?? DocumentType.INVOICE,
       onayDurumu: this.approvalStatus(options),
       cmd: Command.DOWNLOAD_DOCUMENT,
     }

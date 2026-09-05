@@ -274,6 +274,70 @@ describe('EArsivClient', () => {
     expect(await client.getProducerReceiptHtml('abc')).toBe('<html>makbuz</html>')
   })
 
+  it('makbuz indirmeleri belgeTip alanını KENDİ türleriyle gönderir', async () => {
+    // Sevk edilmiş hata facade seviyesinde: `belgeTip` SABİT `FATURA`
+    // gittiği sürece makbuz indirme portalda `HTTP 200` + 0 BAYT dönüyordu
+    // (canlı doğrulandı 2026-09-05). Yönlendirme tablosu bunu göremez —
+    // indirme `dispatch` üzerinden DEĞİL, ayrı bir GET uç noktasından geçer
+    // ve `cmd` üç türde de aynıdır (`EARSIV_PORTAL_BELGE_INDIR`). Ayırt
+    // edici tek alan `belgeTip`tir, bu yüzden burada URL'den okunur.
+    const urls: string[] = []
+    const fetchMock = vi.fn((url: string) => {
+      urls.push(url)
+      return Promise.resolve(new Response(new Uint8Array([0x50, 0x4b, 0x03, 0x04])))
+    })
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    await client.downloadPackage('abc')
+    await client.downloadProducerReceiptPackage('abc')
+
+    expect(new URL(urls[0]!).searchParams.get('belgeTip')).toBe('FATURA')
+    expect(new URL(urls[1]!).searchParams.get('belgeTip')).toBe('MÜSTAHSİL MAKBUZU')
+  })
+
+  it('SMM indirmesi PDF baytlarını döndürür ve adında PDF der', async () => {
+    // Portal SMM'de ZIP paketi DEĞİL, doğrudan bir PDF döndürüyor
+    // (`%PDF-1.5`, dosya adı `_s.pdf`). Bu yüzden metodun adı `...Pdf`;
+    // `downloadPackage` adı altında PDF döndürmek kullanıcıyı şaşırtırdı.
+    const urls: string[] = []
+    const fetchMock = vi.fn((url: string) => {
+      urls.push(url)
+      return Promise.resolve(new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])))
+    })
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    const pdf = await client.downloadSelfEmployedReceiptPdf('abc')
+
+    expect(new URL(urls[0]!).searchParams.get('belgeTip')).toBe('SERBEST MESLEK MAKBUZU')
+    // `%PDF` — gerçek format yalnızca sihirli baytlardan anlaşılır; portalın
+    // `content-type` başlığı üç türde de `application/json` yazar.
+    expect(Array.from(pdf.slice(0, 4))).toEqual([0x25, 0x50, 0x44, 0x46])
+  })
+
+  it('makbuz indirme adresleri de kendi belgeTip değerini taşır', () => {
+    // Ağa çıkmayan URL üreticileri, indirme metotlarıyla AYNI sorguyu
+    // kurmak zorunda; ayrışırlarsa biri çalışırken diğeri sessizce boş
+    // dönerdi.
+    const client = new EArsivClient({ environment: 'test', fetch: vi.fn() as never })
+    client.setToken('tok')
+
+    expect(new URL(client.getDownloadUrl('abc')).searchParams.get('belgeTip')).toBe('FATURA')
+    expect(new URL(client.getProducerReceiptDownloadUrl('abc')).searchParams.get('belgeTip')).toBe(
+      'MÜSTAHSİL MAKBUZU',
+    )
+    expect(new URL(client.getSelfEmployedReceiptPdfUrl('abc')).searchParams.get('belgeTip')).toBe(
+      'SERBEST MESLEK MAKBUZU',
+    )
+  })
+
   it('public API yüzeyi eksiksiz', () => {
     // Not: bu test yalnızca yüzeyi koruyor — bir metodun kazara silinmesini
     // yakalar, davranışını değil. Davranış testleri yukarıdaki beş testte.
@@ -314,6 +378,10 @@ describe('EArsivClient', () => {
       'getSelfEmployedReceipt',
       'getSelfEmployedReceiptHtml',
       'selfEmployedReceiptToPdf',
+      'downloadProducerReceiptPackage',
+      'getProducerReceiptDownloadUrl',
+      'downloadSelfEmployedReceiptPdf',
+      'getSelfEmployedReceiptPdfUrl',
     ]) {
       expect(typeof (client as unknown as Record<string, unknown>)[method]).toBe('function')
     }

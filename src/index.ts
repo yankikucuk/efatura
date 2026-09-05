@@ -34,7 +34,12 @@
  *   ÜST KÜMEDİR: fatura ve her iki makbuz türü aynı listede döner.
  * - Serbest Meslek Makbuzunun HTML gösterimi portalda BOZUKTUR;
  *   `getSelfEmployedReceiptHtml` ağa hiç çıkmadan
- *   `EArsivPortalDefectError` fırlatır.
+ *   `EArsivPortalDefectError` fırlatır. Basılabilir RESMİ belge yine de
+ *   erişilebilir: `downloadSelfEmployedReceiptPdf` portalın kendi PDF'ini
+ *   indirir.
+ * - Belge indirme sorgusundaki `belgeTip` belge TÜRÜNÜ taşır ve dönen format
+ *   da türe göre değişir: fatura ve müstahsil ZIP, serbest meslek makbuzu
+ *   doğrudan PDF. Yanlış tür SESSİZCE boş yanıt üretir.
  * - Taslak silme (`cancelDraft`) test portalında hiçbir belge türünde
  *   çalışmıyor; bu portalın önceden var olan davranışıdır.
  * - Portal makbuz tutarlarını ne hesaplar ne doğrular — aritmetik güvencesi

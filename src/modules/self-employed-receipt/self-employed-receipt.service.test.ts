@@ -266,6 +266,30 @@ describe('SelfEmployedReceiptService.getHtml — portal kusuru', () => {
     expect(thrown?.message).toContain('abc-123')
   })
 
+  it('kısıt anlatısı BASILABİLİR RESMİ PDF yolunu gösterir', () => {
+    // Kısıt 2026-09-05'te ÖNEMLİ ÖLÇÜDE yumuşadı: portalın HTML gösterimi
+    // hâlâ bozuk, AMA indirme uç noktası `belgeTip='SERBEST MESLEK MAKBUZU'`
+    // ile doğrudan resmî bir PDF döndürüyor (`%PDF-1.5`, dosya adı `_s.pdf`;
+    // canlı doğrulandı). Eski mesaj kullanıcıya yalnızca `getSelfEmployedReceipt`
+    // ile VERİYE erişebileceğini söylüyordu — yani basılabilir belgeye hiç
+    // ulaşamayacağını ima ediyordu, ki bu artık YANLIŞ. Elinde bir çıktı
+    // gerekli olan kullanıcı, var olan yolu bilmeden PDF'i kendi üretmeye
+    // ya da özelliği hiç kullanmamaya yönelirdi.
+    let thrown: EArsivPortalDefectError | undefined
+    try {
+      service().service.getHtml('abc-123')
+    } catch (error) {
+      thrown = error as EArsivPortalDefectError
+    }
+
+    // Çalışan yolun ADI mesajda geçmeli; "bir yolu var" demek yetmez.
+    expect(thrown?.message).toContain('downloadSelfEmployedReceiptPdf')
+    // Ve dönen şeyin PDF olduğu söylenmeli — kullanıcı ZIP beklemesin.
+    expect(thrown?.message).toMatch(/PDF/)
+    // Veri yolu da korunur; ikisi farklı ihtiyaçlara cevap verir.
+    expect(thrown?.message).toContain('getSelfEmployedReceipt(')
+  })
+
   it('toPdf da aynı hatayı verir', () => {
     expect(() => service().service.toPdf('abc-123')).toThrow(EArsivPortalDefectError)
   })

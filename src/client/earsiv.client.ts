@@ -1,4 +1,5 @@
 import { type ClientOptions, type EnvironmentName, resolveClientOptions } from '../config/index.js'
+import { DocumentType } from '../constants/index.js'
 import type { DateInput } from '../core/index.js'
 import { AuthService, type Credentials, type TestUserCredentials } from '../modules/auth/index.js'
 import {
@@ -9,7 +10,11 @@ import {
   type IncomingObjectionRequestInput,
   type ObjectionRequestInput,
 } from '../modules/dispute/index.js'
-import { type DocumentOptions, DocumentService } from '../modules/document/index.js'
+import {
+  type DocumentOptions,
+  DocumentService,
+  type DownloadOptions,
+} from '../modules/document/index.js'
 import {
   type CancelDraftOptions,
   type CreatedInvoice,
@@ -675,22 +680,31 @@ export class EArsivClient {
   }
 
   /**
-   * Resmi belge paketi (ZIP): HTML + imzalı UBL-TR XML.
+   * Faturanın resmi belge paketi (ZIP): HTML + imzalı UBL-TR XML.
    *
-   * ZIP içinde `<ettn>_f.html` ve imzalı `<ettn>_f.xml` bulunur; PDF YOKTUR —
+   * Fatura ZIP'i `<ettn>_f.html` ve imzalı `<ettn>_f.xml` içerir; PDF YOKTUR —
    * PDF isteniyorsa `toPdf` HTML üzerinden üretir ve o çıktı resmi imzalı
-   * belge değildir.
+   * belge değildir. `_f` eki yalnızca FATURA içindir; müstahsil paketinde
+   * dosyalar `_m` ekiyle gelir.
    *
-   * DİKKAT: indirme sorgusunda `belgeTip` alanı SABİT olarak `FATURA`
-   * gönderilir. Makbuz belge paketinin indirilmesi hiç test EDİLMEDİ; makbuz
-   * ETTN'i ile çağırmanın davranışı bilinmiyor — "çalışıyor" varsayarak akış
-   * kurmayın.
+   * Belge türü `options.documentType` ile değiştirilebilir (varsayılan
+   * `FATURA`) ama makbuzlarda ADI FORMATI SÖYLEYEN metotları tercih edin:
+   * {@link EArsivClient.downloadProducerReceiptPackage} (ZIP) ve
+   * {@link EArsivClient.downloadSelfEmployedReceiptPdf} (PDF). Sebebi:
+   * `SERBEST MESLEK MAKBUZU` türünde portal ZIP değil, doğrudan PDF döndürür —
+   * "paket" adlı bir metottan PDF almak şaşırtıcıdır.
    *
-   * @param ettn Faturanın ETTN'i.
-   * @param options `signed: true` imzalı sürümü ister; varsayılan `false`.
-   * @returns ZIP dosyasının ham baytları.
-   * @throws {EArsivNetworkError} Portal boş bir paket döndürürse (ETTN veya
-   *   onay durumu hatalı olabilir) ya da portala ulaşılamazsa.
+   * DİKKAT: yanlış belge türü SESSİZCE boş yanıt üretir (portal `HTTP 200` +
+   * 0 bayt, hata metni yok); istemci bunu `EArsivNetworkError`'a çevirir ama
+   * sebebin TÜR olduğunu söyleyemez.
+   *
+   * @param ettn Belgenin ETTN'i.
+   * @param options `documentType` belge türü (varsayılan `FATURA`),
+   *   `signed: true` imzalı sürümü ister (varsayılan `false`).
+   * @returns Dosyanın ham baytları — fatura ve müstahsilde ZIP, serbest meslek
+   *   makbuzunda PDF.
+   * @throws {EArsivNetworkError} Portal boş gövde döndürürse (ETTN, belge
+   *   türü veya onay durumu hatalı olabilir) ya da portala ulaşılamazsa.
    * @throws {EArsivAuthError} Oturum yoksa.
    *
    * @example
@@ -703,10 +717,10 @@ export class EArsivClient {
    * await client.loginWithTestUser()
    *
    * const ettn = '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f'
-   * await writeFile(`${ettn}.zip`, await client.downloadPackage(ettn))
+   * await writeFile(`${ettn}_f.zip`, await client.downloadPackage(ettn))
    * ```
    */
-  async downloadPackage(ettn: string, options?: DocumentOptions): Promise<Uint8Array> {
+  async downloadPackage(ettn: string, options?: DownloadOptions): Promise<Uint8Array> {
     return this.documents.downloadPackage(ettn, options)
   }
 
@@ -721,14 +735,16 @@ export class EArsivClient {
    * isteğin `Referer` başlığında açığa çıkar. Yalnızca güvendiğiniz bir
    * bağlamda kullanın ve paylaşmayın.
    *
-   * DİKKAT: indirme sorgusunda `belgeTip` alanı SABİT olarak `FATURA`
-   * gönderilir. Makbuz belge paketinin indirilmesi hiç test EDİLMEDİ; makbuz
-   * ETTN'i ile çağırmanın davranışı bilinmiyor — "çalışıyor" varsayarak akış
-   * kurmayın.
+   * Adresin indireceği FORMAT belge türüne göre değişir: `FATURA` ve
+   * `MÜSTAHSİL MAKBUZU` bir ZIP, `SERBEST MESLEK MAKBUZU` doğrudan bir PDF
+   * verir. Tür `options.documentType` ile seçilir (varsayılan `FATURA`);
+   * makbuzlarda {@link EArsivClient.getProducerReceiptDownloadUrl} ve
+   * {@link EArsivClient.getSelfEmployedReceiptPdfUrl} aynı işi formatı adında
+   * söyleyerek yapar. Yanlış tür portalda SESSİZCE boş yanıt üretir.
    *
-   * @param ettn Faturanın ETTN'i.
-   * @param options `signed: true` imzalı sürümün adresini üretir; varsayılan
-   *   `false`.
+   * @param ettn Belgenin ETTN'i.
+   * @param options `documentType` belge türü (varsayılan `FATURA`),
+   *   `signed: true` imzalı sürümün adresini üretir (varsayılan `false`).
    * @returns Tam indirme adresi (taban adres + `/earsiv-services/download` +
    *   sorgu dizesi).
    * @throws {EArsivAuthError} Oturum açık değilse — URL token olmadan
@@ -746,7 +762,7 @@ export class EArsivClient {
    * console.log(url.startsWith('https://earsivportaltest.efatura.gov.tr'))
    * ```
    */
-  getDownloadUrl(ettn: string, options?: DocumentOptions): string {
+  getDownloadUrl(ettn: string, options?: DownloadOptions): string {
     return this.documents.getDownloadUrl(ettn, options)
   }
 
@@ -972,6 +988,94 @@ export class EArsivClient {
     return renderHtmlToPdf(html, options)
   }
 
+  /**
+   * Müstahsil makbuzunun resmi belge paketini (ZIP) indirir.
+   *
+   * `downloadPackage`'ın makbuz karşılığıdır ve tek farkı sorguya
+   * `belgeTip: 'MÜSTAHSİL MAKBUZU'` koymasıdır. Bu ayrı metot GEREKLİDİR,
+   * kolaylık değildir: alan bir zamanlar sabit `FATURA` gönderiliyordu ve
+   * makbuz indirme bu yüzden hiç çalışmıyordu — portal, makbuz ETTN'i +
+   * `belgeTip=FATURA` çiftine `HTTP 200` ve **0 bayt** ile karşılık veriyor,
+   * hata metni YOK (canlı doğrulandı 2026-09-05).
+   *
+   * FORMAT: ZIP. Paket `<ettn>_m.html` ve imzalı `<ettn>_m.xml` (UBL-TR)
+   * içerir — faturadaki `_f` ekinin makbuz karşılığı. PDF YOKTUR; portalın
+   * ZIP paketinde hiçbir belge türü için PDF bulunmaz (serbest meslek
+   * makbuzu hariç, orada ZIP'in kendisi yoktur).
+   *
+   * `content-type` başlığı `application/json` yazar; YANILTICIDIR. Formatı
+   * doğrulamak isterseniz sihirli baytlara bakın (`PK`).
+   *
+   * @param ettn Makbuzun ETTN'i; `listProducerReceipts` satırlarından dönen
+   *   değerle birebir aynı olmalıdır.
+   * @param options `signed: true` imzalı (onaylanmış) sürümü ister;
+   *   varsayılan `false`. Belge türü metodun kendisi tarafından verilir.
+   * @returns ZIP dosyasının ham baytları.
+   * @throws {EArsivNetworkError} Portal boş gövde döndürürse (ETTN veya onay
+   *   durumu hatalı olabilir) ya da portala ulaşılamazsa.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { writeFile } from 'node:fs/promises'
+   *
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const ettn = '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f'
+   * const zip = await client.downloadProducerReceiptPackage(ettn)
+   * console.log(zip[0] === 0x50 && zip[1] === 0x4b) // 'PK' — ZIP imzası
+   * await writeFile(`${ettn}_m.zip`, zip)
+   * ```
+   */
+  async downloadProducerReceiptPackage(
+    ettn: string,
+    options?: DocumentOptions,
+  ): Promise<Uint8Array> {
+    return this.documents.downloadPackage(ettn, {
+      ...options,
+      documentType: DocumentType.PRODUCER_RECEIPT,
+    })
+  }
+
+  /**
+   * Müstahsil makbuzu ZIP paketinin indirme adresini üretir. AĞA ÇIKMAZ.
+   *
+   * UYARI: dönen URL, geçerli oturumun CANLI token'ını sorgu dizesinde
+   * (`token=...`) taşır ve bu değer GİZLENMEZ. URL'yi bir tarayıcıya
+   * yapıştırırsanız token tarayıcı geçmişinde ve URL'ye giden herhangi bir
+   * isteğin `Referer` başlığında açığa çıkar. Yalnızca güvendiğiniz bir
+   * bağlamda kullanın ve paylaşmayın. Adres ayrıca oturumu AÇAN istemcinin
+   * IP'sine bağlıdır (bkz. README).
+   *
+   * @param ettn Makbuzun ETTN'i.
+   * @param options `signed: true` imzalı sürümün adresini üretir; varsayılan
+   *   `false`.
+   * @returns ZIP indirecek tam adres.
+   * @throws {EArsivAuthError} Oturum açık değilse — URL token olmadan
+   *   kurulamaz.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const url = client.getProducerReceiptDownloadUrl('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * // CANLI token taşır: günlüğe yazmayın, paylaşmayın.
+   * console.log(url.includes('belgeTip='))
+   * ```
+   */
+  getProducerReceiptDownloadUrl(ettn: string, options?: DocumentOptions): string {
+    return this.documents.getDownloadUrl(ettn, {
+      ...options,
+      documentType: DocumentType.PRODUCER_RECEIPT,
+    })
+  }
+
   // — Serbest Meslek Makbuzu —
 
   /**
@@ -1167,6 +1271,99 @@ export class EArsivClient {
    */
   selfEmployedReceiptToPdf(ettn: string): never {
     return this.selfEmployedReceipts.toPdf(ettn)
+  }
+
+  /**
+   * Serbest meslek makbuzunun RESMİ PDF'ini indirir — portal bu türde ZIP
+   * paketi değil, doğrudan PDF döndürür (`%PDF-1.5`, `content-disposition`
+   * dosya adı `<ettn>_s.pdf`; canlı doğrulandı 2026-09-05).
+   *
+   * Metodun adı `...Package` DEĞİL `...Pdf`tir, çünkü dönen şey gerçekten
+   * budur: aynı uç nokta faturada ve müstahsilde ZIP verir, SMM'de PDF. Adı
+   * "paket" olan bir metottan PDF almak kullanıcıyı şaşırtır ve `.zip`
+   * uzantısıyla yazılmış bozuk dosyalar üretirdi.
+   *
+   * BU, SMM KISITINI ÖNEMLİ ÖLÇÜDE YUMUŞATIR. `getSelfEmployedReceiptHtml`
+   * ve `selfEmployedReceiptToPdf` portal kusuru nedeniyle desteklenmiyor,
+   * ancak bozuk olan yalnızca HTML GÖSTERİMİDİR: basılabilir resmî belgeye bu
+   * metotla erişilir. `selfEmployedReceiptToPdf`'in üreteceği çıktının aksine
+   * buradaki PDF portalın kendi RESMİ belgesidir, yerel bir render değildir.
+   *
+   * `content-type` başlığı `application/json` yazar; YANILTICIDIR. Formatı
+   * doğrulamak isterseniz sihirli baytlara bakın (`%PDF`).
+   *
+   * @param ettn Makbuzun ETTN'i; `listSelfEmployedReceipts` satırlarından
+   *   dönen değerle birebir aynı olmalıdır.
+   * @param options `signed: true` imzalı (onaylanmış) sürümü ister;
+   *   varsayılan `false`. Belge türü metodun kendisi tarafından verilir.
+   * @returns PDF dosyasının ham baytları. ZIP DEĞİLDİR — açmaya çalışmayın.
+   * @throws {EArsivNetworkError} Portal boş gövde döndürürse (ETTN veya onay
+   *   durumu hatalı olabilir) ya da portala ulaşılamazsa.
+   * @throws {EArsivAuthError} Oturum yoksa veya süresi dolmuşsa.
+   *
+   * @example
+   * ```ts
+   * import { writeFile } from 'node:fs/promises'
+   *
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const ettn = '9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f'
+   * const pdf = await client.downloadSelfEmployedReceiptPdf(ettn)
+   * console.log(new TextDecoder().decode(pdf.slice(0, 4))) // '%PDF'
+   * await writeFile(`${ettn}_s.pdf`, pdf)
+   * ```
+   */
+  async downloadSelfEmployedReceiptPdf(
+    ettn: string,
+    options?: DocumentOptions,
+  ): Promise<Uint8Array> {
+    return this.documents.downloadPackage(ettn, {
+      ...options,
+      documentType: DocumentType.SELF_EMPLOYED_RECEIPT,
+    })
+  }
+
+  /**
+   * Serbest meslek makbuzunun resmî PDF'ini indirecek adresi üretir.
+   * AĞA ÇIKMAZ; yalnızca URL kurar.
+   *
+   * Adın `...PdfUrl` olması bilinçlidir: bu adres bir ZIP değil, doğrudan PDF
+   * indirir (bkz. {@link EArsivClient.downloadSelfEmployedReceiptPdf}).
+   *
+   * UYARI: dönen URL, geçerli oturumun CANLI token'ını sorgu dizesinde
+   * (`token=...`) taşır ve bu değer GİZLENMEZ. URL'yi bir tarayıcıya
+   * yapıştırırsanız token tarayıcı geçmişinde ve URL'ye giden herhangi bir
+   * isteğin `Referer` başlığında açığa çıkar. Yalnızca güvendiğiniz bir
+   * bağlamda kullanın ve paylaşmayın. Adres ayrıca oturumu AÇAN istemcinin
+   * IP'sine bağlıdır (bkz. README).
+   *
+   * @param ettn Makbuzun ETTN'i.
+   * @param options `signed: true` imzalı sürümün adresini üretir; varsayılan
+   *   `false`.
+   * @returns PDF indirecek tam adres.
+   * @throws {EArsivAuthError} Oturum açık değilse — URL token olmadan
+   *   kurulamaz.
+   *
+   * @example
+   * ```ts
+   * import { EArsivClient } from 'efatura'
+   *
+   * const client = new EArsivClient({ environment: 'test' })
+   * await client.loginWithTestUser()
+   *
+   * const url = client.getSelfEmployedReceiptPdfUrl('9c2f2b0f-2f4c-4e4f-9f4a-2b0f9c2f2b0f')
+   * // CANLI token taşır: günlüğe yazmayın, paylaşmayın.
+   * console.log(url.includes('belgeTip='))
+   * ```
+   */
+  getSelfEmployedReceiptPdfUrl(ettn: string, options?: DocumentOptions): string {
+    return this.documents.getDownloadUrl(ettn, {
+      ...options,
+      documentType: DocumentType.SELF_EMPLOYED_RECEIPT,
+    })
   }
 
   // — Kullanıcı —
