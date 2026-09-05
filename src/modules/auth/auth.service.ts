@@ -47,6 +47,13 @@ export class AuthService implements TokenProvider {
     const command: LoginCommand =
       credentials.loginCommand ?? (this.options.environment === 'test' ? 'login' : 'anologin')
 
+    // Giriş denemesi, yeni bir oturum kurma niyetinin beyanıdır. Başarısız
+    // olursa doğru durum "kimlik doğrulanmamış"tır, "eski oturum hâlâ
+    // geçerli" değil. Aksi halde çağıran, değiştirdiğini sandığı hesabın
+    // altında işlem yapmaya devam ederdi — çok hesaplı kullanımda fatura
+    // yanlış firma adına kesilebilirdi.
+    this.currentToken = undefined
+
     const raw = await this.http.postForm(Endpoint.LOGIN, {
       assoscmd: command,
       rtype: 'json',
@@ -99,16 +106,27 @@ export class AuthService implements TokenProvider {
     return { username, password, token }
   }
 
-  /** Oturumu kapatır. Token yoksa hiçbir şey yapmaz. */
+  /**
+   * Oturumu kapatır. Token yoksa hiçbir şey yapmaz.
+   *
+   * Yerel token, uzak çağrı başarısız olsa bile temizlenir: istemcinin
+   * kimliğinin doğrulandığına inanmaya devam etmesi, sunucuda bir oturumun
+   * açık kalmasından daha tehlikelidir. Hata yine de yukarı iletilir, böylece
+   * çağıran uzak oturumun kapatılamadığını bilir.
+   */
   async logout(): Promise<void> {
-    if (this.currentToken === undefined) return
+    const token = this.currentToken
+    if (token === undefined) return
 
-    await this.http.postForm(Endpoint.LOGIN, {
-      assoscmd: 'logout',
-      rtype: 'json',
-      token: this.currentToken,
-    })
-    this.currentToken = undefined
-    this.options.logger.info('e-Arşiv oturumu kapatıldı')
+    try {
+      await this.http.postForm(Endpoint.LOGIN, {
+        assoscmd: 'logout',
+        rtype: 'json',
+        token,
+      })
+      this.options.logger.info('e-Arşiv oturumu kapatıldı')
+    } finally {
+      this.currentToken = undefined
+    }
   }
 }

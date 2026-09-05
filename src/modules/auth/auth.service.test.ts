@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../../config/index.js'
-import { EArsivApiError, EArsivAuthError } from '../../core/index.js'
+import { EArsivApiError, EArsivAuthError, EArsivNetworkError } from '../../core/index.js'
 import { HttpClient } from '../../transport/index.js'
 
 import { AuthService } from './auth.service.js'
@@ -154,5 +154,56 @@ describe('AuthService token yaşam döngüsü', () => {
     const fetchMock = vi.fn()
     await serviceWith(fetchMock as unknown as typeof globalThis.fetch).logout()
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("başarısız giriş, önceki oturumun token'ını bayat bırakmaz", async () => {
+    // Çok hesaplı kullanımda en tehlikeli senaryo: kullanıcı hesap
+    // değiştirdiğini sanırken eski oturum altında fatura kesmeye devam eder.
+    const fetchMock = vi.fn(() => json({ token: 'eski-oturum' }))
+    const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch)
+    await service.login({ username: 'a', password: 'p' })
+    expect(service.isAuthenticated).toBe(true)
+
+    fetchMock.mockImplementation(() => json({ chgpwd: 'true' }))
+    await expect(service.login({ username: 'b', password: 'yanlis' })).rejects.toThrow(
+      EArsivAuthError,
+    )
+
+    expect(service.isAuthenticated).toBe(false)
+    expect(service.token).toBeUndefined()
+    expect(() => service.getToken()).toThrow(EArsivAuthError)
+  })
+
+  it("portal hatası da önceki token'ı bayat bırakmaz", async () => {
+    const fetchMock = vi.fn(() => json({ token: 'eski-oturum' }))
+    const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch)
+    await service.login({ username: 'a', password: 'p' })
+
+    fetchMock.mockImplementation(() =>
+      json({ error: '1', messages: [{ text: 'Kullanıcı bulunamadı' }] }),
+    )
+    await expect(service.login({ username: 'b', password: 'p' })).rejects.toThrow(EArsivApiError)
+
+    expect(service.isAuthenticated).toBe(false)
+  })
+
+  it('uzak çıkış başarısız olsa da yerel token temizlenir', async () => {
+    const fetchMock = vi.fn((url: string) =>
+      url.endsWith('/esign') ? json({ userid: 'u' }) : json({ token: 'tok' }),
+    )
+    const service = serviceWith(fetchMock as unknown as typeof globalThis.fetch)
+    await service.loginWithTestUser()
+    expect(service.isAuthenticated).toBe(true)
+
+    // Uzak çıkış ağ hatasıyla düşüyor.
+    fetchMock.mockImplementation(() => {
+      throw new TypeError('fetch failed')
+    })
+    await expect(service.logout()).rejects.toThrow(EArsivNetworkError)
+
+    // Hata yukarı iletildi, ama yerel durum yine de temizlendi: istemcinin
+    // kimliğinin doğrulandığına inanması sunucuda oturum kalmasından kötü.
+    expect(service.isAuthenticated).toBe(false)
+    expect(service.token).toBeUndefined()
   })
 })
