@@ -48,12 +48,35 @@ describe('HttpClient.postForm', () => {
     ).toContain('T%C3%BCrkiye')
   })
 
-  it('5xx yanıtını yeniden dener ve sonunda EArsivNetworkError fırlatır', async () => {
+  it('5xx yanıtını yeniden dener ve HTTP durumunu koruyarak fırlatır', async () => {
     const fetchMock = vi.fn(() => new Response('bozuk', { status: 503 }))
     const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
 
-    await expect(client.postForm(Endpoint.DISPATCH, {})).rejects.toThrow(EArsivNetworkError)
+    // Yalnızca hata sınıfını ve çağrı sayısını kontrol etmek yetmez: send()
+    // içindeki `instanceof EArsivNetworkError` yeniden-fırlatma koruması
+    // silinseydi hata genel "Portala ulaşılamadı." mesajıyla ve status
+    // olmadan yeniden sarılırdı, ama sınıf ve çağrı sayısı aynı kalırdı.
+    // status ve attempts alanlarını sabitlemek korumayı gerçekten pinler.
+    await expect(client.postForm(Endpoint.DISPATCH, {})).rejects.toMatchObject({
+      status: 503,
+      attempts: 3,
+    })
     expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('ayrıştırılamayan gövdede GERÇEK deneme sayısını bildirir', async () => {
+    // İlk denemede 5xx, ikincide ayrıştırılamayan 200: attempts 2 olmalı,
+    // yapılandırılmış tavan olan 3 değil.
+    let call = 0
+    const fetchMock = vi.fn(() => {
+      call += 1
+      return call === 1
+        ? new Response('bozuk', { status: 503 })
+        : new Response('<html>', { status: 200 })
+    })
+    const client = clientWith(fetchMock as unknown as typeof globalThis.fetch)
+
+    await expect(client.postForm(Endpoint.DISPATCH, {})).rejects.toMatchObject({ attempts: 2 })
   })
 
   it('geçici hatadan sonra başarılı denemeyi kabul eder', async () => {
@@ -110,5 +133,19 @@ describe('HttpClient.getBinary', () => {
     await expect(
       clientWith(fetchMock as unknown as typeof globalThis.fetch).getBinary(Endpoint.DOWNLOAD, {}),
     ).rejects.toThrow(EArsivNetworkError)
+  })
+
+  it('boş gövde hatasında gerçek deneme sayısını bildirir', async () => {
+    // İlk denemede 5xx, ikincide boş gövdeli 200: attempts 2 olmalı, 1 değil.
+    let call = 0
+    const fetchMock = vi.fn(() => {
+      call += 1
+      return call === 1
+        ? new Response('bozuk', { status: 503 })
+        : new Response(new Uint8Array(), { status: 200 })
+    })
+    await expect(
+      clientWith(fetchMock as unknown as typeof globalThis.fetch).getBinary(Endpoint.DOWNLOAD, {}),
+    ).rejects.toMatchObject({ attempts: 2 })
   })
 })

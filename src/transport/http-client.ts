@@ -21,7 +21,11 @@ export class HttpClient {
   async postForm(path: EndpointPath, fields: Record<string, string>): Promise<unknown> {
     const url = `${this.options.baseUrl}${path}`
     const body = new URLSearchParams(fields).toString()
-    const response = await this.send(url, { method: 'POST', headers: this.headers, body })
+    const { response, attempts } = await this.send(url, {
+      method: 'POST',
+      headers: this.headers,
+      body,
+    })
     const text = await response.text()
     try {
       return JSON.parse(text) as unknown
@@ -29,7 +33,9 @@ export class HttpClient {
       throw new EArsivNetworkError('Portal JSON olarak ayrıştırılamayan bir yanıt döndürdü.', {
         url,
         status: response.status,
-        attempts: this.options.retry.attempts,
+        // Yapılandırılmış tavan değil, gerçekten yapılan deneme sayısı:
+        // EArsivNetworkError.attempts alanı "toplam deneme sayısı" diye belgeli.
+        attempts,
         cause,
       })
     }
@@ -38,19 +44,26 @@ export class HttpClient {
   /** İkili GET; belge paketi indirmek için. */
   async getBinary(path: EndpointPath, query: Record<string, string>): Promise<Uint8Array> {
     const url = `${this.options.baseUrl}${path}?${new URLSearchParams(query).toString()}`
-    const response = await this.send(url, { method: 'GET', headers: this.headers })
+    const { response, attempts } = await this.send(url, { method: 'GET', headers: this.headers })
     const bytes = new Uint8Array(await response.arrayBuffer())
     if (bytes.byteLength === 0) {
       throw new EArsivNetworkError(
         'Portal boş bir belge paketi döndürdü. ETTN veya onay durumu hatalı olabilir.',
-        { url, status: response.status, attempts: 1 },
+        { url, status: response.status, attempts },
       )
     }
     return bytes
   }
 
-  /** Zaman aşımı ve üstel geri çekilmeli yeniden deneme. */
-  private async send(url: string, init: RequestInit): Promise<Response> {
+  /**
+   * Zaman aşımı ve üstel geri çekilmeli yeniden deneme.
+   * Yanıtla birlikte GERÇEKTEN yapılan deneme sayısını döndürür; çağıranlar
+   * hata bağlamında bu sayıyı kullanır.
+   */
+  private async send(
+    url: string,
+    init: RequestInit,
+  ): Promise<{ response: Response; attempts: number }> {
     const { attempts, backoffMs } = this.options.retry
     let lastCause: unknown
 
@@ -61,7 +74,7 @@ export class HttpClient {
           signal: AbortSignal.timeout(this.options.timeoutMs),
         })
 
-        if (response.ok) return response
+        if (response.ok) return { response, attempts: attempt }
 
         if (!isRetryableStatus(response.status) || attempt === attempts) {
           throw new EArsivNetworkError(`Portal HTTP ${String(response.status)} döndürdü.`, {
