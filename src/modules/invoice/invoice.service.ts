@@ -7,6 +7,7 @@ import {
 } from '../../constants/index.js'
 import { type DateInput, EArsivValidationError, formatPortalDate } from '../../core/index.js'
 import {
+  asRows,
   normalizeSummaryDate,
   resolveCreatedEttn,
   toDocumentSummary,
@@ -36,9 +37,6 @@ import type {
   ListOptions,
 } from './invoice.types.js'
 import { validateInvoiceInput } from './invoice.validator.js'
-
-const asRows = (data: unknown): Record<string, unknown>[] =>
-  Array.isArray(data) ? (data as Record<string, unknown>[]) : []
 
 /** Fatura oluşturma, listeleme, okuma ve silme işlemleri. */
 export class InvoiceService {

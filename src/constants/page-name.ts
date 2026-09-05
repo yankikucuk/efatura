@@ -7,6 +7,10 @@ export const PageName = {
   INVOICE_FORM: 'RG_BASITFATURA',
   INTERACTIVE_DRAFTS: 'RG_BASITTASLAKLAR',
   DRAFTS: 'RG_TASLAKLAR',
+  /** Müstahsil Makbuzu ekranı. */
+  PRODUCER_RECEIPT: 'RG_MUSTAHSIL',
+  /** Serbest Meslek Makbuzu ekranı. */
+  SELF_EMPLOYED_RECEIPT: 'RG_SERBEST',
   INCOMING_DRAFTS: 'RG_ALICI_TASLAKLAR',
   /** Entegratör (portal harici) adıma düzenlenen belgeler ekranı. */
   INCOMING_INTEGRATOR: 'RG_ALICI_ENTEGRATOR',

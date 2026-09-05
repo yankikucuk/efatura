@@ -22,6 +22,20 @@ import {
   type ListOptions,
 } from '../modules/invoice/index.js'
 import {
+  type CreatedProducerReceipt,
+  type ProducerReceiptDetail,
+  type ProducerReceiptInput,
+  ProducerReceiptService,
+  type ProducerReceiptSummary,
+} from '../modules/producer-receipt/index.js'
+import {
+  type CreatedSelfEmployedReceipt,
+  type SelfEmployedReceiptDetail,
+  type SelfEmployedReceiptInput,
+  SelfEmployedReceiptService,
+  type SelfEmployedReceiptSummary,
+} from '../modules/self-employed-receipt/index.js'
+import {
   type SendSmsOptions,
   SigningService,
   type SmsChallenge,
@@ -48,6 +62,8 @@ export class EArsivClient {
   private readonly users: UserService
   private readonly signing: SigningService
   private readonly disputes: DisputeService
+  private readonly producerReceipts: ProducerReceiptService
+  private readonly selfEmployedReceipts: SelfEmployedReceiptService
 
   constructor(options: ClientOptions = {}) {
     const resolved = resolveClientOptions(options)
@@ -62,6 +78,8 @@ export class EArsivClient {
     this.users = new UserService(gateway)
     this.signing = new SigningService(gateway)
     this.disputes = new DisputeService(gateway)
+    this.producerReceipts = new ProducerReceiptService(gateway)
+    this.selfEmployedReceipts = new SelfEmployedReceiptService(gateway)
   }
 
   // — Oturum —
@@ -146,6 +164,83 @@ export class EArsivClient {
   async toPdf(ettn: string, options: ToPdfOptions = {}): Promise<Uint8Array> {
     const html = await this.documents.getHtml(ettn, options)
     return renderHtmlToPdf(html, options)
+  }
+
+  // — Müstahsil Makbuzu —
+
+  /** Taslak müstahsil makbuzu oluşturur ve portalın atadığı ETTN'i çözer. */
+  async createProducerReceipt(input: ProducerReceiptInput): Promise<CreatedProducerReceipt> {
+    return this.producerReceipts.createReceipt(input)
+  }
+
+  /**
+   * Müstahsil makbuzlarını listeler.
+   *
+   * Portal ayrı bir makbuz listeleme komutu sunmuyor; fatura ile aynı liste
+   * bir ÜST KÜMEDİR ve sonuç `belgeTuru` ile süzülür.
+   */
+  async listProducerReceipts(from: DateInput, to: DateInput): Promise<ProducerReceiptSummary[]> {
+    return this.producerReceipts.listReceipts(from, to)
+  }
+
+  async getProducerReceipt(ettn: string): Promise<ProducerReceiptDetail> {
+    return this.producerReceipts.getReceipt(ettn)
+  }
+
+  /**
+   * Müstahsil makbuzunun portal tarafından üretilen HTML gösterimi.
+   *
+   * Fatura ile AYNI portal komutunu kullanır ve çalışır (canlı doğrulandı
+   * 2026-09-05, 51 KB HTML). Serbest meslek makbuzunda aynı komut portal
+   * kusuru nedeniyle çalışmaz; bkz. `getSelfEmployedReceiptHtml`.
+   */
+  async getProducerReceiptHtml(ettn: string, options?: DocumentOptions): Promise<string> {
+    return this.documents.getHtml(ettn, options)
+  }
+
+  /** Müstahsil makbuzunun HTML gösterimini PDF'e çevirir. `puppeteer` kurulu olmalıdır. */
+  async producerReceiptToPdf(ettn: string, options: ToPdfOptions = {}): Promise<Uint8Array> {
+    const html = await this.documents.getHtml(ettn, options)
+    return renderHtmlToPdf(html, options)
+  }
+
+  // — Serbest Meslek Makbuzu —
+
+  /** Taslak serbest meslek makbuzu oluşturur ve portalın atadığı ETTN'i çözer. */
+  async createSelfEmployedReceipt(
+    input: SelfEmployedReceiptInput,
+  ): Promise<CreatedSelfEmployedReceipt> {
+    return this.selfEmployedReceipts.createReceipt(input)
+  }
+
+  /** Serbest meslek makbuzlarını listeler (ÜST KÜME listesinden süzülür). */
+  async listSelfEmployedReceipts(
+    from: DateInput,
+    to: DateInput,
+  ): Promise<SelfEmployedReceiptSummary[]> {
+    return this.selfEmployedReceipts.listReceipts(from, to)
+  }
+
+  async getSelfEmployedReceipt(ettn: string): Promise<SelfEmployedReceiptDetail> {
+    return this.selfEmployedReceipts.getReceipt(ettn)
+  }
+
+  /**
+   * DESTEKLENMEZ — portal kusuru. Her zaman `EArsivPortalDefectError`
+   * fırlatır ve ağa hiç çıkmaz.
+   *
+   * Metot bilinçli olarak SİLİNMEDİ: silinseydi çağıran `getInvoiceHtml`'i
+   * bir SMM ETTN'i ile denerdi ve portalın ham Java istisnasını
+   * ("String index out of range: 4") kendi hatası sanardı. Buradaki hata
+   * kusurun portalda olduğunu ve çalışan alternatifi açıkça söyler.
+   */
+  getSelfEmployedReceiptHtml(ettn: string): never {
+    return this.selfEmployedReceipts.getHtml(ettn)
+  }
+
+  /** DESTEKLENMEZ — PDF, bozuk olan HTML gösterimi üzerine kuruludur. */
+  selfEmployedReceiptToPdf(ettn: string): never {
+    return this.selfEmployedReceipts.toPdf(ettn)
   }
 
   // — Kullanıcı —

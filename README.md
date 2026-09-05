@@ -96,7 +96,7 @@ bir fatura numarasını (`invoiceNumber`) taşır.
 
 ## PHP kütüphanesinden farklar
 
-Bu kütüphane, aynı portalı hedefleyen mevcut PHP kütüphanesinden bilinçli
+Bu kütüphane, aynı portalı hedefleyen mevcut PHP kütüphanelerinden bilinçli
 olarak üç noktada ayrılır:
 
 - **`faturaUuid` artık gönderilmiyor.** Eski yaklaşım istemci tarafında bir
@@ -241,7 +241,10 @@ ve `createObjectionRequestForIncoming` bu ikisini KARIŞTIRMAZ:
 
 - e-Fatura (ticari, mükellefler arası) entegrasyonu — bu kütüphane yalnızca
   e-Arşiv (perakende) portalını hedefler.
-- Müstahsil ve Serbest Meslek Makbuzu belge türleri.
+- Serbest Meslek Makbuzunun HTML gösterimi ve PDF çıktısı — portalın kendi
+  kusuru (`String index out of range: 4`); istemci tarafında çözülemiyor,
+  bu yüzden açılmadı. Makbuzun verilerine `getSelfEmployedReceipt` ile
+  erişilir. Müstahsil Makbuzunda aynı özellik ÇALIŞIR.
 - Bir komut satırı arayüzü (CLI) — kütüphane yalnızca programatik kullanım
   içindir.
 

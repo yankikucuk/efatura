@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { EArsivAuthError } from '../core/index.js'
+import { portalResponses } from '../../tests/fixtures/portal-responses.js'
+import { EArsivAuthError, EArsivPortalDefectError } from '../core/index.js'
 
 import { EArsivClient } from './earsiv.client.js'
 
@@ -89,6 +90,11 @@ describe('EArsivClient', () => {
     ],
     ['getInvoice', ['abc'], 'EARSIV_PORTAL_FATURA_GETIR'],
     ['getInvoiceHtml', ['abc'], 'EARSIV_PORTAL_FATURA_GOSTER'],
+    ['listProducerReceipts', ['05/09/2026', '05/09/2026'], 'EARSIV_PORTAL_TASLAKLARI_GETIR'],
+    ['getProducerReceipt', ['abc'], 'EARSIV_PORTAL_MUSTAHSIL_GETIR'],
+    ['getProducerReceiptHtml', ['abc'], 'EARSIV_PORTAL_FATURA_GOSTER'],
+    ['listSelfEmployedReceipts', ['05/09/2026', '05/09/2026'], 'EARSIV_PORTAL_TASLAKLARI_GETIR'],
+    ['getSelfEmployedReceipt', ['abc'], 'EARSIV_PORTAL_SERBEST_MESLEK_GETIR'],
     ['getUserInfo', [], 'EARSIV_PORTAL_KULLANICI_BILGILERI_GETIR'],
     ['getCompanyInfo', ['1234567890'], 'SICIL_VEYA_MERNISTEN_BILGILERI_GETIR'],
     ['getPhoneNumber', [], 'EARSIV_PORTAL_TELEFONNO_SORGULA'],
@@ -190,6 +196,53 @@ describe('EArsivClient', () => {
     })
   })
 
+  it('makbuz listeleme facade metotları ÜST KÜME listesini kendi belge türüne süzer', async () => {
+    // it.each yüzey testi ikisinde de AYNI komutu (TASLAKLARI_GETIR) görür,
+    // yani iki listeyi birbirine bağlamış bir yönlendirme hatasını asla
+    // yakalayamaz. Asıl ayrım süzme sonucunda.
+    const fetchMock = vi.fn(() => json(portalResponses.receiptDraftList))
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    const producers = await client.listProducerReceipts('05/09/2026', '05/09/2026')
+    const selfEmployed = await client.listSelfEmployedReceipts('05/09/2026', '05/09/2026')
+
+    expect(producers.map((row) => row.documentType)).toEqual([
+      'MÜSTAHSİL MAKBUZU',
+      'MÜSTAHSİL MAKBUZU',
+    ])
+    expect(selfEmployed.map((row) => row.documentType)).toEqual(['SERBEST MESLEK MAKBUZU'])
+  })
+
+  it('SMM HTML/PDF metotları AĞA ÇIKMADAN portal kusuru hatası verir', () => {
+    const fetchMock = vi.fn(() => json({ data: 'olmamalı' }))
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    expect(() => client.getSelfEmployedReceiptHtml('abc')).toThrow(EArsivPortalDefectError)
+    expect(() => client.selfEmployedReceiptToPdf('abc')).toThrow(EArsivPortalDefectError)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('müstahsil HTML gösterimi ÇALIŞIR ve fatura ile aynı komuta gider', async () => {
+    // Kısıt SMM'ye özgü; müstahsili de kapatmak gereksiz bir yetenek kaybı
+    // olurdu (canlı doğrulandı: 51 KB HTML dönüyor).
+    const fetchMock = vi.fn(() => json({ data: '<html>makbuz</html>' }))
+    const client = new EArsivClient({
+      environment: 'test',
+      fetch: fetchMock as unknown as typeof globalThis.fetch,
+    })
+    client.setToken('tok')
+
+    expect(await client.getProducerReceiptHtml('abc')).toBe('<html>makbuz</html>')
+  })
+
   it('public API yüzeyi eksiksiz', () => {
     // Not: bu test yalnızca yüzeyi koruyor — bir metodun kazara silinmesini
     // yakalar, davranışını değil. Davranış testleri yukarıdaki beş testte.
@@ -220,6 +273,16 @@ describe('EArsivClient', () => {
       'createObjectionRequestForIncoming',
       'listDisputeRequests',
       'respondToDisputeRequest',
+      'createProducerReceipt',
+      'listProducerReceipts',
+      'getProducerReceipt',
+      'getProducerReceiptHtml',
+      'producerReceiptToPdf',
+      'createSelfEmployedReceipt',
+      'listSelfEmployedReceipts',
+      'getSelfEmployedReceipt',
+      'getSelfEmployedReceiptHtml',
+      'selfEmployedReceiptToPdf',
     ]) {
       expect(typeof (client as unknown as Record<string, unknown>)[method]).toBe('function')
     }

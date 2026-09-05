@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { Country, Currency, InvoiceType, Unit } from '../../constants/index.js'
+import { num } from '../../documents/index.js'
 
-import {
-  fromPortalPayload,
-  num,
-  toIncomingExternalSummary,
-  toPortalInvoice,
-} from './invoice.mapper.js'
+import { fromPortalPayload, toIncomingExternalSummary, toPortalInvoice } from './invoice.mapper.js'
 import type { InvoiceInput, InvoiceSummary } from './invoice.types.js'
 
 import { toInvoiceSummary } from './index.js'
@@ -131,7 +127,7 @@ describe('toPortalInvoice', () => {
   })
 })
 
-describe('num (I4 — binlik ayırıcı sağlamlaştırma)', () => {
+describe('num (I4 — binlik ayırıcı sağlamlaştırma; documents katmanına taşındı)', () => {
   it('binlik nokta + ondalık virgülü ayrıştırır', () => {
     expect(num('1.234,56')).toBe(1234.56)
   })

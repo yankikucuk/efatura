@@ -1,6 +1,5 @@
 import type {
   ApprovalStatusValue,
-  CountryName,
   CurrencyCode,
   DocumentTypeCode,
   InvoiceListKindValue,
@@ -8,19 +7,14 @@ import type {
   UnitCode,
 } from '../../constants/index.js'
 import type { DateInput } from '../../core/index.js'
-import type { DocumentSummary } from '../../documents/index.js'
+import type { AddressInput, CreatedDocument, DocumentSummary } from '../../documents/index.js'
 
-export interface AddressInput {
-  country?: CountryName
-  city?: string
-  district?: string
-  street?: string
-  buildingName?: string
-  buildingNumber?: string
-  doorNumber?: string
-  town?: string
-  postalCode?: string
-}
+/**
+ * Adres girdisi `documents` yaprak katmanına taşındı (serbest meslek
+ * makbuzu da aynı alanları taşıyor); adı geriye dönük uyumluluk için
+ * buradan yeniden dışa açılıyor.
+ */
+export type { AddressInput }
 
 export interface ContactInput {
   phone?: string
@@ -159,13 +153,14 @@ export interface InvoiceDetail {
   raw: Record<string, unknown>
 }
 
-/** `createDraft` sonucu. */
-export interface CreatedInvoice {
-  ettn: string
-  documentNumber: string
-  date: string
-  approvalStatus: ApprovalStatusValue
-}
+/**
+ * `createDraft` sonucu.
+ *
+ * `CreatedDocument` olarak `documents` katmanına taşındı — fatura ve her iki
+ * makbuz türü aynı şekli döndürüyor. Bu takma ad public API'nin parçası
+ * olarak korunuyor.
+ */
+export type CreatedInvoice = CreatedDocument
 
 export interface ListOptions {
   /** Varsayılan `InvoiceListKind.INTERACTIVE`. */

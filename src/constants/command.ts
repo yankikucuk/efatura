@@ -17,6 +17,18 @@ export const Command = {
   GET_INVOICE: 'EARSIV_PORTAL_FATURA_GETIR',
   DELETE_INVOICE: 'EARSIV_PORTAL_FATURA_SIL',
 
+  /**
+   * Makbuz belgeleri. Adlandırma portalın kendi ASİMETRİK yazımıdır ve
+   * "düzeltilmemelidir": Müstahsil'de `MAKBUZU` sözcüğü hiç geçmez, Serbest
+   * Meslek'te yalnızca OLUŞTURMA komutunda geçer, GETİRME komutunda geçmez.
+   * Tanınmayan bir komut adı portalda "Bu işlem için yetkiniz yok" döner;
+   * dördü de 2026-09-05'te canlı doğrulandı.
+   */
+  CREATE_PRODUCER_RECEIPT: 'EARSIV_PORTAL_MUSTAHSIL_OLUSTUR',
+  GET_PRODUCER_RECEIPT: 'EARSIV_PORTAL_MUSTAHSIL_GETIR',
+  CREATE_SELF_EMPLOYED_RECEIPT: 'EARSIV_PORTAL_SERBEST_MESLEK_MAKBUZU_OLUSTUR',
+  GET_SELF_EMPLOYED_RECEIPT: 'EARSIV_PORTAL_SERBEST_MESLEK_GETIR',
+
   SHOW_INVOICE: 'EARSIV_PORTAL_FATURA_GOSTER',
   DOWNLOAD_DOCUMENT: 'EARSIV_PORTAL_BELGE_INDIR',
 
@@ -52,6 +64,8 @@ export const RETRYABLE_COMMANDS: ReadonlySet<CommandName> = new Set([
   Command.LIST_INCOMING,
   Command.LIST_INCOMING_EXTERNAL,
   Command.GET_INVOICE,
+  Command.GET_PRODUCER_RECEIPT,
+  Command.GET_SELF_EMPLOYED_RECEIPT,
   Command.SHOW_INVOICE,
   Command.GET_USER_INFO,
   Command.GET_COMPANY_INFO,
@@ -69,6 +83,11 @@ export const RETRYABLE_COMMANDS: ReadonlySet<CommandName> = new Set([
 export const SUCCESS_PATTERNS: Partial<Record<CommandName, readonly string[]>> = {
   [Command.CREATE_INVOICE]: ['Faturanız başarıyla oluşturulmuştur'],
   [Command.DELETE_INVOICE]: ['fatura başarıyla silindi'],
+  // Makbuz cümleleri faturadan FARKLI ve birbirinden de farklı; belge türü
+  // adı kalıbın içinde bırakıldı ki yanlış türe ait bir yanıt beyaz listeden
+  // geçemesin (2026-09-05 canlı yanıtları).
+  [Command.CREATE_PRODUCER_RECEIPT]: ['Müstahsil Makbuzunuz başarıyla oluşturulmuştur'],
+  [Command.CREATE_SELF_EMPLOYED_RECEIPT]: ['Serbest Meslek Makbuzunuz başarıyla oluşturulmuştur'],
 }
 
 /**

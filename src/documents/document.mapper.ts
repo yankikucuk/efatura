@@ -7,17 +7,7 @@ import {
 import { formatPortalDate } from '../core/index.js'
 
 import type { DocumentSummary } from './document.types.js'
-
-/**
- * `invoice.mapper.ts`'teki `str()` ile AYNI, ancak KASITLI olarak ayrı bir
- * kopyadır — taşınmadı. `invoice.mapper.ts` bu yardımcıyı özet dışı birçok
- * alan için de kullanıyor (adres, iletişim, tutarlar); onu buraya taşımak
- * ya orayı kırardı ya da tek bir dahili string-normalize yardımcısını genel
- * public API yüzeyine çıkarırdı. İki satırlık saf bir fonksiyon için bu
- * bedel gereksiz; bkz. rapor "pure move" notu.
- */
-const str = (value: unknown, fallback = ''): string =>
-  typeof value === 'string' ? value : typeof value === 'number' ? String(value) : fallback
+import { str } from './portal-field.js'
 
 /**
  * Bir tarih alanını normalize eder; ayrıştırılamazsa ham stringi geri verir.
@@ -62,4 +52,22 @@ export function toDocumentSummary(raw: Record<string, unknown>): DocumentSummary
     documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
     approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,
   }
+}
+
+/**
+ * Karışık bir taslak listesini tek bir belge türüne indirger.
+ *
+ * `EARSIV_PORTAL_TASLAKLARI_GETIR`'in `hangiTip: 'Buyuk'` listesi bir belge
+ * türü FİLTRESİ DEĞİL, bir ÜST KÜMEDİR: fatura, müstahsil makbuzu ve serbest
+ * meslek makbuzu aynı satır biçiminde birlikte döner (canlı doğrulandı
+ * 2026-09-05 — tek oturumda üç belge oluşturuldu; `5000/30000` bir satır,
+ * `Buyuk` üç satır döndürdü). Bu yüzden makbuz listeleyen her servis sonucu
+ * `belgeTuru` ile süzmek ZORUNDADIR; süzmemek "makbuzlarınız" diye
+ * faturalarınızı da göstermek olurdu.
+ */
+export function filterByDocumentType(
+  rows: readonly DocumentSummary[],
+  documentType: DocumentTypeCode,
+): DocumentSummary[] {
+  return rows.filter((row) => row.documentType === documentType)
 }

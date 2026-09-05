@@ -28,4 +28,10 @@ export {
   type InvoiceListKindValue,
 } from './document.js'
 export { InvoiceType, type InvoiceTypeCode } from './invoice-type.js'
+export {
+  PRODUCER_RECEIPT_TAX_CODES,
+  PRODUCER_RECEIPT_TAX_TOTAL_FIELDS,
+  ProducerReceiptTax,
+  type ProducerReceiptTaxCode,
+} from './receipt.js'
 export { Unit, type UnitCode } from './unit.js'

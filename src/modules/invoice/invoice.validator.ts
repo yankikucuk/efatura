@@ -1,14 +1,16 @@
 import { Currency } from '../../constants/index.js'
 import { EArsivValidationError, type ValidationIssue } from '../../core/index.js'
+import { isValidTaxOrIdentityNumber } from '../../documents/index.js'
 
 import type { InvoiceInput } from './invoice.types.js'
 
-const DIGITS_ONLY = /^\d+$/
-
-/** VKN 10, TCKN 11 hanedir; portal yalnızca uzunluk ve rakam kontrolü yapar. */
-export function isValidTaxOrIdentityNumber(value: string): boolean {
-  return DIGITS_ONLY.test(value) && (value.length === 10 || value.length === 11)
-}
+/**
+ * VKN/TCKN kontrolü `documents` yaprak katmanına taşındı (makbuzlar da aynı
+ * `vknTckn` alanını kullanıyor); adı geriye dönük uyumluluk için buradan
+ * yeniden dışa açılıyor — `invoice/index.ts` üzerinden public API'nin
+ * parçası.
+ */
+export { isValidTaxOrIdentityNumber }
 
 /**
  * Faturayı portala göndermeden önce doğrular.

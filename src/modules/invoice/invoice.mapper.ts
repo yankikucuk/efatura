@@ -11,7 +11,7 @@ import {
   type InvoiceTypeCode,
 } from '../../constants/index.js'
 import { formatMinor, formatPortalDate, formatPortalTime, toMinor } from '../../core/index.js'
-import { normalizeSummaryDate } from '../../documents/index.js'
+import { normalizeSummaryDate, num, str } from '../../documents/index.js'
 
 import { computeTotals, mergeAndVerifyTotals } from './invoice.totals.js'
 import type {
@@ -20,33 +20,6 @@ import type {
   InvoiceTotals,
   LineItemInput,
 } from './invoice.types.js'
-
-const str = (value: unknown, fallback = ''): string =>
-  typeof value === 'string' ? value : typeof value === 'number' ? String(value) : fallback
-
-/**
- * Portalın sayısal alanlarını ayrıştırır.
- *
- * Türkçe biçim binlik ayırıcı olarak nokta, ondalık ayırıcı olarak virgül
- * kullanır (`"1.234,56"`). Eski sürüm yalnızca virgülü noktaya çeviriyordu
- * (`value.replace(',', '.')`) — binlik noktayı ayıklamadığı için
- * `"1.234,56"` `"1.234.56"` olarak `NaN`'a düşüyor ve ₺999 üzeri her tutar
- * sessizce 0 olarak raporlanıyordu (bkz. I4). Virgül varsa Türkçe biçim
- * kabul edilir (noktalar ayıklanır, virgül ondalık noktaya çevrilir);
- * virgül yoksa nokta zaten ondalık ayırıcıdır (`"1234.56"`, `"1234"`).
- */
-export const num = (value: unknown, fallback = 0): number => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    const normalized = trimmed.includes(',')
-      ? trimmed.replace(/\./g, '').replace(',', '.')
-      : trimmed
-    const parsed = Number(normalized)
-    if (normalized.length > 0 && Number.isFinite(parsed)) return parsed
-  }
-  return fallback
-}
 
 /**
  * Fatura girdisini portalın beklediği Türkçe anahtarlı yüke çevirir.

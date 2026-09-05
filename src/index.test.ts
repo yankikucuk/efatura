@@ -6,7 +6,9 @@ import {
   DocumentService,
   HttpClient,
   InvoiceService,
+  ProducerReceiptService,
   resolveClientOptions,
+  SelfEmployedReceiptService,
   SigningService,
   UserService,
 } from './index.js'
@@ -22,5 +24,7 @@ describe('genel API yüzeyi — servisler tek başına örneklenebilir (I9)', ()
     expect(new DocumentService(gateway, http, auth, options)).toBeInstanceOf(DocumentService)
     expect(new UserService(gateway)).toBeInstanceOf(UserService)
     expect(new SigningService(gateway)).toBeInstanceOf(SigningService)
+    expect(new ProducerReceiptService(gateway)).toBeInstanceOf(ProducerReceiptService)
+    expect(new SelfEmployedReceiptService(gateway)).toBeInstanceOf(SelfEmployedReceiptService)
   })
 })

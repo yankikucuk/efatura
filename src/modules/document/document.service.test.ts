@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { resolveClientOptions } from '../../config/index.js'
+import { EArsivApiError, EArsivPortalDefectError } from '../../core/index.js'
 import type { DispatchGateway, HttpClient } from '../../transport/index.js'
 
 import { DocumentService } from './document.service.js'
@@ -34,6 +35,41 @@ describe('DocumentService.getHtml', () => {
     const { service, call } = build(vi.fn().mockResolvedValue('<html/>'))
     await service.getHtml('abc', { signed: true })
     expect((call.mock.calls[0]?.[2] as Record<string, unknown>).onayDurumu).toBe('Onaylandı')
+  })
+
+  it('portalın Java istisnasını ham hâlde geçirmez, portal kusuru hatasına çevirir', async () => {
+    // Bir SMM ETTN'i bu yola getInvoiceHtml/toPdf üzerinden de girebilir;
+    // orada kullanıcı "String index out of range: 4" görür ve bunu kendi
+    // hatası sanar. Çeviri olmadan bu vaka tamamen açıkta kalırdı.
+    const apiError = new EArsivApiError('String index out of range: 4', {
+      command: 'EARSIV_PORTAL_FATURA_GOSTER',
+      callId: 'x',
+      raw: { error: '1', messages: ['String index out of range: 4'] },
+    })
+    const { service } = build(vi.fn().mockRejectedValue(apiError))
+
+    const rejection = service.getHtml('abc-smm')
+    await expect(rejection).rejects.toThrow(EArsivPortalDefectError)
+    await rejection.catch((error: unknown) => {
+      const defect = error as EArsivPortalDefectError
+      expect(defect.portalMessage).toBe('String index out of range: 4')
+      expect(defect.message).toMatch(/[Ss]erbest [Mm]eslek/)
+      expect(defect.message).toContain('getSelfEmployedReceipt')
+      // Orijinal hata kaybolmamalı.
+      expect(defect.cause).toBe(apiError)
+    })
+  })
+
+  it('ALAKASIZ bir portal hatasını olduğu gibi bırakır', async () => {
+    // Çeviri yalnızca bilinen kusur metnine uygulanmalı; her hatayı
+    // "portal kusuru" diye etiketlemek gerçek iş hatalarını gizlerdi.
+    const apiError = new EArsivApiError('Bu işlem için yetkiniz yok', {
+      command: 'EARSIV_PORTAL_FATURA_GOSTER',
+      callId: 'x',
+      raw: {},
+    })
+    const { service } = build(vi.fn().mockRejectedValue(apiError))
+    await expect(service.getHtml('abc')).rejects.toBe(apiError)
   })
 })
 

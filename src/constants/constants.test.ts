@@ -9,6 +9,7 @@ import {
   DocumentType,
   InvoiceListKind,
   InvoiceType,
+  ProducerReceiptTax,
   Unit,
 } from './index.js'
 
@@ -62,5 +63,19 @@ describe('sabitler', () => {
 
   it('belge türü', () => {
     expect(DocumentType.INVOICE).toBe('FATURA')
+  })
+
+  it('makbuz belge türleri portalın Türkçe diakritikli yazımıdır', () => {
+    // Liste satırındaki `belgeTuru` alanı bu metinlerle BİREBİR eşleşmeli;
+    // diakritiksiz bir yazım ("MUSTAHSIL MAKBUZU") hiçbir satırı süzmez.
+    expect(DocumentType.PRODUCER_RECEIPT).toBe('MÜSTAHSİL MAKBUZU')
+    expect(DocumentType.SELF_EMPLOYED_RECEIPT).toBe('SERBEST MESLEK MAKBUZU')
+  })
+
+  it('müstahsil vergi kodları portal alan adlarının kaynağıdır', () => {
+    expect(ProducerReceiptTax.INCOME_TAX_WITHHOLDING).toBe('0003')
+    expect(ProducerReceiptTax.PASTURE_FUND).toBe('9040')
+    expect(ProducerReceiptTax.STOCK_EXCHANGE_REGISTRATION).toBe('8001')
+    expect(ProducerReceiptTax.SOCIAL_SECURITY_PREMIUM).toBe('SGK_PRIM')
   })
 })

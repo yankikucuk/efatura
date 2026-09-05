@@ -35,6 +35,19 @@ describe('komut kataloğu', () => {
     expect(Command.SUGGEST_TEST_USER).toBe('kullaniciOner')
   })
 
+  it('makbuz komut adları ASİMETRİK portal yazımını birebir taşır', () => {
+    // 2026-09-05 canlı doğrulaması. Adlandırma tutarsız: Müstahsil'de
+    // "MAKBUZU" hiç yok, SMM'de yalnızca OLUŞTURMADA var, GETİRMEDE yok.
+    // "Düzeltilmiş" bir ad portalda YOK ve "Bu işlem için yetkiniz yok"
+    // döner — bu yüzden burada harfi harfine sabitleniyor.
+    expect(Command.CREATE_PRODUCER_RECEIPT).toBe('EARSIV_PORTAL_MUSTAHSIL_OLUSTUR')
+    expect(Command.GET_PRODUCER_RECEIPT).toBe('EARSIV_PORTAL_MUSTAHSIL_GETIR')
+    expect(Command.CREATE_SELF_EMPLOYED_RECEIPT).toBe(
+      'EARSIV_PORTAL_SERBEST_MESLEK_MAKBUZU_OLUSTUR',
+    )
+    expect(Command.GET_SELF_EMPLOYED_RECEIPT).toBe('EARSIV_PORTAL_SERBEST_MESLEK_GETIR')
+  })
+
   it('sayfa adları portal ekranlarıdır', () => {
     expect(PageName.INVOICE_FORM).toBe('RG_BASITFATURA')
     expect(PageName.INTERACTIVE_DRAFTS).toBe('RG_BASITTASLAKLAR')
@@ -45,6 +58,8 @@ describe('komut kataloğu', () => {
     expect(PageName.USER).toBe('RG_KULLANICI')
     expect(PageName.SMS_APPROVAL).toBe('RG_SMSONAY')
     expect(PageName.MAIN_MENU).toBe('MAINTREEMENU')
+    expect(PageName.PRODUCER_RECEIPT).toBe('RG_MUSTAHSIL')
+    expect(PageName.SELF_EMPLOYED_RECEIPT).toBe('RG_SERBEST')
   })
 
   it('fatura oluşturma için başarı metni tanımlıdır', () => {
@@ -58,6 +73,27 @@ describe('komut kataloğu', () => {
   it('fatura silme başarı metni adet önekini tolere eder', () => {
     const patterns = SUCCESS_PATTERNS[Command.DELETE_INVOICE]
     expect('1 fatura başarıyla silindi.').toContain(patterns?.[0] ?? '@@yok@@')
+  })
+
+  it('makbuz oluşturma başarı metinleri canlı yanıtın ALT METNİDİR', () => {
+    // Gerçek yanıtlar (2026-09-05): iki makbuz türü FARKLI cümle döndürüyor.
+    // Kalıp yanlış türe ait olsaydı beyaz liste eşleşmez ve başarılı bir
+    // oluşturma hataya çevrilirdi — bu yüzden çapraz kontrol de yapılıyor.
+    const producer =
+      'e-Arşiv Portal Müstahsil Makbuzunuz başarıyla oluşturulmuştur. Düzenlenen Belgeler menüsünden makbuzunuza ulaşabilirsiniz.'
+    const selfEmployed =
+      'e-Arşiv Portal Serbest Meslek Makbuzunuz başarıyla oluşturulmuştur. Düzenlenen Belgeler menüsünden makbuzunuza ulaşabilirsiniz.'
+
+    const producerPatterns = SUCCESS_PATTERNS[Command.CREATE_PRODUCER_RECEIPT]
+    const selfEmployedPatterns = SUCCESS_PATTERNS[Command.CREATE_SELF_EMPLOYED_RECEIPT]
+    expect(producerPatterns).toBeDefined()
+    expect(selfEmployedPatterns).toBeDefined()
+    expect(producer).toContain(producerPatterns?.[0] ?? '@@yok@@')
+    expect(selfEmployed).toContain(selfEmployedPatterns?.[0] ?? '@@yok@@')
+    // Çapraz eşleşme OLMAMALI: aksi halde kalıp iki türü ayırt etmiyor
+    // demektir ve "Müstahsil" kelimesi kalıptan düşmüş olurdu.
+    expect(selfEmployed).not.toContain(producerPatterns?.[0] ?? '@@yok@@')
+    expect(producer).not.toContain(selfEmployedPatterns?.[0] ?? '@@yok@@')
   })
 
   it('başarı metni bilinmeyen komutlar için genel kalıp TANIMLI DEĞİLDİR', () => {
@@ -151,11 +187,18 @@ describe('RETRYABLE_COMMANDS (round 2 madde 2)', () => {
     ['CREATE_CANCELLATION_REQUEST', Command.CREATE_CANCELLATION_REQUEST],
     ['CREATE_OBJECTION_REQUEST', Command.CREATE_OBJECTION_REQUEST],
     ['RESPOND_TO_DISPUTE', Command.RESPOND_TO_DISPUTE],
+    ['CREATE_PRODUCER_RECEIPT', Command.CREATE_PRODUCER_RECEIPT],
+    ['CREATE_SELF_EMPLOYED_RECEIPT', Command.CREATE_SELF_EMPLOYED_RECEIPT],
   ])('%s mutasyon komutu RETRYABLE_COMMANDS içinde DEĞİLDİR', (_name, command) => {
     expect(RETRYABLE_COMMANDS.has(command)).toBe(false)
   })
 
   it('LIST_INCOMING_EXTERNAL salt okunur olduğu için RETRYABLE_COMMANDS içindedir', () => {
     expect(RETRYABLE_COMMANDS.has(Command.LIST_INCOMING_EXTERNAL)).toBe(true)
+  })
+
+  it('makbuz OKUMA komutları RETRYABLE_COMMANDS içindedir', () => {
+    expect(RETRYABLE_COMMANDS.has(Command.GET_PRODUCER_RECEIPT)).toBe(true)
+    expect(RETRYABLE_COMMANDS.has(Command.GET_SELF_EMPLOYED_RECEIPT)).toBe(true)
   })
 })

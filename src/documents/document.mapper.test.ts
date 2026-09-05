@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { portalResponses } from '../../tests/fixtures/portal-responses.js'
+import { DocumentType } from '../constants/index.js'
 
-import { toDocumentSummary } from './document.mapper.js'
+import { filterByDocumentType, toDocumentSummary } from './document.mapper.js'
 
 describe('toDocumentSummary', () => {
   it('taslak satırını normalize eder ve tarih ayırıcısını düzeltir', () => {
@@ -49,5 +50,31 @@ describe('toDocumentSummary', () => {
       ettn: '408cc357-0000-0000-0000-000000000000',
     }
     expect(toDocumentSummary(row).buyerName).toBe('')
+  })
+})
+
+describe('filterByDocumentType', () => {
+  // 2026-09-05 canlı doğrulaması: hangiTip 'Buyuk' bir belge türü FİLTRESİ
+  // DEĞİL, bir ÜST KÜMEDİR — tek oturumda oluşturulan fatura + iki makbuz
+  // aynı listede döndü, hangiTip '5000/30000' ise yalnızca FATURA döndürdü.
+  const rows = [
+    { ettn: 'f', documentType: DocumentType.INVOICE },
+    { ettn: 'm', documentType: DocumentType.PRODUCER_RECEIPT },
+    { ettn: 's', documentType: DocumentType.SELF_EMPLOYED_RECEIPT },
+  ] as unknown as Parameters<typeof filterByDocumentType>[0]
+
+  it('yalnızca istenen belge türünü bırakır', () => {
+    expect(filterByDocumentType(rows, DocumentType.PRODUCER_RECEIPT).map((r) => r.ettn)).toEqual([
+      'm',
+    ])
+    expect(
+      filterByDocumentType(rows, DocumentType.SELF_EMPLOYED_RECEIPT).map((r) => r.ettn),
+    ).toEqual(['s'])
+    expect(filterByDocumentType(rows, DocumentType.INVOICE).map((r) => r.ettn)).toEqual(['f'])
+  })
+
+  it('eşleşme yoksa boş liste döner', () => {
+    const onlyInvoice = [rows[0]!]
+    expect(filterByDocumentType(onlyInvoice, DocumentType.PRODUCER_RECEIPT)).toEqual([])
   })
 })

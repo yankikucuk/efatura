@@ -5,7 +5,16 @@ import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
 
 /** Kardeş izolasyonu için modül listesi. Yeni modül eklenince buraya yazılır. */
-const MODULES = ['auth', 'invoice', 'document', 'user', 'signing', 'dispute']
+const MODULES = [
+  'auth',
+  'invoice',
+  'document',
+  'user',
+  'signing',
+  'dispute',
+  'producer-receipt',
+  'self-employed-receipt',
+]
 const SIBLING_MESSAGE = 'Modüller birbirine bağımlı olamaz; ortak ihtiyaç core katmanına iner.'
 
 /** Bir katmanın import etmesi YASAK olan yolları üretir. */
