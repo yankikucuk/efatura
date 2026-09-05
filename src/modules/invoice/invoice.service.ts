@@ -11,6 +11,7 @@ import type { DispatchGateway } from '../../transport/index.js'
 import { resolveCreatedEttn } from './ettn-resolver.js'
 import {
   fromPortalPayload,
+  normalizePortalDate,
   portalTotals,
   toInvoiceSummary,
   toPortalInvoice,
@@ -128,7 +129,12 @@ export class InvoiceService {
     return {
       ettn,
       documentNumber: input.documentNumber ?? '',
-      date: formatPortalDate(input.date),
+      // formatPortalDate(input.date) fırlardı: input.date str()'ten geliyor
+      // ve '' de geçerli bir string olduğundan varsayılana düşmüyor (I5'in
+      // okuma yolundaki aynı kör noktası — round 2 madde 3). Bu yöntemin
+      // kendi belgesi çağıranın en azından `raw`'a erişebileceğini
+      // vaat ediyor; fırlatmak bunu bozardı.
+      date: normalizePortalDate(input.date),
       time: typeof input.time === 'string' ? input.time : '',
       currency: input.currency ?? 'TRY',
       currencyRate: input.currencyRate ?? 0,

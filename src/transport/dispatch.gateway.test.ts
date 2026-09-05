@@ -70,7 +70,9 @@ describe('DispatchGateway.call', () => {
     }
   })
 
-  it('sunucu tarafı token süresi dolumunu EArsivAuthError olarak yükseltir ve token temizler (I7)', async () => {
+  it('sunucu tarafı token süresi dolumunu EArsivAuthError olarak yükseltir ve token temizler (I7 + round 2 madde 1: prob da başarısız)', async () => {
+    // Bu mock HER çağrıya (orijinal komuta ve prob'a) aynı yetki hatasını
+    // döndürür — yani prob da başarısız olur ve süre dolumu ONAYLANIR.
     const fetchMock = vi.fn(() =>
       json({ error: '1', messages: [{ type: '7', text: 'Bu işlem için yetkiniz yok' }] }),
     )
@@ -87,6 +89,81 @@ describe('DispatchGateway.call', () => {
       expect((auth.cause as EArsivApiError).command).toBe(Command.GET_USER_INFO)
     }
     expect(clearToken).toHaveBeenCalledTimes(1)
+    // Orijinal çağrı + tam olarak bir prob = 2. Ne daha az (prob hiç
+    // atılmadı) ne daha fazla (prob kendi başarısızlığıyla ikinci bir prob
+    // tetikledi — yasak özyineleme).
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  describe('round 2 madde 1 — genuine yetki hatası ile bayat token ayrımı', () => {
+    // Spec §2.5: EARSIV_PORTAL_TELEFONNO_SORGULA test ortamında bir YETKİ
+    // KISITLAMASIDIR, bayat token değil. Portal ikisi için de AYNI "Bu işlem
+    // için yetkiniz yok" metnini döndürür — bu yüzden metnin kendisi
+    // ayrıştırıcı değildir; bir prob (GET_USER_MENU) gerekir.
+    const authFailure = (): Response =>
+      json({ error: '1', messages: [{ type: '7', text: 'Bu işlem için yetkiniz yok' }] })
+
+    it('prob sağlıklıysa tokeni korur, orijinal EArsivApiError hatasını aynen fırlatır', async () => {
+      const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+        const cmd = new URLSearchParams(init.body as string).get('cmd')
+        // Prob (GET_USER_MENU) başarılı — token sağlıklı, gerçek bir yetki
+        // reddiydi.
+        if (cmd === Command.GET_USER_MENU) return json({ data: 'menu-ok' })
+        return authFailure()
+      })
+      const clearToken = vi.fn()
+      const gateway = gatewayWith(
+        fetchMock as unknown as typeof globalThis.fetch,
+        'tok',
+        clearToken,
+      )
+
+      try {
+        await gateway.call(Command.QUERY_PHONE, PageName.INTERACTIVE_DRAFTS, {})
+        expect.unreachable('hata bekleniyordu')
+      } catch (error) {
+        // EArsivAuthError'a ÇEVRİLMEMİŞ — orijinal EArsivApiError aynen yükseldi.
+        expect(error).toBeInstanceOf(EArsivApiError)
+        expect(error).not.toBeInstanceOf(EArsivAuthError)
+        expect((error as EArsivApiError).command).toBe(Command.QUERY_PHONE)
+      }
+      expect(clearToken).not.toHaveBeenCalled()
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+
+      // Prob'un gövdesi spec'in belirttiği şekilde: GET_USER_MENU / MAIN_MENU / ANONIM_LOGIN=1.
+      const probeCall = fetchMock.mock.calls[1] as unknown as [string, RequestInit]
+      const probeBody = new URLSearchParams(probeCall[1].body as string)
+      expect(probeBody.get('cmd')).toBe(Command.GET_USER_MENU)
+      expect(probeBody.get('pageName')).toBe(PageName.MAIN_MENU)
+      expect(probeBody.get('jp')).toBe('{"ANONIM_LOGIN":"1"}')
+    })
+
+    it('prob de BAŞARISIZ ise: token gerçekten ölü — temizler ve EArsivAuthError fırlatır', async () => {
+      const fetchMock = vi.fn(() => authFailure())
+      const clearToken = vi.fn()
+      const gateway = gatewayWith(
+        fetchMock as unknown as typeof globalThis.fetch,
+        'tok',
+        clearToken,
+      )
+
+      await expect(
+        gateway.call(Command.QUERY_PHONE, PageName.INTERACTIVE_DRAFTS, {}),
+      ).rejects.toBeInstanceOf(EArsivAuthError)
+      expect(clearToken).toHaveBeenCalledTimes(1)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('prob tam olarak bir kez atılır — kendi başarısızlığı ikinci bir prob TETİKLEMEZ', async () => {
+      const fetchMock = vi.fn(() => authFailure())
+      const gateway = gatewayWith(fetchMock as unknown as typeof globalThis.fetch)
+
+      await expect(
+        gateway.call(Command.QUERY_PHONE, PageName.INTERACTIVE_DRAFTS, {}),
+      ).rejects.toThrow()
+      // 1 orijinal + 1 prob = 2. 3 veya daha fazla olması özyinelemeyi işaret eder.
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('data alanını tipli olarak döndürür', async () => {

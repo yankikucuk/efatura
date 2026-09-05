@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { Command, FAILURE_MARKERS, PageName, SUCCESS_PATTERNS } from './index.js'
+import {
+  Command,
+  FAILURE_MARKERS,
+  PageName,
+  RETRYABLE_COMMANDS,
+  SUCCESS_PATTERNS,
+} from './index.js'
 
 describe('komut kataloğu', () => {
   it('doğrulanmış komut adlarını içerir', () => {
@@ -115,5 +121,25 @@ describe('FAILURE_MARKERS', () => {
     expect(isFailure('1 fatura başarıyla silindi.')).toBe(false)
     expect(isFailure('Bilgileriniz başarıyla kaydedilmiştir.')).toBe(false)
     expect(isFailure('Talebiniz başarıyla oluşturuldu.')).toBe(false)
+  })
+})
+
+describe('RETRYABLE_COMMANDS (round 2 madde 2)', () => {
+  // Bu küme, C1'in tekrar canlanabileceği TEK nokta: dikkatsizce eklenen bir
+  // mutasyon komutu, o komutun tüm 5xx/zaman-aşımı hatalarında sessizce
+  // yeniden denenmesine ve mükerrer bir hukuki belgeye (mükerrer fatura,
+  // mükerrer silme, mükerrer imzalama...) yol açar. Bu test her mutasyon
+  // komutunun kümenin DIŞINDA kaldığını pinler.
+  it.each([
+    ['CREATE_INVOICE', Command.CREATE_INVOICE],
+    ['DELETE_INVOICE', Command.DELETE_INVOICE],
+    ['SAVE_USER_INFO', Command.SAVE_USER_INFO],
+    ['SEND_SMS_CODE', Command.SEND_SMS_CODE],
+    ['VERIFY_SMS_CODE', Command.VERIFY_SMS_CODE],
+    ['CREATE_CANCELLATION_REQUEST', Command.CREATE_CANCELLATION_REQUEST],
+    ['CREATE_OBJECTION_REQUEST', Command.CREATE_OBJECTION_REQUEST],
+    ['RESPOND_TO_DISPUTE', Command.RESPOND_TO_DISPUTE],
+  ])('%s mutasyon komutu RETRYABLE_COMMANDS içinde DEĞİLDİR', (_name, command) => {
+    expect(RETRYABLE_COMMANDS.has(command)).toBe(false)
   })
 })

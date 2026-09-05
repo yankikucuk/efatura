@@ -6,6 +6,13 @@ import { EArsivNetworkError } from '../core/index.js'
 import { Endpoint } from './endpoints.js'
 import { HttpClient } from './http-client.js'
 
+// round 2 madde 5: PostFormOptions HttpClient.postForm'un genel bir
+// parametre tipi ama transport/index.js'ten dışa açık DEĞİLDİ — bir
+// kullanıcı bir literal geçirebiliyordu ama tipi adlandıramıyordu. Bu
+// import barrel'dan (index.js) geliyor, doğrudan http-client.js'ten değil —
+// tsc'nin barrel export'unu görüp görmediğini pinlemek için kasıtlı.
+import type { PostFormOptions } from './index.js'
+
 const json = (body: unknown): Response =>
   new Response(JSON.stringify(body), {
     status: 200,
@@ -20,6 +27,13 @@ const clientWith = (fetchImpl: typeof globalThis.fetch, retryBackoffMs = 0): Htt
       retry: { backoffMs: retryBackoffMs },
     }),
   )
+
+describe('PostFormOptions dışa açıklığı (round 2 madde 5)', () => {
+  it('transport/index.js barrel üzerinden adlandırılabilir', () => {
+    const options: PostFormOptions = { retryable: true }
+    expect(options.retryable).toBe(true)
+  })
+})
 
 describe('HttpClient.postForm', () => {
   it('alanları form-urlencoded olarak gönderir', async () => {

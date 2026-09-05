@@ -102,6 +102,17 @@ alanı taşır:
 | `EArsivAmbiguousResultError` | `'ambiguous-result'` | Sonuç (ör. yeni oluşturulan faturanın ETTN'i) tekil olarak belirlenemedi |
 | `EArsivNetworkError`         | `'network'`          | Zaman aşımı, DNS hatası, bağlantı kesintisi veya HTTP 5xx                |
 
+Portalın "Bu işlem için yetkiniz yok" metni hem GERÇEK bir izin kısıtlaması
+hem de sunucu tarafında süresi dolmuş bir token için AYNI şekilde geliyor —
+metnin kendisi ikisini ayırt etmiyor. Bu yüzden istemci, bu metni gördüğünde
+zararsız bir prob isteği (`getUserMenu`) atarak hangisi olduğunu doğrular:
+prob başarılı olursa token sağlamdır ve orijinal `EArsivApiError` olduğu gibi
+yükselir (oturumunuz bozulmaz); prob da aynı metinle başarısız olursa token
+gerçekten ölüdür, kütüphane onu temizler ve `EArsivAuthError` fırlatır
+(orijinal hata `cause` alanında bulunur). Sonuç: `isAuthenticated`'ın
+`false`'a düşmesi yalnızca token'ın gerçekten geçersiz olduğu kanıtlandığında
+olur; sıradan bir izin reddi oturumunuzu sonlandırmaz.
+
 ```ts
 import { EArsivApiError, EArsivClient } from 'efatura'
 
@@ -115,6 +126,22 @@ try {
   }
 }
 ```
+
+## Yeniden deneme davranışı
+
+`retry.attempts` (varsayılan 3) yalnızca **salt okunur** komutlar için
+geçerlidir — oturum açma, listeleme, okuma, belge görüntüleme/indirme gibi.
+Bu istekler yapılandırılmış deneme sayısına kadar üstel geri çekilmeyle
+(`retry.backoffMs`, her denemede ikiye katlanarak) yeniden denenir.
+
+**Mutasyon niteliğindeki her komut** — fatura oluşturma, silme, kullanıcı
+bilgisi kaydetme, SMS gönderme/doğrulama, iptal/itiraz talebi oluşturma,
+talebe cevap verme — `retry.attempts` ne olursa olsun **tam olarak bir kez**
+denenir. Sebep: bir zaman aşımı, sunucu isteği zaten işleyip yanıtı
+gönderemeden fırlayabilir; bu durumda mutasyonu yeniden denemek mükerrer bir
+hukuki belgeyle (mükerrer fatura, mükerrer silme, mükerrer imzalama...)
+sonuçlanır. `retry.attempts: 5` vermek bu davranışı DEĞİŞTİRMEZ — yalnızca
+okuma komutları 5 kez denenir, her mutasyon yine tek seferde denenir.
 
 ## Test ortamı
 

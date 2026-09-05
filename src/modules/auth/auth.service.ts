@@ -117,7 +117,13 @@ export class AuthService implements TokenProvider {
     // yukarıda. Üretim koruması geçildikten sonra burada da temizliyoruz.
     this.currentToken = undefined
 
-    // esign da salt okunur bir öneri adımıdır; yeniden denenebilir (bkz. C1).
+    // `kullaniciOner` retryable: true olarak işaretli çünkü test kullanıcısı
+    // önerme SALT OKUNUR bir sorgu GİBİ görünüyor. Round 2 notu: bu kanıtlanmış
+    // değil — paylaşılan test havuzundan gerçekten bir kullanıcı TAHSİS
+    // ediyor olabilir, ki bu durumda bir yeniden deneme ikinci bir kullanıcıyı
+    // "yakabilir". Yalnızca test ortamında ve zararsız olduğu için (ve retry
+    // davranışını doğrulayamadığımız bir yolda değiştirmemek adına) şimdilik
+    // olduğu gibi bırakıldı — bkz. final-fixes-report.md round 2 madde 7.
     const raw = await this.http.postForm(
       Endpoint.ESIGN,
       { assoscmd: 'kullaniciOner', rtype: 'json' },

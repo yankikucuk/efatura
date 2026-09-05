@@ -11,7 +11,17 @@ export const DEFAULT_USER_AGENT =
   '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 export interface RetryOptions {
-  /** Toplam deneme sayısı (ilk istek dahil). En az 1. */
+  /**
+   * Toplam deneme sayısı (ilk istek dahil). En az 1.
+   *
+   * YALNIZCA salt okunur komutlar (bkz. `RETRYABLE_COMMANDS`) için geçerlidir.
+   * `EARSIV_PORTAL_FATURA_OLUSTUR` gibi bir mutasyon komutu bu değeri
+   * GÖRMEZDEN GELİR ve her zaman tam olarak bir kez denenir (bkz. C1) — bir
+   * mutasyonu yeniden denemek sunucu isteği zaten işlemişse mükerrer bir
+   * hukuki belgeyle (mükerrer fatura, mükerrer imzalama...) sonuçlanabilir.
+   * `attempts: 5` verip her mutasyonda da 5 deneme beklemek yaygın bir
+   * yanlış varsayımdır.
+   */
   attempts?: number
   /** İlk yeniden denemeden önceki bekleme; her denemede ikiye katlanır. */
   backoffMs?: number

@@ -194,6 +194,22 @@ describe('InvoiceService.getInvoice', () => {
     })
   })
 
+  it('boş faturaTarihi alanında hata FIRLATMAZ, ham stringi döner (round 2 madde 3)', async () => {
+    // Aynı str() kör noktası I5'te listelerde yamanmıştı; okuma yolunda
+    // (getInvoice) yamasızdı — formatPortalDate(input.date) boş stringde
+    // fırlıyor ve çağıran detail.raw'a bile erişemiyordu.
+    const call = vi.fn().mockResolvedValue({
+      belgeNumarasi: 'GIB1',
+      faturaTarihi: '',
+      vknTckn: '11111111111',
+      malHizmetTable: [],
+    })
+
+    const detail = await new InvoiceService(gatewayMock(call)).getInvoice('abc')
+    expect(detail.date).toBe('')
+    expect(detail.raw).toBeDefined()
+  })
+
   it('portalın kendi toplamlarını raporlar, kalemlerden yeniden hesaplamaz (I4)', async () => {
     // Portal matrah/kdv/toplam alanlarını gönderiyor; bu kütüphanenin kendi
     // aritmetiği (kalemlerden hesaplanan) bunlarla KASITLI olarak

@@ -1,5 +1,5 @@
 export { DispatchGateway, type TokenProvider } from './dispatch.gateway.js'
 export { Endpoint, type EndpointPath } from './endpoints.js'
 export { buildPortalHeaders } from './headers.js'
-export { HttpClient } from './http-client.js'
+export { HttpClient, type PostFormOptions } from './http-client.js'
 export { type ParseContext, parsePortalResponse } from './response.parser.js'

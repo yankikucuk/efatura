@@ -134,13 +134,19 @@ export function toPortalInvoice(input: InvoiceInput): Record<string, unknown> {
 }
 
 /**
- * Bir satırın tarihini normalize eder; ayrıştırılamazsa ham stringi geri
- * verir. `str()` yalnızca alan STRING DEĞİLSE varsayılana düşer — boş string
- * ('') geçerli bir string olduğu için varsayılanı tetiklemez ve doğrudan
+ * Bir tarih alanını normalize eder; ayrıştırılamazsa ham stringi geri verir.
+ * `str()` yalnızca alan STRING DEĞİLSE varsayılana düşer — boş string ('')
+ * geçerli bir string olduğu için varsayılanı tetiklemez ve doğrudan
  * `formatPortalDate('')`'a gider, ki bu fırlatır (bkz. I5). Tek bir bozuk
- * satırın tüm listeyi düşürmemesi için bu fırlatma burada yutulur.
+ * alanın çağıranı düşürmemesi için bu fırlatma burada yutulur.
+ *
+ * Hem `toInvoiceSummary` (liste satırları) hem `InvoiceService.getInvoice`
+ * (tekil detay — round 2 madde 3: aynı `str()` kör noktası okuma yolunda da
+ * vardı, `input.date` boş geldiğinde `formatPortalDate(input.date)`
+ * fırlatıyor ve çağıran `detail.raw`'a bile erişemiyordu) tarafından
+ * paylaşılır.
  */
-function normalizeSummaryDate(raw: unknown): string {
+export function normalizePortalDate(raw: unknown): string {
   const rawDate = str(raw, formatPortalDate())
   try {
     return formatPortalDate(rawDate)
@@ -154,7 +160,7 @@ function normalizeSummaryDate(raw: unknown): string {
  * döndürüyor (`03-09-2026`) ancak fatura yükünde eğik çizgi bekliyor.
  *
  * Tek bir satırın alanı bozuksa (ör. ayrıştırılamayan tarih) bu fonksiyon
- * FIRLATMAZ — bkz. `normalizeSummaryDate`. Aksi halde `listDrafts` gibi bir
+ * FIRLATMAZ — bkz. `normalizePortalDate`. Aksi halde `listDrafts` gibi bir
  * toplu listeleme, paylaşılan test kullanıcı havuzundaki YABANCI tek bir
  * kayıt yüzünden tamamen başarısız olurdu (bkz. I5; `createDraft` içindeki
  * ikinci `listDrafts` çağrısı özellikle risklidir: ETTN çözümü bu listeye
@@ -166,7 +172,7 @@ export function toInvoiceSummary(raw: Record<string, unknown>): InvoiceSummary {
     documentNumber: str(raw.belgeNumarasi),
     buyerTaxOrIdentityNumber: str(raw.aliciVknTckn),
     buyerName: str(raw.aliciUnvanAdSoyad),
-    date: normalizeSummaryDate(raw.belgeTarihi),
+    date: normalizePortalDate(raw.belgeTarihi),
     documentType: str(raw.belgeTuru, DocumentType.INVOICE) as DocumentTypeCode,
     approvalStatus: str(raw.onayDurumu, ApprovalStatus.NOT_APPROVED) as ApprovalStatusValue,
   }
