@@ -16,6 +16,14 @@ updates:
       prefix: chore
       prefix-development: chore
       include: scope
+    ignore:
+      # TypeScript major'ları YUKARI AKIŞ TARAFINDAN engelli: typescript-eslint
+      # peer aralığı `typescript >=4.8.4 <6.1.0` istiyor ve TS 7'yi destekleyen
+      # bir sürümü henüz yok. Dependabot bunu her hafta kırık bir PR olarak
+      # yeniden açıyordu (`npm ci` çözümleme hatasıyla düşüyor). typescript-eslint
+      # TS 7 desteğini yayınladığında bu kural KALDIRILMALI.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     groups:
       # Sürümleri birlikte hareket etmek ZORUNDA olan paketler.
       vitest:
