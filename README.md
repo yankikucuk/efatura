@@ -51,11 +51,15 @@ Daha kapsamlı örnekler için `examples/` dizinine bakın:
 
 - Oturum yönetimi: `login`, `loginWithTestUser`, `logout`, `setToken`
 - Fatura: oluşturma (`createDraft`), listeleme (`listDrafts`, `listIncoming`),
-  okuma (`getInvoice`), silme (`cancelDraft`)
-- Toplamların kalemlerden otomatik hesaplanması (tam sayı kuruş aritmetiği)
+  okuma (`getInvoice`), silme (`cancelDraft` — varsayılan bugün, `{ date }`
+  seçeneğiyle başka bir günün taslağı da hedeflenebilir)
+- Toplamların kalemlerden otomatik hesaplanması (tam sayı kuruş aritmetiği);
+  `getInvoice` okurken kalemlerden yeniden HESAPLAMAZ, portalın kendi
+  `matrah`/`hesaplanankdv`/`odenecekTutar` gibi resmi rakamlarını raporlar
 - Belge: HTML gösterimi (`getInvoiceHtml`), resmi paket indirme
   (`downloadPackage`, ZIP), doğrudan indirme adresi (`getDownloadUrl`)
-- SMS ile fatura imzalama (`getPhoneNumber`, `sendSmsCode`, `verifySmsCode`)
+- SMS ile fatura imzalama (`getPhoneNumber`, `sendSmsCode`, `verifySmsCode` —
+  başarısızlıkta `EArsivApiError` fırlatır, `boolean` DÖNDÜRMEZ)
 - İptal ve itiraz talepleri: oluşturma, listeleme, cevaplama
 - Firma bilgisi okuma/güncelleme, VKN ile firma sorgulama
 - Opsiyonel PDF üretimi (`toPdf`) — `puppeteer` peer bağımlılığı gerektirir
@@ -73,7 +77,9 @@ olarak üç noktada ayrılır:
   bir kayda inmezse — örneğin portal listeyi henüz güncellememişse veya aynı
   anda birden fazla taslak oluşturulmuşsa — yanlış bir ETTN döndürmek yerine
   `EArsivAmbiguousResultError` fırlatılır; adaylar hatanın `candidates`
-  alanında bulunur.
+  alanında bulunur. Bu yüzden `createDraft`, AYNI alıcı ve AYNI tarih için
+  eşzamanlı (paralel) çağrılmamalıdır — iki oluşturma isteği aynı anda
+  çakışırsa anlık görüntü farkı tekile inmez ve ETTN çözümü belirsizleşir.
 - **Toplamlar kalemlerden otomatik hesaplanır.** İskonto, KDV matrahı ve genel
   toplam gibi alanları elle hesaplayıp göndermeniz gerekmez; `lineItems`
   girdisinden tam sayı kuruş aritmetiğiyle türetilir. İsterseniz `totals` ile

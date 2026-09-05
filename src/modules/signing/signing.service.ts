@@ -48,9 +48,18 @@ export class SigningService {
 
   /**
    * Kodu doğrular ve faturaları imzalar.
-   * Portal başarıyı `data.sonuc` alanında `"1"` olarak bildirir.
+   *
+   * Portal başarıyı `data.sonuc` alanında `"1"` olarak bildirir. Spec §4
+   * her başarısız işlemin bir hata fırlatması gerektiğini söylüyor;
+   * `boolean` döndürmek çağıranın dönüş değerini yoksayıp faturalarının
+   * imzalandığına inanmasına izin verirdi (bkz. I8). `sonuc` `String()` ile
+   * zorlanır: spec §2.5 bu akışın test ortamında hiç doğrulanamadığını
+   * söylüyor, yani portalın `"1"` yerine SAYISAL `1` döndürme ihtimali
+   * kanıtlanmamıştı — `str()` (yalnızca string/number'ı kabul eden, sayıyı
+   * `String()`'e çeviren o yardımcı DEĞİL, burada tanımsız/null için `''`
+   * döndüren özel bir coercion) her iki biçimi de kabul eder.
    */
-  async verifySmsCode(input: VerifySmsInput): Promise<boolean> {
+  async verifySmsCode(input: VerifySmsInput): Promise<void> {
     if (input.invoices.length === 0) {
       throw new EArsivValidationError('İmzalamak için en az bir fatura verilmeli.', [
         { path: 'invoices', message: 'Liste boş.' },
@@ -76,6 +85,15 @@ export class SigningService {
       },
     )
 
-    return str(data.sonuc) === '1'
+    const rawSonuc = data.sonuc
+    const sonuc =
+      typeof rawSonuc === 'string' || typeof rawSonuc === 'number' ? String(rawSonuc) : ''
+    if (sonuc !== '1') {
+      throw new EArsivApiError('SMS doğrulama kodu reddedildi veya faturalar imzalanamadı.', {
+        command: Command.VERIFY_SMS_CODE,
+        callId: 'verifySmsCode',
+        raw: data,
+      })
+    }
   }
 }

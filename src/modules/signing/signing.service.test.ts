@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { EArsivApiError } from '../../core/index.js'
 import type { DispatchGateway } from '../../transport/index.js'
 // eslint-disable-next-line no-restricted-imports -- yalnızca tip import'u, çalışma zamanı bağımlılığı yok
 import type { InvoiceSummary } from '../invoice/index.js'
@@ -63,17 +64,18 @@ describe('SigningService.sendSmsCode', () => {
   })
 })
 
-describe('SigningService.verifySmsCode', () => {
-  it('faturaları portal özet biçiminde gönderir', async () => {
+describe('SigningService.verifySmsCode (I8 — void döner, başarısızlıkta fırlatır)', () => {
+  it('faturaları portal özet biçiminde gönderir ve başarıda sessizce döner', async () => {
     const call = vi.fn().mockResolvedValue({ sonuc: '1' })
 
-    const ok = await new SigningService(gatewayMock(call)).verifySmsCode({
-      code: '123456',
-      operationId: 'op-987',
-      invoices: [summary],
-    })
+    await expect(
+      new SigningService(gatewayMock(call)).verifySmsCode({
+        code: '123456',
+        operationId: 'op-987',
+        invoices: [summary],
+      }),
+    ).resolves.toBeUndefined()
 
-    expect(ok).toBe(true)
     expect(call.mock.calls[0]?.[0]).toBe('0lhozfib5410mp')
     expect(call.mock.calls[0]?.[1]).toBe('RG_SMSONAY')
     expect(call.mock.calls[0]?.[2]).toEqual({
@@ -94,26 +96,39 @@ describe('SigningService.verifySmsCode', () => {
     })
   })
 
-  it('sonuc 0 ise false döner', async () => {
+  it('sonuc SAYI 1 iken de başarı kabul eder (portalın test edilemeyen tek akışı)', async () => {
+    // spec §2.5: bu akış test ortamında hiç doğrulanamıyor, bu yüzden
+    // string-mi-sayı-mı varsayımı hiç kanıtlanmamıştı. String(1) === '1'.
+    const call = vi.fn().mockResolvedValue({ sonuc: 1 })
+    await expect(
+      new SigningService(gatewayMock(call)).verifySmsCode({
+        code: '123456',
+        operationId: 'op-1',
+        invoices: [summary],
+      }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('sonuc "0" ise EArsivApiError fırlatır', async () => {
     const call = vi.fn().mockResolvedValue({ sonuc: '0' })
-    expect(
-      await new SigningService(gatewayMock(call)).verifySmsCode({
+    await expect(
+      new SigningService(gatewayMock(call)).verifySmsCode({
         code: '000000',
         operationId: 'op-1',
         invoices: [summary],
       }),
-    ).toBe(false)
+    ).rejects.toThrow(EArsivApiError)
   })
 
-  it('sonuc alanı yoksa false döner', async () => {
+  it('sonuc alanı yoksa EArsivApiError fırlatır', async () => {
     const call = vi.fn().mockResolvedValue({})
-    expect(
-      await new SigningService(gatewayMock(call)).verifySmsCode({
+    await expect(
+      new SigningService(gatewayMock(call)).verifySmsCode({
         code: '1',
         operationId: 'op-1',
         invoices: [summary],
       }),
-    ).toBe(false)
+    ).rejects.toThrow(EArsivApiError)
   })
 
   it('boş fatura listesinde hata fırlatır', async () => {

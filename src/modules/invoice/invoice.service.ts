@@ -22,6 +22,7 @@ import {
   sumTotals,
 } from './invoice.totals.js'
 import type {
+  CancelDraftOptions,
   CreatedInvoice,
   InvoiceDetail,
   InvoiceInput,
@@ -143,17 +144,24 @@ export class InvoiceService {
   /**
    * Onaylanmamış bir taslağı siler. Portal özet satırının tamamını istediği
    * için önce liste üzerinden ilgili kayıt bulunur.
+   *
+   * Arama tarihi varsayılan olarak bugündür; `options.date` ile dünün (veya
+   * başka bir günün) bir taslağı da hedeflenebilir (bkz. I10).
    */
-  async cancelDraft(ettn: string, reason = 'Yanlış İşlem'): Promise<void> {
-    const today = formatPortalDate()
-    const candidates = await this.listDrafts(today, today)
+  async cancelDraft(
+    ettn: string,
+    reason = 'Yanlış İşlem',
+    options: CancelDraftOptions = {},
+  ): Promise<void> {
+    const date = formatPortalDate(options.date)
+    const candidates = await this.listDrafts(date, date)
     const target = candidates.find((row) => row.ettn === ettn)
 
     if (target === undefined) {
       throw new EArsivValidationError(
-        `Silinecek taslak bugünün listesinde bulunamadı: ${ettn}. ` +
-          'Fatura başka bir tarihte oluşturulmuş olabilir.',
-        [{ path: 'ettn', message: `Bulunamayan ETTN: ${ettn}` }],
+        `Silinecek taslak aranan tarih aralığında bulunamadı: ${ettn} (aranan tarih: ${date}). ` +
+          'Fatura başka bir tarihte oluşturulmuş olabilir; options.date ile doğru tarihi belirtin.',
+        [{ path: 'ettn', message: `Bulunamayan ETTN: ${ettn} (tarih: ${date})` }],
       )
     }
 

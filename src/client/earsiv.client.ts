@@ -10,6 +10,7 @@ import {
 } from '../modules/dispute/index.js'
 import { type DocumentOptions, DocumentService } from '../modules/document/index.js'
 import {
+  type CancelDraftOptions,
   type CreatedInvoice,
   type InvoiceDetail,
   type InvoiceInput,
@@ -110,8 +111,8 @@ export class EArsivClient {
     return this.invoices.getInvoice(ettn)
   }
 
-  async cancelDraft(ettn: string, reason?: string): Promise<void> {
-    return this.invoices.cancelDraft(ettn, reason)
+  async cancelDraft(ettn: string, reason?: string, options?: CancelDraftOptions): Promise<void> {
+    return this.invoices.cancelDraft(ettn, reason, options)
   }
 
   // — Belge —
@@ -159,7 +160,8 @@ export class EArsivClient {
     return this.signing.sendSmsCode(options)
   }
 
-  async verifySmsCode(input: VerifySmsInput): Promise<boolean> {
+  /** Kodu doğrular ve faturaları imzalar. Başarısız olursa `EArsivApiError` fırlatır. */
+  async verifySmsCode(input: VerifySmsInput): Promise<void> {
     return this.signing.verifySmsCode(input)
   }
 

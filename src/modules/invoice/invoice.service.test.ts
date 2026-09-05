@@ -245,4 +245,43 @@ describe('InvoiceService.cancelDraft', () => {
       new InvoiceService(gatewayMock(call)).cancelDraft('yok', 'gerekçe'),
     ).rejects.toThrow(/bulunamadı/)
   })
+
+  it('dünün tarihiyle sağlanan taslağı bulur ve siler (I10)', async () => {
+    // Eski davranış her iki aramayı da bugüne sabitliyordu; dünkü bir
+    // taslak bu API üzerinden asla silinemiyordu.
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce([draftRow('dunku')])
+      .mockResolvedValueOnce('1 fatura başarıyla silindi.')
+
+    await new InvoiceService(gatewayMock(call)).cancelDraft('dunku', 'gerekçe', {
+      date: '02/09/2026',
+    })
+
+    expect(call.mock.calls[0]?.[2]).toMatchObject({
+      baslangic: '02/09/2026',
+      bitis: '02/09/2026',
+    })
+  })
+
+  it('date verilmezse bugünü aramaya devam eder', async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValueOnce([draftRow('bugunku')])
+      .mockResolvedValueOnce('1 fatura başarıyla silindi.')
+
+    await new InvoiceService(gatewayMock(call)).cancelDraft('bugunku', 'gerekçe')
+
+    const today = call.mock.calls[0]?.[2] as Record<string, unknown>
+    expect(today.baslangic).toBe(today.bitis)
+  })
+
+  it('bulunamayan ETTN hata mesajı aranan tarih aralığını belirtir (I10)', async () => {
+    const call = vi.fn().mockResolvedValueOnce([draftRow('baska')])
+    await expect(
+      new InvoiceService(gatewayMock(call)).cancelDraft('yok', 'gerekçe', {
+        date: '02/09/2026',
+      }),
+    ).rejects.toThrow(/02\/09\/2026/)
+  })
 })

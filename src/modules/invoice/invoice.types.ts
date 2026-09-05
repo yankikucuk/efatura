@@ -173,3 +173,13 @@ export interface ListOptions {
   /** Varsayılan `InvoiceListKind.INTERACTIVE`. */
   kind?: InvoiceListKindValue
 }
+
+export interface CancelDraftOptions {
+  /**
+   * Taslağın aranacağı tarih. Varsayılan: bugün.
+   *
+   * Eski davranış aramayı her zaman bugüne sabitliyordu; dünkü (veya daha
+   * eski) bir taslak bu API üzerinden asla silinemiyordu (bkz. I10).
+   */
+  date?: DateInput
+}
