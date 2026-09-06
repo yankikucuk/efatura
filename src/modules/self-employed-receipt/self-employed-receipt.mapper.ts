@@ -1,4 +1,4 @@
-import { Country, Currency, type CurrencyCode } from '../../constants/index.js'
+import { Country, Currency } from '../../constants/index.js'
 import { formatMinor, formatPortalDate, formatPortalTime, toMinor } from '../../core/index.js'
 import { normalizeSummaryDate, num, str } from '../../documents/index.js'
 
@@ -195,7 +195,7 @@ export function toSelfEmployedReceiptDetail(
     // `raw`'a erişimini engellememeli (I5'in okuma yolundaki karşılığı).
     date: normalizeSummaryDate(raw.tarih),
     time: str(raw.saat),
-    currency: str(raw.paraBirimi, Currency.TURKISH_LIRA) as CurrencyCode,
+    currency: str(raw.paraBirimi, Currency.TURKISH_LIRA),
     currencyRate: num(raw.kur),
     payer: {
       taxOrIdentityNumber: str(raw.vknTckn),

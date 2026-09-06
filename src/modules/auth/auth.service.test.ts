@@ -154,14 +154,14 @@ describe('AuthService token yaşam döngüsü', () => {
   // hangilerinin KORUMASI gerektiği. Bu blok bir "getter/setter" süiti değil,
   // yanlış mükellef adına belge düzenlenmesine karşı korumadır.
   it('token yokken getToken hata fırlatır', () => {
-    const service = serviceWith(vi.fn() as unknown as typeof globalThis.fetch)
+    const service = serviceWith(vi.fn())
     expect(service.isAuthenticated).toBe(false)
     expect(service.token).toBeUndefined()
     expect(() => service.getToken()).toThrow(EArsivAuthError)
   })
 
   it('setToken dışarıdan token kabul eder', () => {
-    const service = serviceWith(vi.fn() as unknown as typeof globalThis.fetch)
+    const service = serviceWith(vi.fn())
     service.setToken('kayitli-token')
     expect(service.getToken()).toBe('kayitli-token')
   })
@@ -182,7 +182,7 @@ describe('AuthService token yaşam döngüsü', () => {
 
   it('token yokken logout sessizce geçer', async () => {
     const fetchMock = vi.fn()
-    await serviceWith(fetchMock as unknown as typeof globalThis.fetch).logout()
+    await serviceWith(fetchMock).logout()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

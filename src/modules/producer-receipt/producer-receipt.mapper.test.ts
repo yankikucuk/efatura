@@ -129,10 +129,6 @@ describe('toPortalProducerReceipt', () => {
 
   it('opsiyonel metin alanlarını boş string olarak doldurur', () => {
     const { city, website, note, deliveryDate, ...withoutOptionals } = input()
-    void city
-    void website
-    void note
-    void deliveryDate
     const payload = toPortalProducerReceipt(withoutOptionals)
     for (const field of ['sehir', 'websitesi', 'not', 'belgeNumarasi']) {
       expect(payload[field], `${field} boş string olmalı`).toBe('')

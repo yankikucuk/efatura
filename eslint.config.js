@@ -58,6 +58,15 @@ export default tseslint.config(
       'import-x/order': ['error', { 'newlines-between': 'always', alphabetize: { order: 'asc' } }],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
+      // `const { city, ...rest } = input()` — bir alanı KASTEN dışarıda
+      // bırakma deyimi. `city` hiç okunmaz; amaç zaten onu `rest`ten
+      // ayıklamak. ESLint'in `no-unused-vars` varsayılanı
+      // (`ignoreRestSiblings: false`) bunu ihlal sayıyordu ve kod bunu
+      // `void city` ile susturuyordu — ancak ESLint 10 ile gelen
+      // `no-meaningless-void-operator` o hileyi de yasaklıyor. İki kural
+      // birbiriyle çelişince tek çıkış deyimi kuralın kendi seçeneğiyle
+      // tanıtmak: rest kardeşleri kullanılmamış sayma.
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
   // eslint.config.js tsconfig.json'un include listesine girmez (yalnızca

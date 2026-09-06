@@ -32,14 +32,13 @@ import type { ProducerReceiptLineItemInput } from './producer-receipt.types.js'
 
 const item = (
   overrides: Partial<ProducerReceiptLineItemInput> = {},
-): ProducerReceiptLineItemInput =>
-  ({
-    name: 'Ceviz',
-    quantity: 10,
-    unit: Unit.KILOGRAM,
-    unitPrice: 100,
-    ...overrides,
-  }) as ProducerReceiptLineItemInput
+): ProducerReceiptLineItemInput => ({
+  name: 'Ceviz',
+  quantity: 10,
+  unit: Unit.KILOGRAM,
+  unitPrice: 100,
+  ...overrides,
+})
 
 describe('computeProducerReceiptLineItem', () => {
   // Kapsam: kalem tutarı (miktar × birim fiyat) ve dört kesintinin AYRI AYRI,
