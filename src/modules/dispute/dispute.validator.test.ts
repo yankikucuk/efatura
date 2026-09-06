@@ -73,7 +73,7 @@ describe('validateObjectionRequest', () => {
 
   it('referans belge tarihi zorunludur', () => {
     expect(() => {
-      validateObjectionRequest({ ...valid, referenceDocumentDate: '' as unknown as string })
+      validateObjectionRequest({ ...valid, referenceDocumentDate: '' })
     }).toThrow(EArsivValidationError)
   })
 

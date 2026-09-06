@@ -69,7 +69,6 @@ describe('computeSelfEmployedReceiptLineItem', () => {
 
   it('stopaj oranı verilmezse sıfır sayılır ve net ücret brüte eşit olur', () => {
     const { withholdingRate, ...withoutRates } = item()
-    void withholdingRate
     const computed = computeSelfEmployedReceiptLineItem(withoutRates)
     expect(computed.withholdingAmount).toBe(0)
     expect(computed.netFee).toBe(1000)

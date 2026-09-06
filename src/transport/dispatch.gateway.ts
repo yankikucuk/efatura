@@ -181,7 +181,7 @@ export class DispatchGateway {
     payload: Record<string, unknown>,
   ): Promise<T> {
     try {
-      return (await this.dispatch<T>(command, pageName, payload)) as T
+      return await this.dispatch<T>(command, pageName, payload)
     } catch (error) {
       if (error instanceof EArsivApiError) {
         if (SESSION_TIMEOUT_PATTERN.test(error.message)) {
