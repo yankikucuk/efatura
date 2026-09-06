@@ -532,6 +532,13 @@ Bkz. "Belge paketi içeriği" altındaki not.
 - Bir komut satırı arayüzü (CLI) — kütüphane yalnızca programatik kullanım
   içindir.
 
+## Güvenlik
+
+Güvenlik açıklarını herkese açık issue ile bildirmeyin; GitHub'ın özel
+[güvenlik bildirimi kanalını](https://github.com/yankikucuk/efatura/security/advisories/new)
+kullanın. Kimlik bilgisi/token yaşam döngüsü, hata nesnelerinin taşıdığı ham
+portal yanıtı ve log'lama tuzakları için bkz. [SECURITY.md](SECURITY.md).
+
 ## Sorumluluk reddi
 
 Bu kütüphane GİB'in (Gelir İdaresi Başkanlığı) resmi bir ürünü değildir ve
